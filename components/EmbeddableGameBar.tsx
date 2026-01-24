@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Team, Game, League } from '../types';
 import { MOCK_TEAMS, INITIAL_GAMES } from '../constants';
 import { formatDate } from '../utils';
 import GameBar from './GameBar';
+import { loadStorageData } from '../services/storage';
 
 interface EmbeddableGameBarProps {
   initialLeagueId?: string;
@@ -15,31 +16,12 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
   initialLeagueId,
   initialCategory,
   initialTeamId,
-  height = '400px'
+  height = '240px'
 }) => {
-  // Load data from localStorage (shared with main app)
-  const [leagues] = useState<League[]>(() => {
-    const saved = localStorage.getItem('dsa_leagues');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [teams] = useState<Team[]>(() => {
-    const saved = localStorage.getItem('dsa_teams');
-    const savedTeams = saved ? JSON.parse(saved) : MOCK_TEAMS;
-    // Also include teams from leagues
-    const savedLeagues = localStorage.getItem('dsa_leagues');
-    const leagues = savedLeagues ? JSON.parse(savedLeagues) : [];
-    const leagueTeams = leagues.flatMap((l: League) => l.teams || []);
-    // Merge and deduplicate by id
-    const allTeams = [...savedTeams, ...leagueTeams];
-    const uniqueTeams = Array.from(new Map(allTeams.map(t => [t.id, t])).values());
-    return uniqueTeams.length > 0 ? uniqueTeams : MOCK_TEAMS;
-  });
-
-  const [games] = useState<Game[]>(() => {
-    const saved = localStorage.getItem('dsa_games');
-    return saved ? JSON.parse(saved) : INITIAL_GAMES;
-  });
+  // Load data from storage (local storage or PocketBase)
+  const [leagues, setLeagues] = useState<League[]>([]);
+  const [teams, setTeams] = useState<Team[]>(MOCK_TEAMS);
+  const [games, setGames] = useState<Game[]>(INITIAL_GAMES);
 
   const [selectedTeamId, setSelectedTeamId] = useState<string>(initialTeamId || 'all');
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>(initialLeagueId || 'all');
@@ -51,6 +33,31 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
     if (initialCategory) setSelectedCategory(initialCategory);
     if (initialTeamId) setSelectedTeamId(initialTeamId);
   }, [initialLeagueId, initialCategory, initialTeamId]);
+
+  useEffect(() => {
+    let isActive = true;
+    const hydrate = async () => {
+      const data = await loadStorageData({
+        leagues: [],
+        teams: MOCK_TEAMS,
+        games: INITIAL_GAMES,
+        gamesInHoldingArea: []
+      });
+      if (!isActive) return;
+      setLeagues(data.leagues);
+
+      const leagueTeams = data.leagues.flatMap((l: League) => l.teams || []);
+      const allTeams = [...data.teams, ...leagueTeams];
+      const uniqueTeams = Array.from(new Map(allTeams.map(t => [t.id, t])).values());
+      setTeams(uniqueTeams.length > 0 ? uniqueTeams : MOCK_TEAMS);
+
+      setGames(data.games);
+    };
+    hydrate();
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const handleGameClick = (game: Game) => {
     const home = teams.find(t => t.id === game.homeTeamId);

@@ -1,0 +1,5 @@
+{
+  "name": "Scheduler",
+  "description": "A comprehensive baseball league management tool featuring an interactive calendar, league generation, and manual scheduling capabilities.",
+  "requestFramePermissions": []
+}

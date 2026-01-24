@@ -1,0 +1,938 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useKeycloak } from '@react-keycloak/web';
+import { Team, Game, ViewMode, League } from './types';
+import { MOCK_TEAMS, INITIAL_GAMES } from './constants';
+import { getMonthDays, formatDate, generateUUID } from './utils';
+import { loadStorageData, persistStorageData } from './services/storage';
+import Calendar from './components/Calendar';
+import GameHoldingArea from './components/GameHoldingArea';
+import TeamList from './components/TeamList';
+import ImportExport from './components/ImportExport';
+import { 
+  Calendar as CalendarIcon, 
+  Users, 
+  Trophy, 
+  PlusCircle, 
+  Code,
+  Trash2,
+  UserCircle,
+  ChevronDown,
+  LogOut
+} from 'lucide-react';
+import LeagueBuilder from './components/LeagueBuilder';
+import ScheduleGenerator from './components/ScheduleGenerator';
+import EmbedCodeGenerator from './components/EmbedCodeGenerator';
+
+const App: React.FC = () => {
+  const { keycloak, initialized } = useKeycloak();
+  const [authTimeout, setAuthTimeout] = useState(false);
+  const [showNavMenu, setShowNavMenu] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const navMenuRef = useRef<HTMLDivElement | null>(null);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const keycloakEnv = {
+    url: import.meta.env.VITE_KEYCLOAK_URL,
+    realm: import.meta.env.VITE_KEYCLOAK_REALM,
+    clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID,
+  };
+  const missingKeycloakEnv = Object.entries(keycloakEnv)
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+
+  const userName =
+    keycloak.tokenParsed?.preferred_username ||
+    keycloak.tokenParsed?.email ||
+    'Signed in';
+  const userEmail = keycloak.tokenParsed?.email as string | undefined;
+  const userDomain = window.location.hostname;
+  const realmRoles = (keycloak.tokenParsed as any)?.realm_access?.roles as string[] | undefined;
+  const userRole =
+    realmRoles?.find((role) => !role.startsWith('default-roles-') && role !== 'offline_access' && role !== 'uma_authorization') ||
+    realmRoles?.[0] ||
+    'unknown';
+  const userId = (keycloak.tokenParsed as any)?.sub as string | undefined;
+  const orgId =
+    (keycloak.tokenParsed as any)?.org_id ||
+    (keycloak.tokenParsed as any)?.organization ||
+    (keycloak.tokenParsed as any)?.tenant ||
+    (keycloak.tokenParsed as any)?.org;
+
+  const navItems: { mode: ViewMode; label: string; icon: any }[] = [
+    { mode: 'calendar', label: 'Calendar', icon: CalendarIcon },
+    { mode: 'teams', label: 'Teams', icon: Users },
+    { mode: 'league_builder', label: 'League Creator', icon: Trophy },
+    { mode: 'scheduler', label: 'Scheduler', icon: CalendarIcon },
+    { mode: 'embed', label: 'Embed Code', icon: Code }
+  ];
+
+  // State
+  const [currentDate, setCurrentDate] = useState(new Date());
+  
+  // Leagues & Teams State
+  const [leagues, setLeagues] = useState<League[]>([]);
+  
+  // Teams represents the currently active roster being viewed or scheduled
+  const [teams, setTeams] = useState<Team[]>(MOCK_TEAMS);
+
+  const [games, setGames] = useState<Game[]>(INITIAL_GAMES);
+
+  const [viewMode, setViewMode] = useState<ViewMode>('calendar');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingGame, setEditingGame] = useState<Game | null>(null);
+  
+  // Calendar Specific State
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('all');
+  const [selectedLeagueId, setSelectedLeagueId] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [calendarView, setCalendarView] = useState<'grid' | 'list'>('grid');
+  
+  // Game Holding Area State (for games in edit mode)
+  const [gamesInHoldingArea, setGamesInHoldingArea] = useState<Game[]>([]);
+
+  // New Game Form State
+  const [newGameForm, setNewGameForm] = useState<Partial<Game> & { leagueIds?: string[] }>({
+    date: formatDate(new Date()),
+    time: '19:00',
+    location: 'Main Stadium',
+    gameNumber: 1,
+    leagueIds: []
+  });
+
+  // Persistence
+  useEffect(() => {
+    let isActive = true;
+    const hydrate = async () => {
+      const data = await loadStorageData({
+        leagues: [],
+        teams: MOCK_TEAMS,
+        games: INITIAL_GAMES,
+        gamesInHoldingArea: []
+      }, { userId, orgId });
+      if (!isActive) return;
+      setLeagues(data.leagues);
+      setTeams(data.teams);
+      setGames(data.games);
+      setGamesInHoldingArea(data.gamesInHoldingArea);
+      setIsHydrated(true);
+    };
+    hydrate();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (initialized) return;
+    const timeoutId = window.setTimeout(() => {
+      setAuthTimeout(true);
+    }, 10000);
+    return () => window.clearTimeout(timeoutId);
+  }, [initialized]);
+
+  useEffect(() => {
+    if (!showUserMenu) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showUserMenu]);
+
+  useEffect(() => {
+    if (!showNavMenu) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (navMenuRef.current && !navMenuRef.current.contains(event.target as Node)) {
+        setShowNavMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNavMenu]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    const timeoutId = window.setTimeout(() => {
+      persistStorageData(
+        {
+          leagues,
+          teams,
+          games,
+          gamesInHoldingArea
+        },
+        { userId, orgId }
+      );
+    }, 300);
+    return () => window.clearTimeout(timeoutId);
+  }, [isHydrated, leagues, teams, games, gamesInHoldingArea]);
+
+  // Helper to get league IDs from a game (handles both old and new format)
+  const getGameLeagueIds = (game: Game): string[] => {
+    if (game.leagueIds && game.leagueIds.length > 0) {
+      return game.leagueIds;
+    }
+    // Backward compatibility: if leagueIds is empty/undefined but leagueId exists
+    if (game.leagueId) {
+      return [game.leagueId];
+    }
+    return [];
+  };
+
+  // Derived State for Filtering
+  const filteredGames = games.filter(g => {
+    // Team filter
+    if (selectedTeamId !== 'all') {
+      if (g.homeTeamId !== selectedTeamId && g.awayTeamId !== selectedTeamId) {
+        return false;
+      }
+    }
+    
+    // League filter
+    if (selectedLeagueId !== 'all') {
+      const gameLeagueIds = getGameLeagueIds(g);
+      if (!gameLeagueIds.includes(selectedLeagueId)) {
+        return false;
+      }
+    }
+    
+    // Category filter
+    if (selectedCategory !== 'all') {
+      const gameLeagueIds = getGameLeagueIds(g);
+      const gameLeagues = gameLeagueIds.map(id => leagues.find(l => l.id === id)).filter(Boolean);
+      const hasMatchingCategory = gameLeagues.some(l => l && l.category === selectedCategory);
+      if (!hasMatchingCategory) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+
+  // Calendar Helpers (Grid view depends on filtered games)
+  const days = getMonthDays(currentDate.getFullYear(), currentDate.getMonth(), filteredGames);
+
+  const handlePrevMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  // Game Move Logic (Drag and Drop)
+  const handleGameMove = (gameId: string, newDate: Date | null) => {
+    // Check if game is in holding area
+    const gameInHolding = gamesInHoldingArea.find(g => g.id === gameId);
+    
+    if (gameInHolding) {
+      // Move from holding area to calendar with new date
+      if (newDate) {
+        const updatedGame = { ...gameInHolding, date: formatDate(newDate) };
+        setGames([...games, updatedGame]);
+        setGamesInHoldingArea(gamesInHoldingArea.filter(g => g.id !== gameId));
+      }
+    } else {
+      // Check if moving to holding area (newDate is null)
+      if (!newDate) {
+        handleAddToHoldingArea(gameId);
+      } else {
+        // Move within calendar (update date)
+        const updatedGames = games.map(g => {
+          if (g.id === gameId) {
+            return { ...g, date: formatDate(newDate) };
+          }
+          return g;
+        });
+        setGames(updatedGames);
+      }
+    }
+  };
+
+  // Add game to holding area
+  const handleAddToHoldingArea = (gameId: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (game) {
+      setGamesInHoldingArea([...gamesInHoldingArea, game]);
+      setGames(games.filter(g => g.id !== gameId));
+    }
+  };
+
+  // Remove game from holding area (back to calendar with original date)
+  const handleRemoveFromHoldingArea = (gameId: string) => {
+    const game = gamesInHoldingArea.find(g => g.id === gameId);
+    if (game) {
+      setGames([...games, game]);
+      setGamesInHoldingArea(gamesInHoldingArea.filter(g => g.id !== gameId));
+    }
+  };
+
+  // Delete game from holding area
+  const handleDeleteFromHoldingArea = (gameId: string) => {
+    if (window.confirm("Are you sure you want to delete this game?")) {
+      setGamesInHoldingArea(gamesInHoldingArea.filter(g => g.id !== gameId));
+    }
+  };
+
+  // Game Copy Logic
+  const handleGameCopy = (game: Game) => {
+    const newGame: Game = {
+        ...game,
+        id: generateUUID(),
+        gameNumber: (game.gameNumber || 0) + 1 // Increment game number on copy
+    };
+    setGames([...games, newGame]);
+  };
+
+  // Game Delete Logic
+  const handleDeleteGame = (gameId: string) => {
+    if (window.confirm("Are you sure you want to delete this game?")) {
+        setGames(games.filter(g => g.id !== gameId));
+    }
+  };
+
+  // Remove All Games Logic
+  const handleRemoveAllGames = () => {
+    if (games.length === 0) {
+      alert("There are no games to remove.");
+      return;
+    }
+    
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ALL ${games.length} game(s)?\n\nThis action cannot be undone.`
+    );
+    
+    if (confirmed) {
+      setGames([]);
+      alert("All games have been removed.");
+    }
+  };
+
+  const handleGameClick = (game: Game) => {
+    setEditingGame(game);
+    // Initialize form with game's current values
+    const gameLeagueIds = getGameLeagueIds(game);
+    setNewGameForm({
+      date: game.date,
+      time: game.time,
+      location: game.location,
+      homeTeamId: game.homeTeamId,
+      awayTeamId: game.awayTeamId,
+      leagueIds: gameLeagueIds,
+      gameNumber: game.gameNumber,
+      seriesName: game.seriesName
+    });
+    setShowEditModal(true);
+  };
+
+  const handleGameUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingGame) return;
+    
+    if (!newGameForm.leagueIds || newGameForm.leagueIds.length === 0) {
+      alert("Please select at least one league.");
+      return;
+    }
+    
+    const updatedGame: Game = {
+      ...editingGame,
+      date: newGameForm.date || editingGame.date,
+      time: newGameForm.time || editingGame.time,
+      location: newGameForm.location || editingGame.location,
+      homeTeamId: newGameForm.homeTeamId || editingGame.homeTeamId,
+      awayTeamId: newGameForm.awayTeamId || editingGame.awayTeamId,
+      leagueIds: newGameForm.leagueIds || getGameLeagueIds(editingGame),
+      gameNumber: newGameForm.gameNumber || editingGame.gameNumber,
+      seriesName: newGameForm.seriesName !== undefined ? newGameForm.seriesName : editingGame.seriesName
+    };
+
+    if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
+      alert("Home and Away teams must be different.");
+      return;
+    }
+
+    setGames(games.map(g => g.id === editingGame.id ? updatedGame : g));
+    setShowEditModal(false);
+    setEditingGame(null);
+    // Reset form
+    setNewGameForm({
+      date: formatDate(new Date()),
+      time: '19:00',
+      location: 'Main Stadium',
+      gameNumber: 1,
+      leagueIds: []
+    });
+  };
+
+  const handleDateClick = (date: Date) => {
+    if (leagues.length === 0) {
+      alert("Please create a league first before scheduling games.");
+      return;
+    }
+    const defaultLeague = leagues.find(l => l.teams.some(t => t.id === teams[0]?.id)) || leagues[0];
+    setNewGameForm({ 
+        date: formatDate(date), 
+        time: '19:00',
+        location: 'Main Stadium',
+        leagueIds: defaultLeague ? [defaultLeague.id] : [],
+        gameNumber: 1
+    });
+    setShowAddModal(true);
+  };
+
+  const handleAddGameClick = () => {
+    if (leagues.length === 0) {
+        alert("Please create a league first before adding games.");
+        return;
+    }
+    const defaultLeague = leagues.find(l => l.teams.some(t => t.id === teams[0]?.id)) || leagues[0];
+    setNewGameForm({
+        date: formatDate(new Date()),
+        time: '19:00',
+        location: 'Main Stadium',
+        leagueIds: defaultLeague ? [defaultLeague.id] : [],
+        gameNumber: 1
+    });
+    setShowAddModal(true);
+  };
+
+  const handleAddGame = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newGameForm.homeTeamId && newGameForm.awayTeamId && newGameForm.date && newGameForm.leagueIds && newGameForm.leagueIds.length > 0) {
+        if(newGameForm.homeTeamId === newGameForm.awayTeamId) {
+            alert("Home and Away teams must be different.");
+            return;
+        }
+        const game: Game = {
+            id: generateUUID(),
+            homeTeamId: newGameForm.homeTeamId,
+            awayTeamId: newGameForm.awayTeamId,
+            date: newGameForm.date,
+            time: newGameForm.time || '19:00',
+            location: newGameForm.location || 'Stadium',
+            status: 'scheduled',
+            leagueIds: newGameForm.leagueIds,
+            gameNumber: newGameForm.gameNumber
+        };
+        setGames([...games, game]);
+        setShowAddModal(false);
+    }
+  };
+
+  // Team Logic
+  const handleUpdateTeam = (updatedTeam: Team) => {
+    setTeams(teams.map(t => t.id === updatedTeam.id ? updatedTeam : t));
+  };
+
+  // League Handlers
+  const handleLeagueCreated = (league: League) => {
+      setLeagues([...leagues, league]);
+      // Automatically switch to this league's teams
+      setTeams(league.teams);
+      setGames([]); // Clear games when switching to a fresh league context
+      alert(`League "${league.name}" created! You can now generate a schedule for it.`);
+      setViewMode('scheduler');
+  };
+
+  const handleLeagueUpdated = (updatedLeague: League) => {
+    setLeagues(leagues.map(l => l.id === updatedLeague.id ? updatedLeague : l));
+    // If the active roster belongs to this league, update it immediately
+    const isActiveLeague = teams.length > 0 && updatedLeague.teams.some(t => t.id === teams[0].id);
+    if (isActiveLeague) {
+        setTeams(updatedLeague.teams);
+    }
+    alert(`League "${updatedLeague.name}" updated successfully.`);
+  };
+
+  const handleLeagueSelectedForSchedule = (leagueId: string) => {
+      const league = leagues.find(l => l.id === leagueId);
+      if (league) {
+          setTeams(league.teams);
+      }
+  };
+
+  // Filter teams for manual add modal based on selected leagues
+  const formLeagues = newGameForm.leagueIds 
+    ? leagues.filter(l => newGameForm.leagueIds!.includes(l.id))
+    : [];
+  const formTeams = formLeagues.length > 0
+    ? Array.from(new Map(formLeagues.flatMap(l => l.teams).map(t => [t.id, t])).values())
+    : [];
+
+  if (missingKeycloakEnv.length > 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-8 text-center max-w-md">
+          <h1 className="text-xl font-semibold text-slate-800">Keycloak config missing</h1>
+          <p className="text-sm text-slate-600 mt-2">
+            Set the missing environment variables in `.env.local`, then restart the dev server.
+          </p>
+          <div className="mt-4 text-left text-sm text-slate-700 space-y-1">
+            {missingKeycloakEnv.map((envKey) => (
+              <div key={envKey}>{envKey}</div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!initialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-700">
+        <div className="text-center">
+          <div>Loading authentication...</div>
+          {authTimeout && (
+            <div className="mt-3 text-sm text-slate-500">
+              Taking longer than expected. Check that the Keycloak URL is reachable and
+              the realm/client are correct, then refresh the page.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (!keycloak.authenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-8 text-center max-w-sm">
+          <h1 className="text-xl font-semibold text-slate-800">Sign in required</h1>
+          <p className="text-sm text-slate-600 mt-2">
+            Please sign in with your Keycloak account to continue.
+          </p>
+          <button
+            className="mt-6 bg-indigo-600 text-white px-4 py-2 rounded-md shadow hover:bg-indigo-700 text-sm font-medium"
+            onClick={() => keycloak.login()}
+          >
+            Sign in
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-screen bg-slate-50 overflow-hidden">
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+        {/* Header */}
+        <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shrink-0">
+            <div className="flex-1 flex justify-between items-center">
+                <div className="flex items-center space-x-4">
+                  <div className="relative" ref={navMenuRef}>
+                    <button
+                      onClick={() => setShowNavMenu((prev) => !prev)}
+                      className="flex items-center space-x-3 px-2 py-1 rounded-md hover:bg-slate-100"
+                    >
+                      <img
+                        src="/logo.png"
+                        alt="Diamond Manager logo"
+                        className="h-8 w-8 rounded-lg object-contain bg-slate-100 p-1"
+                      />
+                      <div className="text-left">
+                        <div className="text-lg font-bold tracking-tight text-slate-900 flex items-center">
+                          <span>Diamond Manager</span>
+                          <ChevronDown size={16} className="ml-2 text-slate-500" />
+                        </div>
+                        <div className="text-xs text-indigo-500 uppercase tracking-wider">Scheduler</div>
+                      </div>
+                    </button>
+                    {showNavMenu && (
+                      <div className="absolute left-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                        <div className="py-2">
+                          {navItems.map(({ mode, label, icon: Icon }) => (
+                            <button
+                              key={mode}
+                              onClick={() => {
+                                setViewMode(mode);
+                                setShowNavMenu(false);
+                              }}
+                              className={`w-full flex items-center space-x-3 px-4 py-2 text-sm transition-colors ${
+                                viewMode === mode ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700 hover:bg-slate-100'
+                              }`}
+                            >
+                              <Icon size={18} />
+                              <span>{label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <h2 className="text-lg font-semibold text-slate-800 capitalize hidden md:block">
+                      {viewMode === 'league_builder' ? 'League Management' : viewMode === 'scheduler' ? 'Scheduler' : viewMode === 'teams' ? 'Teams' : viewMode === 'embed' ? 'Embed Code' : 'Calendar'}
+                  </h2>
+                </div>
+
+                <div className="flex items-center space-x-3 relative" ref={userMenuRef}>
+                  <button
+                    onClick={() => setShowUserMenu((prev) => !prev)}
+                    className="flex items-center space-x-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-md text-sm font-medium text-slate-700"
+                  >
+                    <UserCircle size={18} />
+                    <span className="hidden sm:inline">{userName}</span>
+                    <ChevronDown size={16} className="text-slate-500" />
+                  </button>
+                  {showUserMenu && (
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                      <div className="px-3 py-2 border-b border-slate-100">
+                        <div className="text-sm font-semibold text-slate-800">{userName}</div>
+                        <div className="text-xs text-slate-500">{userRole} · {userDomain}</div>
+                      </div>
+                      <div className="py-2">
+                        <ImportExport
+                          teams={teams}
+                          allGames={games}
+                          onImportGames={(newGames) => setGames([...games, ...newGames])}
+                          variant="menu"
+                          onAfterAction={() => setShowUserMenu(false)}
+                        />
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            setViewMode('calendar');
+                            handleAddGameClick();
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                          <span>Add Game</span>
+                          <PlusCircle size={16} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            handleRemoveAllGames();
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                        >
+                          <span>Remove All</span>
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                      <div className="border-t border-slate-100">
+                        <button
+                          onClick={() => keycloak.logout()}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                          <span>Sign out</span>
+                          <LogOut size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+            </div>
+        </header>
+
+        {/* Content Area */}
+        <div className="flex-1 overflow-auto p-6 relative">
+          {viewMode === 'calendar' && (
+            <>
+              <GameHoldingArea
+                games={gamesInHoldingArea}
+                teams={teams}
+                leagues={leagues}
+                onGameMove={handleGameMove}
+                onGameRemove={handleRemoveFromHoldingArea}
+                onGameClick={handleGameClick}
+              />
+              <Calendar 
+                currentDate={currentDate}
+                days={days} // Contains filtered games for Grid
+                filteredGames={filteredGames} // Contains filtered games for List
+                teams={teams}
+                leagues={leagues}
+                onPrevMonth={handlePrevMonth}
+                onNextMonth={handleNextMonth}
+                onGameClick={handleGameClick}
+                onDateClick={handleDateClick}
+                onGameMove={handleGameMove}
+                onGameCopy={handleGameCopy}
+                onDeleteGame={handleDeleteGame}
+                onAddToHoldingArea={handleAddToHoldingArea}
+                // View Controls
+                viewType={calendarView}
+                onViewTypeChange={setCalendarView}
+                selectedTeamId={selectedTeamId}
+                onTeamFilterChange={setSelectedTeamId}
+                selectedLeagueId={selectedLeagueId}
+                onLeagueFilterChange={setSelectedLeagueId}
+                selectedCategory={selectedCategory}
+                onCategoryFilterChange={setSelectedCategory}
+              />
+            </>
+          )}
+
+          {viewMode === 'teams' && (
+            <TeamList 
+              teams={teams}
+              onAddTeam={(t) => setTeams([...teams, t])}
+              onUpdateTeam={handleUpdateTeam}
+              onDeleteTeam={(id) => {
+                 setTeams(teams.filter(t => t.id !== id));
+                 setGames(games.filter(g => g.homeTeamId !== id && g.awayTeamId !== id)); // Cascade delete
+              }}
+            />
+          )}
+
+          {viewMode === 'league_builder' && (
+            <LeagueBuilder 
+                leagues={leagues}
+                onLeagueCreated={handleLeagueCreated}
+                onLeagueUpdated={handleLeagueUpdated}
+                existingTeams={teams}
+            />
+          )}
+
+          {viewMode === 'scheduler' && (
+            <ScheduleGenerator
+                leagues={leagues}
+                onLeagueSelected={handleLeagueSelectedForSchedule}
+                onScheduleGenerated={(g) => {
+                    if(confirm("This will replace the current schedule for this view. Continue?")) {
+                        setGames(g);
+                        setViewMode('calendar');
+                    }
+                }}
+            />
+          )}
+
+          {viewMode === 'embed' && (
+            <EmbedCodeGenerator
+                leagues={leagues}
+                teams={teams}
+                currentUrl={window.location.href}
+            />
+          )}
+
+        </div>
+
+        {/* Add Game Modal */}
+        {showAddModal && (
+            <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                        <h3 className="font-bold text-slate-800">Schedule Game</h3>
+                        <button onClick={() => setShowAddModal(false)}><X size={20} className="text-slate-400 hover:text-slate-600" /></button>
+                    </div>
+                    <form onSubmit={handleAddGame} className="p-6 space-y-4">
+                        
+                        {/* League Selection - Multi-select */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Leagues (select one or more)</label>
+                            <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
+                                {leagues.length === 0 ? (
+                                    <p className="text-sm text-slate-400">No leagues available. Create a league first.</p>
+                                ) : (
+                                    leagues.map(l => (
+                                        <label key={l.id} className="flex items-center space-x-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                            <input
+                                                type="checkbox"
+                                                checked={newGameForm.leagueIds?.includes(l.id) || false}
+                                                onChange={(e) => {
+                                                    const currentIds = newGameForm.leagueIds || [];
+                                                    if (e.target.checked) {
+                                                        setNewGameForm({...newGameForm, leagueIds: [...currentIds, l.id]});
+                                                    } else {
+                                                        setNewGameForm({...newGameForm, leagueIds: currentIds.filter(id => id !== l.id)});
+                                                    }
+                                                }}
+                                                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                            <span className="text-sm text-slate-700">{l.name} {l.category && <span className="text-slate-400">({l.category})</span>}</span>
+                                        </label>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                             <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                                <input required type="date" className="w-full border rounded-md p-2" value={newGameForm.date} onChange={e => setNewGameForm({...newGameForm, date: e.target.value})} />
+                             </div>
+                             <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
+                                <input required type="time" className="w-full border rounded-md p-2" value={newGameForm.time} onChange={e => setNewGameForm({...newGameForm, time: e.target.value})} />
+                             </div>
+                        </div>
+
+                         <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Game Number</label>
+                            <input 
+                                type="number" 
+                                min="1"
+                                className="w-full border rounded-md p-2" 
+                                value={newGameForm.gameNumber} 
+                                onChange={e => setNewGameForm({...newGameForm, gameNumber: parseInt(e.target.value)})} 
+                            />
+                         </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Home Team</label>
+                                <select required className="w-full border rounded-md p-2" value={newGameForm.homeTeamId || ''} onChange={e => setNewGameForm({...newGameForm, homeTeamId: e.target.value})}>
+                                    <option value="">Select...</option>
+                                    {formTeams.map((t: Team) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Away Team</label>
+                                <select required className="w-full border rounded-md p-2" value={newGameForm.awayTeamId || ''} onChange={e => setNewGameForm({...newGameForm, awayTeamId: e.target.value})}>
+                                    <option value="">Select...</option>
+                                    {formTeams.map((t: Team) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                             <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+                             <input className="w-full border rounded-md p-2" placeholder="Stadium Name" value={newGameForm.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})} />
+                        </div>
+                        
+                        <div className="pt-2">
+                            <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
+                                Add to Schedule
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        )}
+
+        {/* Edit Game Modal */}
+        {showEditModal && editingGame && (() => {
+          const editFormLeagueIds = newGameForm.leagueIds || getGameLeagueIds(editingGame);
+          const editFormLeagues = leagues.filter(l => editFormLeagueIds.includes(l.id));
+          const editFormTeams = editFormLeagues.length > 0
+            ? Array.from(new Map(editFormLeagues.flatMap(l => l.teams).map(t => [t.id, t])).values())
+            : [];
+          
+          const closeEditModal = () => {
+            setShowEditModal(false);
+            setEditingGame(null);
+            setNewGameForm({
+              date: formatDate(new Date()),
+              time: '19:00',
+              location: 'Main Stadium',
+              gameNumber: 1,
+              leagueIds: []
+            });
+          };
+          
+          return (
+            <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={closeEditModal}>
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                        <h3 className="font-bold text-slate-800">Edit Game</h3>
+                        <button onClick={closeEditModal}><X size={20} className="text-slate-400 hover:text-slate-600" /></button>
+                    </div>
+                    <form onSubmit={handleGameUpdate} className="p-6 space-y-4">
+                        
+                        {/* League Selection - Multi-select */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Leagues (select one or more)</label>
+                            <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
+                                {leagues.length === 0 ? (
+                                    <p className="text-sm text-slate-400">No leagues available.</p>
+                                ) : (
+                                    leagues.map(l => (
+                                        <label key={l.id} className="flex items-center space-x-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                                            <input
+                                                type="checkbox"
+                                                checked={editFormLeagueIds.includes(l.id)}
+                                                onChange={(e) => {
+                                                    const currentIds = newGameForm.leagueIds || getGameLeagueIds(editingGame);
+                                                    if (e.target.checked) {
+                                                        setNewGameForm({...newGameForm, leagueIds: [...currentIds, l.id]});
+                                                    } else {
+                                                        setNewGameForm({...newGameForm, leagueIds: currentIds.filter(id => id !== l.id)});
+                                                    }
+                                                }}
+                                                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                            <span className="text-sm text-slate-700">{l.name} {l.category && <span className="text-slate-400">({l.category})</span>}</span>
+                                        </label>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                             <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                                <input required type="date" className="w-full border rounded-md p-2" value={newGameForm.date || editingGame.date} onChange={e => setNewGameForm({...newGameForm, date: e.target.value})} />
+                             </div>
+                             <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
+                                <input required type="time" className="w-full border rounded-md p-2" value={newGameForm.time || editingGame.time} onChange={e => setNewGameForm({...newGameForm, time: e.target.value})} />
+                             </div>
+                        </div>
+
+                         <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Game Number</label>
+                            <input 
+                                type="number" 
+                                min="1"
+                                className="w-full border rounded-md p-2" 
+                                value={newGameForm.gameNumber !== undefined ? newGameForm.gameNumber : (editingGame.gameNumber || 1)} 
+                                onChange={e => setNewGameForm({...newGameForm, gameNumber: parseInt(e.target.value)})} 
+                            />
+                         </div>
+
+                        <div>
+                             <label className="block text-sm font-medium text-slate-700 mb-1">Series Name (optional)</label>
+                             <input 
+                                 className="w-full border rounded-md p-2" 
+                                 placeholder="e.g., Semifinal, Final" 
+                                 value={newGameForm.seriesName !== undefined ? newGameForm.seriesName : (editingGame.seriesName || '')} 
+                                 onChange={e => setNewGameForm({...newGameForm, seriesName: e.target.value})} 
+                             />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Home Team</label>
+                                <select required className="w-full border rounded-md p-2" value={newGameForm.homeTeamId || editingGame.homeTeamId || ''} onChange={e => setNewGameForm({...newGameForm, homeTeamId: e.target.value})}>
+                                    <option value="">Select...</option>
+                                    {editFormTeams.map((t: Team) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Away Team</label>
+                                <select required className="w-full border rounded-md p-2" value={newGameForm.awayTeamId || editingGame.awayTeamId || ''} onChange={e => setNewGameForm({...newGameForm, awayTeamId: e.target.value})}>
+                                    <option value="">Select...</option>
+                                    {editFormTeams.map((t: Team) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                             <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+                             <input className="w-full border rounded-md p-2" placeholder="Stadium Name" value={newGameForm.location || editingGame.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})} />
+                        </div>
+                        
+                        <div className="pt-2 flex space-x-2">
+                            <button type="button" onClick={closeEditModal} className="flex-1 bg-slate-200 text-slate-700 py-2 rounded-lg font-medium hover:bg-slate-300 transition-colors">
+                                Cancel
+                            </button>
+                            <button type="submit" className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+          );
+        })()}
+
+      </main>
+    </div>
+  );
+};
+
+export default App;
