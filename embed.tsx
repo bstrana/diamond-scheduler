@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import EmbeddableCalendar from './components/EmbeddableCalendar';
 import EmbeddableGameBar from './components/EmbeddableGameBar';
 import './index.css';
+import { loadPublishedScheduleByKey, StorageData } from './services/storage';
 
 // Get URL parameters
 const urlParams = new URLSearchParams(window.location.search);
@@ -13,6 +14,7 @@ const teamId = urlParams.get('team') || undefined;
 const view = (urlParams.get('view') as 'grid' | 'list') || 'grid';
 const height = urlParams.get('height') || (embedType === 'gamebar' ? '240px' : '800px');
 const stylesParam = urlParams.get('styles');
+const scheduleKey = urlParams.get('schedule_key') || undefined;
 
 // Parse and apply custom styles
 if (stylesParam) {
@@ -70,29 +72,80 @@ if (!rootElement) {
 } else {
   const root = ReactDOM.createRoot(rootElement);
 
-  if (embedType === 'gamebar') {
-    root.render(
-      <React.StrictMode>
+  const EmbeddedApp: React.FC = () => {
+    const [scheduleData, setScheduleData] = useState<StorageData | null>(null);
+    const [isLoading, setIsLoading] = useState(!!scheduleKey);
+
+    useEffect(() => {
+      if (!scheduleKey) {
+        setIsLoading(false);
+        return;
+      }
+      let isActive = true;
+      const loadSchedule = async () => {
+        const data = await loadPublishedScheduleByKey(scheduleKey);
+        if (!isActive) return;
+        setScheduleData(data);
+        setIsLoading(false);
+      };
+      loadSchedule();
+      return () => {
+        isActive = false;
+      };
+    }, []);
+
+    if (isLoading) {
+      return (
+        <div className="min-h-screen flex items-center justify-center text-slate-500">
+          Loading schedule...
+        </div>
+      );
+    }
+
+    if (scheduleKey && !scheduleData) {
+      return (
+        <div className="min-h-screen flex items-center justify-center text-slate-500">
+          Schedule not found.
+        </div>
+      );
+    }
+
+    if (embedType === 'gamebar') {
+      return (
         <EmbeddableGameBar
           initialLeagueId={leagueId}
           initialCategory={category}
           initialTeamId={teamId}
           height={height}
+          dataOverride={scheduleData ? {
+            leagues: scheduleData.leagues,
+            teams: scheduleData.teams,
+            games: scheduleData.games
+          } : null}
         />
-      </React.StrictMode>
+      );
+    }
+
+    return (
+      <EmbeddableCalendar
+        initialLeagueId={leagueId}
+        initialCategory={category}
+        initialTeamId={teamId}
+        initialView={view}
+        height={height}
+        dataOverride={scheduleData ? {
+          leagues: scheduleData.leagues,
+          teams: scheduleData.teams,
+          games: scheduleData.games
+        } : null}
+      />
     );
-  } else {
-    root.render(
-      <React.StrictMode>
-        <EmbeddableCalendar
-          initialLeagueId={leagueId}
-          initialCategory={category}
-          initialTeamId={teamId}
-          initialView={view}
-          height={height}
-        />
-      </React.StrictMode>
-    );
-  }
+  };
+
+  root.render(
+    <React.StrictMode>
+      <EmbeddedApp />
+    </React.StrictMode>
+  );
 }
 

@@ -10,13 +10,15 @@ interface EmbeddableGameBarProps {
   initialCategory?: string;
   initialTeamId?: string;
   height?: string;
+  dataOverride?: { leagues: League[]; teams: Team[]; games: Game[] } | null;
 }
 
 const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
   initialLeagueId,
   initialCategory,
   initialTeamId,
-  height = '240px'
+  height = '240px',
+  dataOverride = null
 }) => {
   // Load data from storage (local storage or PocketBase)
   const [leagues, setLeagues] = useState<League[]>([]);
@@ -37,6 +39,16 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
   useEffect(() => {
     let isActive = true;
     const hydrate = async () => {
+      if (dataOverride) {
+        setLeagues(dataOverride.leagues || []);
+        setGames(dataOverride.games || []);
+        const leagueTeams = dataOverride.leagues.flatMap((l: League) => l.teams || []);
+        const allTeams = [...(dataOverride.teams || []), ...leagueTeams];
+        const uniqueTeams = Array.from(new Map(allTeams.map(t => [t.id, t])).values());
+        setTeams(uniqueTeams.length > 0 ? uniqueTeams : MOCK_TEAMS);
+        return;
+      }
+
       const data = await loadStorageData({
         leagues: [],
         teams: MOCK_TEAMS,
@@ -57,7 +69,7 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [dataOverride]);
 
   const handleGameClick = (game: Game) => {
     const home = teams.find(t => t.id === game.homeTeamId);

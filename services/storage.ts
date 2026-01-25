@@ -13,6 +13,12 @@ export type StorageContext = {
   orgId?: string;
 };
 
+export type PublishedScheduleSummary = {
+  id: string;
+  scheduleKey: string;
+  scheduleName?: string;
+};
+
 const STORAGE_KEYS = {
   leagues: 'dsa_leagues',
   teams: 'dsa_teams',
@@ -206,3 +212,62 @@ export const publishScheduleNow = async (
   scheduleKey?: string,
   scheduleName?: string
 ): Promise<PublishResult> => saveScheduleToPocketBase(data, context, scheduleKey, scheduleName);
+
+export const listPublishedSchedules = async (
+  context?: StorageContext
+): Promise<PublishedScheduleSummary[]> => {
+  if (!pocketbaseClient || !scheduleCollection) return [];
+  const baseFilters = [`app_id="${appId}"`, 'active=true'];
+  const scopedFilters = [...baseFilters];
+  if (context?.orgId) {
+    scopedFilters.push(`org_id="${context.orgId}"`);
+  }
+  if (context?.userId) {
+    scopedFilters.push(`user_id="${context.userId}"`);
+  }
+  const scopedFilter = scopedFilters.join(' && ');
+  try {
+    const data = await pocketbaseClient
+      .collection(scheduleCollection)
+      .getList(1, 200, { filter: scopedFilter, sort: '-updated' });
+    let items = data.items || [];
+    if (items.length === 0 && scopedFilters.length > baseFilters.length) {
+      const fallback = await pocketbaseClient
+        .collection(scheduleCollection)
+        .getList(1, 200, { filter: baseFilters.join(' && '), sort: '-updated' });
+      items = fallback.items || [];
+    }
+    return items
+      .map((item: any) => ({
+        id: item.id,
+        scheduleKey: item.schedule_key || 'default',
+        scheduleName: item.schedule_name || undefined
+      }))
+      .filter((item) => item.scheduleKey);
+  } catch (error) {
+    console.warn('PocketBase schedule list failed.', error);
+    return [];
+  }
+};
+
+export const loadPublishedScheduleByKey = async (
+  scheduleKey: string
+): Promise<StorageData | null> => {
+  if (!pocketbaseClient || !scheduleCollection || !scheduleKey) return null;
+  try {
+    const record = await pocketbaseClient
+      .collection(scheduleCollection)
+      .getFirstListItem(`app_id="${appId}" && schedule_key="${scheduleKey}" && active=true`);
+    const data = (record as { data?: Partial<StorageData> }).data;
+    if (!data) return null;
+    return {
+      leagues: data.leagues || [],
+      teams: data.teams || [],
+      games: data.games || [],
+      gamesInHoldingArea: []
+    };
+  } catch (error) {
+    console.warn('PocketBase schedule fetch failed.', error);
+    return null;
+  }
+};

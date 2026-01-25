@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { League, Team } from '../types';
 import { Copy, Check, Code, ExternalLink } from 'lucide-react';
 import EmbedStyler, { EmbedStyles } from './EmbedStyler';
+import * as storageApi from '../services/storage';
 
 interface EmbedCodeGeneratorProps {
   leagues: League[];
@@ -16,6 +17,9 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
   const [embedView, setEmbedView] = useState<'calendar' | 'gamebar'>('calendar');
   const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
   const [height, setHeight] = useState<string>('800');
+  const [scheduleKey, setScheduleKey] = useState<string>('');
+  const [publishedSchedules, setPublishedSchedules] = useState<{ id: string; scheduleKey: string; scheduleName?: string }[]>([]);
+  const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showStyler, setShowStyler] = useState(false);
   const [embedStyles, setEmbedStyles] = useState<EmbedStyles | null>(null);
@@ -28,6 +32,22 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
       setHeight('800');
     }
   }, [embedView]);
+
+  useEffect(() => {
+    let isActive = true;
+    const loadSchedules = async () => {
+      if (!storageApi.listPublishedSchedules) return;
+      setIsLoadingSchedules(true);
+      const items = await storageApi.listPublishedSchedules();
+      if (!isActive) return;
+      setPublishedSchedules(items);
+      setIsLoadingSchedules(false);
+    };
+    loadSchedules();
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   // Get base URL (remove hash/query if present)
   const baseUrl = useMemo(() => {
@@ -46,6 +66,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
     if (selectedLeagueId !== 'all') params.set('league', selectedLeagueId);
     if (selectedCategory !== 'all') params.set('category', selectedCategory);
     if (selectedTeamId !== 'all') params.set('team', selectedTeamId);
+    if (scheduleKey) params.set('schedule_key', scheduleKey);
     if (embedView === 'calendar' && viewType !== 'grid') params.set('view', viewType);
     params.set('height', `${height}px`);
     
@@ -112,6 +133,28 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
         <h3 className="text-lg font-semibold text-slate-800">Configure Embed Settings</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Schedule Source */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Schedule Source</label>
+            <select
+              value={scheduleKey}
+              onChange={(e) => setScheduleKey(e.target.value)}
+              className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            >
+              <option value="">
+                {isLoadingSchedules ? 'Loading schedules...' : 'Local (current data)'}
+              </option>
+              {publishedSchedules.map((schedule) => (
+                <option key={schedule.id} value={schedule.scheduleKey}>
+                  {schedule.scheduleName || schedule.scheduleKey}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500 mt-1">
+              Select an active schedule published to the database.
+            </p>
+          </div>
+
           {/* League Filter */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Filter by League</label>

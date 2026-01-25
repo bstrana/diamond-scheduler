@@ -18,7 +18,8 @@ import {
   UserCircle,
   ChevronDown,
   LogOut,
-  Send
+  Send,
+  X
 } from 'lucide-react';
 import LeagueBuilder from './components/LeagueBuilder';
 import ScheduleGenerator from './components/ScheduleGenerator';
@@ -63,6 +64,20 @@ const App: React.FC = () => {
     (keycloak.tokenParsed as any)?.organization ||
     (keycloak.tokenParsed as any)?.tenant ||
     (keycloak.tokenParsed as any)?.org;
+  const scheduleScopeLabel = orgId
+    ? `org:${orgId}`
+    : userId
+      ? `user:${userId}`
+      : 'app only';
+
+  const loadPublishedSchedules = async () => {
+    setIsLoadingSchedules(true);
+    const items = storageApi.listPublishedSchedules
+      ? await storageApi.listPublishedSchedules({ userId, orgId })
+      : [];
+    setPublishedSchedules(items);
+    setIsLoadingSchedules(false);
+  };
 
   const navItems: { mode: ViewMode; label: string; icon: any }[] = [
     { mode: 'calendar', label: 'Calendar', icon: CalendarIcon },
@@ -158,20 +173,11 @@ const App: React.FC = () => {
     if (!scheduleName) {
       setScheduleName(storedName);
     }
-    let isActive = true;
     const loadSchedules = async () => {
-      setIsLoadingSchedules(true);
-      const items = storageApi.listPublishedSchedules
-        ? await storageApi.listPublishedSchedules({ userId, orgId })
-        : [];
-      if (!isActive) return;
-      setPublishedSchedules(items);
-      setIsLoadingSchedules(false);
+      await loadPublishedSchedules();
     };
     loadSchedules();
-    return () => {
-      isActive = false;
-    };
+    return () => {};
   }, [showUserMenu, userId, orgId, scheduleKey, scheduleName]);
 
   useEffect(() => {
@@ -612,7 +618,9 @@ const App: React.FC = () => {
                     <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
                       <div className="px-3 py-2 border-b border-slate-100">
                         <div className="text-sm font-semibold text-slate-800">{userName}</div>
-                        <div className="text-xs text-slate-500">{userRole} · {userDomain}</div>
+                        <div className="text-[11px] text-slate-400 mt-1">
+                          Org: {orgId || 'none'}
+                        </div>
                       </div>
                       <div className="py-2">
                         <ImportExport
@@ -645,6 +653,16 @@ const App: React.FC = () => {
                         </button>
                         <div className="px-3 pb-2 space-y-2">
                           <div className="text-xs font-semibold text-slate-500 uppercase">Schedule</div>
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>Scope: {scheduleScopeLabel}</span>
+                            <button
+                              type="button"
+                              onClick={loadPublishedSchedules}
+                              className="text-indigo-500 hover:text-indigo-600"
+                            >
+                              Refresh
+                            </button>
+                          </div>
                           <select
                             className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm"
                             value=""
@@ -657,7 +675,11 @@ const App: React.FC = () => {
                             }}
                           >
                             <option value="" disabled>
-                              {isLoadingSchedules ? 'Loading schedules...' : 'Select existing schedule'}
+                              {isLoadingSchedules
+                                ? 'Loading schedules...'
+                                : publishedSchedules.length === 0
+                                  ? 'No schedules found'
+                                  : 'Select existing schedule'}
                             </option>
                             {publishedSchedules.map((item) => (
                               <option key={item.id} value={item.id}>

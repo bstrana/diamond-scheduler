@@ -3,6 +3,7 @@ import { Team, Game, CalendarDay, League } from '../types';
 import { MOCK_TEAMS, INITIAL_GAMES } from '../constants';
 import { getMonthDays, formatDate } from '../utils';
 import Calendar from './Calendar';
+import { loadStorageData } from '../services/storage';
 
 interface EmbeddableCalendarProps {
   initialLeagueId?: string;
@@ -10,6 +11,7 @@ interface EmbeddableCalendarProps {
   initialTeamId?: string;
   initialView?: 'grid' | 'list';
   height?: string;
+  dataOverride?: { leagues: League[]; teams: Team[]; games: Game[] } | null;
 }
 
 const EmbeddableCalendar: React.FC<EmbeddableCalendarProps> = ({
@@ -17,31 +19,12 @@ const EmbeddableCalendar: React.FC<EmbeddableCalendarProps> = ({
   initialCategory,
   initialTeamId,
   initialView = 'grid',
-  height = '800px'
+  height = '800px',
+  dataOverride = null
 }) => {
-  // Load data from localStorage (shared with main app)
-  const [leagues] = useState<League[]>(() => {
-    const saved = localStorage.getItem('dsa_leagues');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [teams] = useState<Team[]>(() => {
-    const saved = localStorage.getItem('dsa_teams');
-    const savedTeams = saved ? JSON.parse(saved) : MOCK_TEAMS;
-    // Also include teams from leagues
-    const savedLeagues = localStorage.getItem('dsa_leagues');
-    const leagues = savedLeagues ? JSON.parse(savedLeagues) : [];
-    const leagueTeams = leagues.flatMap((l: League) => l.teams || []);
-    // Merge and deduplicate by id
-    const allTeams = [...savedTeams, ...leagueTeams];
-    const uniqueTeams = Array.from(new Map(allTeams.map(t => [t.id, t])).values());
-    return uniqueTeams.length > 0 ? uniqueTeams : MOCK_TEAMS;
-  });
-
-  const [games] = useState<Game[]>(() => {
-    const saved = localStorage.getItem('dsa_games');
-    return saved ? JSON.parse(saved) : INITIAL_GAMES;
-  });
+  const [leagues, setLeagues] = useState<League[]>([]);
+  const [teams, setTeams] = useState<Team[]>(MOCK_TEAMS);
+  const [games, setGames] = useState<Game[]>(INITIAL_GAMES);
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedTeamId, setSelectedTeamId] = useState<string>(initialTeamId || 'all');
@@ -55,6 +38,39 @@ const EmbeddableCalendar: React.FC<EmbeddableCalendarProps> = ({
     if (initialCategory) setSelectedCategory(initialCategory);
     if (initialTeamId) setSelectedTeamId(initialTeamId);
   }, [initialLeagueId, initialCategory, initialTeamId]);
+
+  useEffect(() => {
+    let isActive = true;
+    const hydrate = async () => {
+      if (dataOverride) {
+        setLeagues(dataOverride.leagues || []);
+        setGames(dataOverride.games || []);
+        const leagueTeams = dataOverride.leagues.flatMap((l: League) => l.teams || []);
+        const allTeams = [...(dataOverride.teams || []), ...leagueTeams];
+        const uniqueTeams = Array.from(new Map(allTeams.map(t => [t.id, t])).values());
+        setTeams(uniqueTeams.length > 0 ? uniqueTeams : MOCK_TEAMS);
+        return;
+      }
+
+      const data = await loadStorageData({
+        leagues: [],
+        teams: MOCK_TEAMS,
+        games: INITIAL_GAMES,
+        gamesInHoldingArea: []
+      });
+      if (!isActive) return;
+      setLeagues(data.leagues);
+      setGames(data.games);
+      const leagueTeams = data.leagues.flatMap((l: League) => l.teams || []);
+      const allTeams = [...data.teams, ...leagueTeams];
+      const uniqueTeams = Array.from(new Map(allTeams.map(t => [t.id, t])).values());
+      setTeams(uniqueTeams.length > 0 ? uniqueTeams : MOCK_TEAMS);
+    };
+    hydrate();
+    return () => {
+      isActive = false;
+    };
+  }, [dataOverride]);
 
   // Helper to get league IDs from a game (handles both old and new format)
   const getGameLeagueIds = (game: Game): string[] => {
