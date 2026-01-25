@@ -43,12 +43,15 @@ This app can publish its active schedule so other apps (e.g., scorekeeping) can 
 Set these optional variables in `.env.local`:
 - `VITE_PB_SCHEDULE_COLLECTION` (collection containing schedules)
 - `VITE_PB_SCHEDULE_PUBLISH` (`true`/`false`, default: `false`)
+- `VITE_PB_SCHEDULE_KEY` (default schedule key used for auto-publish)
 
 Published schedule record fields:
 - `app_id` (text)
 - `active` (boolean)
 - `org_id` (text, optional)
 - `user_id` (text, optional)
+- `schedule_key` (text, used to identify multiple schedules)
+- `schedule_name` (text, optional)
 - `data` (json) with `{ leagues, teams, games }`
 
 ### Tailwind CSS

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Team, League } from '../types';
-import { Plus, Trash2, Trophy, Save, Shield, Check, Settings2, FolderOpen } from 'lucide-react';
+import { Plus, Trash2, Trophy, Save, Shield, Check, Settings2, FolderOpen, Pencil, X } from 'lucide-react';
 import { generateUUID } from '../utils';
 
 interface LeagueBuilderProps {
@@ -22,6 +22,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
   
   // Teams State
   const [teams, setTeams] = useState<Team[]>([]);
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   
   // New Team Form State
   const [newTeam, setNewTeam] = useState<Partial<Team>>({
@@ -57,14 +58,18 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
     e.preventDefault();
     if (newTeam.name && newTeam.city && newTeam.abbreviation) {
       const team: Team = {
-        id: generateUUID(),
+        id: editingTeamId || generateUUID(),
         name: newTeam.name,
         city: newTeam.city,
         abbreviation: newTeam.abbreviation,
         primaryColor: newTeam.primaryColor || '#000000',
         logoUrl: newTeam.logoUrl || undefined
       };
-      setTeams([...teams, team]);
+      if (editingTeamId) {
+        setTeams(teams.map((existing) => (existing.id === editingTeamId ? team : existing)));
+      } else {
+        setTeams([...teams, team]);
+      }
       setNewTeam({ 
         name: '', 
         city: '', 
@@ -72,6 +77,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
         primaryColor: '#000000', 
         logoUrl: '' 
       });
+      setEditingTeamId(null);
     }
   };
 
@@ -84,6 +90,26 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
 
   const removeTeam = (id: string) => {
     setTeams(teams.filter(t => t.id !== id));
+    if (editingTeamId === id) {
+      setEditingTeamId(null);
+      setNewTeam({ name: '', city: '', abbreviation: '', primaryColor: '#000000', logoUrl: '' });
+    }
+  };
+
+  const handleEditTeam = (team: Team) => {
+    setEditingTeamId(team.id);
+    setNewTeam({
+      name: team.name,
+      city: team.city,
+      abbreviation: team.abbreviation,
+      primaryColor: team.primaryColor,
+      logoUrl: team.logoUrl || ''
+    });
+  };
+
+  const cancelEditTeam = () => {
+    setEditingTeamId(null);
+    setNewTeam({ name: '', city: '', abbreviation: '', primaryColor: '#000000', logoUrl: '' });
   };
 
   const handleSaveLeague = () => {
@@ -255,7 +281,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
               <div className="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center">
                     <Plus size={20} className="mr-2 text-indigo-600" />
-                    Create New Team
+                    {editingTeamId ? 'Edit Team' : 'Create New Team'}
                 </h3>
                 <form onSubmit={handleAddTeam} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                     <div className="md:col-span-3">
@@ -289,8 +315,19 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
                             </div>
                         )}
                     </div>
-                    <div className="md:col-span-2">
-                        <button type="submit" className="w-full h-9 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm font-medium">Add</button>
+                    <div className="md:col-span-2 space-y-2">
+                        <button type="submit" className="w-full h-9 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm font-medium">
+                          {editingTeamId ? 'Update' : 'Add'}
+                        </button>
+                        {editingTeamId && (
+                          <button
+                            type="button"
+                            onClick={cancelEditTeam}
+                            className="w-full h-9 border border-slate-200 text-slate-600 rounded hover:bg-slate-50 text-sm font-medium"
+                          >
+                            Cancel
+                          </button>
+                        )}
                     </div>
                 </form>
               </div>
@@ -368,9 +405,18 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
                         </div>
                       </div>
                     </div>
-                    <button onClick={() => removeTeam(team.id)} className="text-slate-300 hover:text-red-500 p-2">
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => handleEditTeam(team)}
+                        className="text-slate-400 hover:text-indigo-600 p-2"
+                        title="Edit Team"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button onClick={() => removeTeam(team.id)} className="text-slate-300 hover:text-red-500 p-2">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

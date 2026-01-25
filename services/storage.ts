@@ -29,6 +29,7 @@ const pocketbaseCollection = import.meta.env.VITE_PB_COLLECTION || DEFAULT_COLLE
 const scheduleCollection = import.meta.env.VITE_PB_SCHEDULE_COLLECTION;
 const schedulePublishEnabled =
   (import.meta.env.VITE_PB_SCHEDULE_PUBLISH || 'false').toLowerCase() === 'true';
+const scheduleKeyEnv = import.meta.env.VITE_PB_SCHEDULE_KEY;
 
 const parseArray = <T>(value: string | null, fallback: T[]): T[] => {
   if (!value) return fallback;
@@ -133,7 +134,9 @@ const formatPocketbaseError = (error: unknown) => {
 
 const saveScheduleToPocketBase = async (
   data: StorageData,
-  context?: StorageContext
+  context?: StorageContext,
+  scheduleKey?: string,
+  scheduleName?: string
 ): Promise<PublishResult> => {
   if (!schedulePublishEnabled) {
     return { ok: false, reason: 'Publish disabled. Set VITE_PB_SCHEDULE_PUBLISH=true.' };
@@ -152,6 +155,8 @@ const saveScheduleToPocketBase = async (
     active: true,
     org_id: context?.orgId,
     user_id: context?.userId,
+    schedule_key: scheduleKey || scheduleKeyEnv || 'default',
+    schedule_name: scheduleName,
     data: {
       leagues: data.leagues,
       teams: data.teams,
@@ -162,7 +167,7 @@ const saveScheduleToPocketBase = async (
   try {
     const record = await pocketbaseClient
       .collection(scheduleCollection)
-      .getFirstListItem(`app_id="${appId}"`);
+      .getFirstListItem(`app_id="${appId}" && schedule_key="${payload.schedule_key}"`);
     await pocketbaseClient.collection(scheduleCollection).update(record.id, payload);
     return { ok: true };
   } catch (error) {
@@ -181,7 +186,9 @@ const saveScheduleToPocketBase = async (
 
 export const persistStorageData = async (
   data: StorageData,
-  context?: StorageContext
+  context?: StorageContext,
+  scheduleKey?: string,
+  scheduleName?: string
 ): Promise<boolean> => {
   localStorage.setItem(STORAGE_KEYS.leagues, JSON.stringify(data.leagues));
   localStorage.setItem(STORAGE_KEYS.teams, JSON.stringify(data.teams));
@@ -189,11 +196,13 @@ export const persistStorageData = async (
   localStorage.setItem(STORAGE_KEYS.gamesInHoldingArea, JSON.stringify(data.gamesInHoldingArea));
 
   await saveToPocketBase(data);
-  const result = await saveScheduleToPocketBase(data, context);
+  const result = await saveScheduleToPocketBase(data, context, scheduleKey, scheduleName);
   return result.ok;
 };
 
 export const publishScheduleNow = async (
   data: StorageData,
-  context?: StorageContext
-): Promise<PublishResult> => saveScheduleToPocketBase(data, context);
+  context?: StorageContext,
+  scheduleKey?: string,
+  scheduleName?: string
+): Promise<PublishResult> => saveScheduleToPocketBase(data, context, scheduleKey, scheduleName);

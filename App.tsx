@@ -3,7 +3,7 @@ import { useKeycloak } from '@react-keycloak/web';
 import { Team, Game, ViewMode, League } from './types';
 import { MOCK_TEAMS, INITIAL_GAMES } from './constants';
 import { getMonthDays, formatDate, generateUUID } from './utils';
-import { loadStorageData, persistStorageData, publishScheduleNow } from './services/storage';
+import * as storageApi from './services/storage';
 import Calendar from './components/Calendar';
 import GameHoldingArea from './components/GameHoldingArea';
 import TeamList from './components/TeamList';
@@ -30,6 +30,10 @@ const App: React.FC = () => {
   const [showNavMenu, setShowNavMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [publishedSchedules, setPublishedSchedules] = useState<{ id: string; scheduleKey: string; scheduleName?: string }[]>([]);
+  const [scheduleKey, setScheduleKey] = useState('');
+  const [scheduleName, setScheduleName] = useState('');
+  const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
   const navMenuRef = useRef<HTMLDivElement | null>(null);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -106,7 +110,7 @@ const App: React.FC = () => {
   useEffect(() => {
     let isActive = true;
     const hydrate = async () => {
-      const data = await loadStorageData({
+      const data = await storageApi.loadStorageData({
         leagues: [],
         teams: MOCK_TEAMS,
         games: INITIAL_GAMES,
@@ -145,6 +149,32 @@ const App: React.FC = () => {
   }, [showUserMenu]);
 
   useEffect(() => {
+    if (!showUserMenu) return;
+    const storedKey = localStorage.getItem('dsa_schedule_publish_key') || '';
+    const storedName = localStorage.getItem('dsa_schedule_publish_name') || '';
+    if (!scheduleKey) {
+      setScheduleKey(storedKey || 'default');
+    }
+    if (!scheduleName) {
+      setScheduleName(storedName);
+    }
+    let isActive = true;
+    const loadSchedules = async () => {
+      setIsLoadingSchedules(true);
+      const items = storageApi.listPublishedSchedules
+        ? await storageApi.listPublishedSchedules({ userId, orgId })
+        : [];
+      if (!isActive) return;
+      setPublishedSchedules(items);
+      setIsLoadingSchedules(false);
+    };
+    loadSchedules();
+    return () => {
+      isActive = false;
+    };
+  }, [showUserMenu, userId, orgId, scheduleKey, scheduleName]);
+
+  useEffect(() => {
     if (!showNavMenu) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (navMenuRef.current && !navMenuRef.current.contains(event.target as Node)) {
@@ -158,7 +188,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!isHydrated) return;
     const timeoutId = window.setTimeout(() => {
-      persistStorageData(
+      storageApi.persistStorageData(
         {
           leagues,
           teams,
@@ -613,17 +643,69 @@ const App: React.FC = () => {
                           <span>Remove All</span>
                           <Trash2 size={16} />
                         </button>
+                        <div className="px-3 pb-2 space-y-2">
+                          <div className="text-xs font-semibold text-slate-500 uppercase">Schedule</div>
+                          <select
+                            className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm"
+                            value=""
+                            onChange={(e) => {
+                              const selected = publishedSchedules.find((item) => item.id === e.target.value);
+                              if (selected) {
+                                setScheduleKey(selected.scheduleKey);
+                                setScheduleName(selected.scheduleName || '');
+                              }
+                            }}
+                          >
+                            <option value="" disabled>
+                              {isLoadingSchedules ? 'Loading schedules...' : 'Select existing schedule'}
+                            </option>
+                            {publishedSchedules.map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.scheduleName || item.scheduleKey}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm"
+                            placeholder="Schedule name"
+                            value={scheduleName}
+                            onChange={(e) => setScheduleName(e.target.value)}
+                          />
+                          <input
+                            className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm"
+                            placeholder="Schedule key (unique id)"
+                            value={scheduleKey}
+                            onChange={(e) => setScheduleKey(e.target.value)}
+                          />
+                        </div>
                         <button
                           onClick={async () => {
-                            const result = await publishScheduleNow(
+                            const trimmedKey = scheduleKey.trim();
+                            if (!trimmedKey) {
+                              alert('Schedule key is required.');
+                              return;
+                            }
+                            const trimmedName = scheduleName.trim();
+                            const finalName = trimmedName || trimmedKey;
+                            localStorage.setItem('dsa_schedule_publish_key', scheduleKey);
+                            localStorage.setItem('dsa_schedule_publish_name', finalName);
+                            const result = await storageApi.publishScheduleNow(
                               {
                                 leagues,
                                 teams,
                                 games,
                                 gamesInHoldingArea
                               },
-                              { userId, orgId }
+                              { userId, orgId },
+                              trimmedKey,
+                              finalName
                             );
+                            if (result.ok) {
+                              const updated = storageApi.listPublishedSchedules
+                                ? await storageApi.listPublishedSchedules({ userId, orgId })
+                                : [];
+                              setPublishedSchedules(updated);
+                            }
                             setShowUserMenu(false);
                             alert(
                               result.ok
