@@ -41,26 +41,15 @@ PocketBase storage expects a collection with fields:
 This app can publish its active schedule so other apps (e.g., scorekeeping) can read it by org/user.
 
 Set these optional variables in `.env.local`:
-- `VITE_PB_SCHEDULE_COLLECTION` (collection containing schedules, default: `scheduled_games`)
+- `VITE_PB_SCHEDULE_COLLECTION` (collection containing schedules)
 - `VITE_PB_SCHEDULE_PUBLISH` (`true`/`false`, default: `false`)
-- `VITE_PB_SCHEDULE_TEAMS_COLLECTION` (teams collection, default: `teams`)
 
-Published schedule record fields (aligns with scorekeeping app):
-- `title` (text)
-- `date` (datetime)
-- `competition` (text)
-- `location` (text)
-- `status` (select: scheduled, in_progress, finished)
-- `home_team` (relation -> teams)
-- `away_team` (relation -> teams)
-- `home_roster` (relation -> rosters, optional)
-- `away_roster` (relation -> rosters, optional)
-- Optional: `org_id`, `user_id`, `app_id`
-
-Published teams fields (aligns with scorekeeping app):
-- `name` (text)
-- `logo_url` (url or text)
-- `color` (text)
+Published schedule record fields:
+- `app_id` (text)
+- `active` (boolean)
+- `org_id` (text, optional)
+- `user_id` (text, optional)
+- `data` (json) with `{ leagues, teams, games }`
 
 ### Tailwind CSS
 

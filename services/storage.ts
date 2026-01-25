@@ -29,8 +29,6 @@ const pocketbaseCollection = import.meta.env.VITE_PB_COLLECTION || DEFAULT_COLLE
 const scheduleCollection = import.meta.env.VITE_PB_SCHEDULE_COLLECTION;
 const schedulePublishEnabled =
   (import.meta.env.VITE_PB_SCHEDULE_PUBLISH || 'false').toLowerCase() === 'true';
-const scheduleTeamsCollection = import.meta.env.VITE_PB_SCHEDULE_TEAMS_COLLECTION || 'teams';
-const scheduleRostersCollection = import.meta.env.VITE_PB_SCHEDULE_ROSTERS_COLLECTION || 'rosters';
 
 const parseArray = <T>(value: string | null, fallback: T[]): T[] => {
   if (!value) return fallback;
@@ -115,104 +113,87 @@ export const loadStorageData = async (
   return baseData;
 };
 
-const formatTeamName = (team?: Team) => {
-  if (!team) return 'Unknown';
-  return `${team.city} ${team.name}`.trim();
+type PublishResult = { ok: boolean; reason?: string };
+
+const formatPocketbaseError = (error: unknown) => {
+  if (!error) return 'Unknown PocketBase error.';
+  const err = error as { status?: number; message?: string; data?: any };
+  if (err.data?.message) {
+    return `PocketBase ${err.status || ''} ${err.data.message}`.trim();
+  }
+  if (err.message) {
+    return `PocketBase ${err.status || ''} ${err.message}`.trim();
+  }
+  try {
+    return `PocketBase error: ${JSON.stringify(err)}`;
+  } catch {
+    return 'PocketBase error (unserializable).';
+  }
 };
 
-const upsertTeamRecord = async (team: Team, context?: StorageContext) => {
-  if (!pocketbaseClient) return null;
-  const name = formatTeamName(team);
+const saveScheduleToPocketBase = async (
+  data: StorageData,
+  context?: StorageContext
+): Promise<PublishResult> => {
+  if (!schedulePublishEnabled) {
+    return { ok: false, reason: 'Publish disabled. Set VITE_PB_SCHEDULE_PUBLISH=true.' };
+  }
+  if (!pocketbaseUrl) {
+    return { ok: false, reason: 'Missing VITE_PB_URL.' };
+  }
+  if (!scheduleCollection) {
+    return { ok: false, reason: 'Missing VITE_PB_SCHEDULE_COLLECTION.' };
+  }
+  if (!pocketbaseClient) {
+    return { ok: false, reason: 'PocketBase client not initialized.' };
+  }
+  const payload = {
+    app_id: appId,
+    active: true,
+    org_id: context?.orgId,
+    user_id: context?.userId,
+    data: {
+      leagues: data.leagues,
+      teams: data.teams,
+      games: data.games
+    }
+  };
+
   try {
-    const existing = await pocketbaseClient
-      .collection(scheduleTeamsCollection)
-      .getFirstListItem(`name="${name}"`);
-    await pocketbaseClient.collection(scheduleTeamsCollection).update(existing.id, {
-      name,
-      logo_url: team.logoUrl || '',
-      color: team.primaryColor,
-      org_id: context?.orgId,
-      user_id: context?.userId
-    });
-    return existing.id;
+    const record = await pocketbaseClient
+      .collection(scheduleCollection)
+      .getFirstListItem(`app_id="${appId}"`);
+    await pocketbaseClient.collection(scheduleCollection).update(record.id, payload);
+    return { ok: true };
   } catch (error) {
     try {
-      const created = await pocketbaseClient.collection(scheduleTeamsCollection).create({
-        name,
-        logo_url: team.logoUrl || '',
-        color: team.primaryColor,
-        org_id: context?.orgId,
-        user_id: context?.userId
-      });
-      return created.id;
+      await pocketbaseClient.collection(scheduleCollection).create(payload);
+      return { ok: true };
     } catch (createError) {
-      console.warn('PocketBase team publish failed.', createError);
-      return null;
+      console.warn('PocketBase schedule publish failed.', createError);
+      return {
+        ok: false,
+        reason: formatPocketbaseError(createError)
+      };
     }
   }
 };
 
-const saveScheduleToPocketBase = async (data: StorageData, context?: StorageContext) => {
-  if (!pocketbaseClient || !scheduleCollection || !schedulePublishEnabled) return;
-  const leagueNameById = new Map(data.leagues.map((league) => [league.id, league.name]));
-  const teamById = new Map(data.teams.map((team) => [team.id, team]));
-
-  const upsertedTeams = new Map<string, string>();
-  for (const team of data.teams) {
-    const recordId = await upsertTeamRecord(team, context);
-    if (recordId) {
-      upsertedTeams.set(team.id, recordId);
-    }
-  }
-
-  for (const game of data.games) {
-    const homeTeam = teamById.get(game.homeTeamId);
-    const awayTeam = teamById.get(game.awayTeamId);
-    const homeTeamId = homeTeam ? upsertedTeams.get(homeTeam.id) : null;
-    const awayTeamId = awayTeam ? upsertedTeams.get(awayTeam.id) : null;
-
-    const competition =
-      (game.leagueIds && game.leagueIds[0] && leagueNameById.get(game.leagueIds[0])) ||
-      (game.leagueId && leagueNameById.get(game.leagueId)) ||
-      'Schedule';
-
-    const dateTime = new Date(`${game.date}T${game.time || '19:00'}:00`);
-    const payload = {
-      title: `${formatTeamName(awayTeam)} @ ${formatTeamName(homeTeam)}`,
-      date: dateTime.toISOString(),
-      competition,
-      location: game.location,
-      status: 'scheduled',
-      home_team: homeTeamId,
-      away_team: awayTeamId,
-      home_roster: null,
-      away_roster: null,
-      org_id: context?.orgId,
-      user_id: context?.userId,
-      app_id: appId
-    };
-
-    try {
-      const existing = await pocketbaseClient
-        .collection(scheduleCollection)
-        .getFirstListItem(`title="${payload.title}" && date="${payload.date}"`);
-      await pocketbaseClient.collection(scheduleCollection).update(existing.id, payload);
-    } catch (error) {
-      try {
-        await pocketbaseClient.collection(scheduleCollection).create(payload);
-      } catch (createError) {
-        console.warn('PocketBase schedule publish failed.', createError);
-      }
-    }
-  }
-};
-
-export const persistStorageData = async (data: StorageData, context?: StorageContext) => {
+export const persistStorageData = async (
+  data: StorageData,
+  context?: StorageContext
+): Promise<boolean> => {
   localStorage.setItem(STORAGE_KEYS.leagues, JSON.stringify(data.leagues));
   localStorage.setItem(STORAGE_KEYS.teams, JSON.stringify(data.teams));
   localStorage.setItem(STORAGE_KEYS.games, JSON.stringify(data.games));
   localStorage.setItem(STORAGE_KEYS.gamesInHoldingArea, JSON.stringify(data.gamesInHoldingArea));
 
   await saveToPocketBase(data);
-  await saveScheduleToPocketBase(data, context);
+  const result = await saveScheduleToPocketBase(data, context);
+  return result.ok;
 };
+
+export const publishScheduleNow = async (
+  data: StorageData,
+  context?: StorageContext
+): Promise<PublishResult> => saveScheduleToPocketBase(data, context);

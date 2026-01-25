@@ -3,7 +3,7 @@ import { useKeycloak } from '@react-keycloak/web';
 import { Team, Game, ViewMode, League } from './types';
 import { MOCK_TEAMS, INITIAL_GAMES } from './constants';
 import { getMonthDays, formatDate, generateUUID } from './utils';
-import { loadStorageData, persistStorageData } from './services/storage';
+import { loadStorageData, persistStorageData, publishScheduleNow } from './services/storage';
 import Calendar from './components/Calendar';
 import GameHoldingArea from './components/GameHoldingArea';
 import TeamList from './components/TeamList';
@@ -17,7 +17,8 @@ import {
   Trash2,
   UserCircle,
   ChevronDown,
-  LogOut
+  LogOut,
+  Send
 } from 'lucide-react';
 import LeagueBuilder from './components/LeagueBuilder';
 import ScheduleGenerator from './components/ScheduleGenerator';
@@ -611,6 +612,29 @@ const App: React.FC = () => {
                         >
                           <span>Remove All</span>
                           <Trash2 size={16} />
+                        </button>
+                        <button
+                          onClick={async () => {
+                            const result = await publishScheduleNow(
+                              {
+                                leagues,
+                                teams,
+                                games,
+                                gamesInHoldingArea
+                              },
+                              { userId, orgId }
+                            );
+                            setShowUserMenu(false);
+                            alert(
+                              result.ok
+                                ? 'Schedule published to PocketBase.'
+                                : `Schedule publish failed. ${result.reason || 'Check PocketBase URL and rules.'}`
+                            );
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                          <span>Publish Schedule</span>
+                          <Send size={16} />
                         </button>
                       </div>
                       <div className="border-t border-slate-100">
