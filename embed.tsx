@@ -15,6 +15,9 @@ const view = (urlParams.get('view') as 'grid' | 'list') || 'grid';
 const height = urlParams.get('height') || (embedType === 'gamebar' ? '240px' : '800px');
 const stylesParam = urlParams.get('styles');
 const scheduleKey = urlParams.get('schedule_key') || undefined;
+const hideLeagueFilter = urlParams.get('hide_league_filter') === '1';
+const hideCategoryFilter = urlParams.get('hide_category_filter') === '1';
+const hideTeamFilter = urlParams.get('hide_team_filter') === '1';
 
 // Parse and apply custom styles
 if (stylesParam) {
@@ -122,6 +125,9 @@ if (!rootElement) {
             teams: scheduleData.teams,
             games: scheduleData.games
           } : null}
+          hideLeagueFilter={hideLeagueFilter}
+          hideCategoryFilter={hideCategoryFilter}
+          hideTeamFilter={hideTeamFilter}
         />
       );
     }
@@ -138,6 +144,9 @@ if (!rootElement) {
           teams: scheduleData.teams,
           games: scheduleData.games
         } : null}
+        hideLeagueFilter={hideLeagueFilter}
+        hideCategoryFilter={hideCategoryFilter}
+        hideTeamFilter={hideTeamFilter}
       />
     );
   };

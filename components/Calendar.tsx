@@ -27,6 +27,9 @@ interface CalendarProps {
   onLeagueFilterChange: (id: string) => void;
   selectedCategory: string;
   onCategoryFilterChange: (category: string) => void;
+  hideLeagueFilter?: boolean;
+  hideCategoryFilter?: boolean;
+  hideTeamFilter?: boolean;
 }
 
 const Calendar: React.FC<CalendarProps> = ({ 
@@ -50,7 +53,10 @@ const Calendar: React.FC<CalendarProps> = ({
   selectedLeagueId,
   onLeagueFilterChange,
   selectedCategory,
-  onCategoryFilterChange
+  onCategoryFilterChange,
+  hideLeagueFilter = false,
+  hideCategoryFilter = false,
+  hideTeamFilter = false
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -159,7 +165,7 @@ const Calendar: React.FC<CalendarProps> = ({
         <div className="flex items-center space-x-2 w-full md:w-auto justify-end flex-wrap gap-2">
             
             {/* League Filter */}
-            {leagues.length > 0 && (
+            {leagues.length > 0 && !hideLeagueFilter && (
                 <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
                     <Filter size={16} className="text-slate-400" />
                     <select 
@@ -177,7 +183,7 @@ const Calendar: React.FC<CalendarProps> = ({
             )}
 
             {/* Category Filter */}
-            {leagues.length > 0 && (() => {
+            {!hideCategoryFilter && leagues.length > 0 && (() => {
                 const categories = Array.from(new Set(leagues.map(l => l.category).filter(Boolean)));
                 return categories.length > 0 ? (
                     <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
@@ -198,20 +204,22 @@ const Calendar: React.FC<CalendarProps> = ({
             })()}
             
             {/* Team Filter */}
-            <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
-                <Filter size={16} className="text-slate-400" />
-                <select 
-                    value={selectedTeamId}
-                    onChange={(e) => onTeamFilterChange(e.target.value)}
-                    className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
-                >
-                    <option value="all">All Teams</option>
-                    <option disabled>──────────</option>
-                    {teams.map(t => (
-                        <option key={t.id} value={t.id}>{t.city} {t.name}</option>
-                    ))}
-                </select>
-            </div>
+            {!hideTeamFilter && (
+              <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
+                  <Filter size={16} className="text-slate-400" />
+                  <select 
+                      value={selectedTeamId}
+                      onChange={(e) => onTeamFilterChange(e.target.value)}
+                      className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
+                  >
+                      <option value="all">All Teams</option>
+                      <option disabled>──────────</option>
+                      {teams.map(t => (
+                          <option key={t.id} value={t.id}>{t.city} {t.name}</option>
+                      ))}
+                  </select>
+              </div>
+            )}
 
             {/* View Toggle */}
             <div className="flex bg-slate-200 p-1 rounded-lg">

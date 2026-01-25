@@ -15,6 +15,9 @@ interface GameBarProps {
   onLeagueFilterChange: (id: string) => void;
   onCategoryFilterChange: (category: string) => void;
   hideFilters?: boolean; // Hide filters for single team embeds
+  hideLeagueFilter?: boolean;
+  hideCategoryFilter?: boolean;
+  hideTeamFilter?: boolean;
 }
 
 const GameBar: React.FC<GameBarProps> = ({
@@ -28,7 +31,10 @@ const GameBar: React.FC<GameBarProps> = ({
   onTeamFilterChange,
   onLeagueFilterChange,
   onCategoryFilterChange,
-  hideFilters = false
+  hideFilters = false,
+  hideLeagueFilter = false,
+  hideCategoryFilter = false,
+  hideTeamFilter = false
 }) => {
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const [scrollPosition, setScrollPosition] = React.useState(0);
@@ -173,7 +179,7 @@ const GameBar: React.FC<GameBarProps> = ({
                   }}
                 >
                   {/* League Filter */}
-                  {leagues.length > 0 && (
+                  {leagues.length > 0 && !hideLeagueFilter && (
                     <div className="space-y-1">
                       <div className="text-xs font-semibold text-slate-500">League</div>
                       <select 
@@ -200,7 +206,7 @@ const GameBar: React.FC<GameBarProps> = ({
                   )}
 
                   {/* Category Filter */}
-                  {categories.length > 0 && (
+                  {categories.length > 0 && !hideCategoryFilter && (
                     <div className="space-y-1">
                       <div className="text-xs font-semibold text-slate-500">Category</div>
                       <select 
@@ -227,29 +233,31 @@ const GameBar: React.FC<GameBarProps> = ({
                   )}
 
                   {/* Team Filter */}
-                  <div className="space-y-1">
-                    <div className="text-xs font-semibold text-slate-500">Team</div>
-                    <select 
-                      value={selectedTeamId}
-                      onChange={(e) => onTeamFilterChange(e.target.value)}
-                      className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2"
-                      style={{
-                        backgroundColor: 'var(--embed-card-bg, #ffffff)',
-                        border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)',
-                        borderRadius: 'var(--embed-card-radius, 0.375rem)',
-                        color: 'var(--embed-text, #334155)',
-                        fontFamily: 'var(--embed-font, inherit)',
-                        fontSize: 'var(--embed-font-size, 0.875rem)',
-                        '--tw-ring-color': 'var(--embed-primary, #4f46e5)'
-                      } as React.CSSProperties}
-                    >
-                      <option value="all">All Teams</option>
-                      <option disabled>──────────</option>
-                      {teams.map(t => (
-                        <option key={t.id} value={t.id}>{t.city} {t.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                  {!hideTeamFilter && (
+                    <div className="space-y-1">
+                      <div className="text-xs font-semibold text-slate-500">Team</div>
+                      <select 
+                        value={selectedTeamId}
+                        onChange={(e) => onTeamFilterChange(e.target.value)}
+                        className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2"
+                        style={{
+                          backgroundColor: 'var(--embed-card-bg, #ffffff)',
+                          border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)',
+                          borderRadius: 'var(--embed-card-radius, 0.375rem)',
+                          color: 'var(--embed-text, #334155)',
+                          fontFamily: 'var(--embed-font, inherit)',
+                          fontSize: 'var(--embed-font-size, 0.875rem)',
+                          '--tw-ring-color': 'var(--embed-primary, #4f46e5)'
+                        } as React.CSSProperties}
+                      >
+                        <option value="all">All Teams</option>
+                        <option disabled>──────────</option>
+                        {teams.map(t => (
+                          <option key={t.id} value={t.id}>{t.city} {t.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

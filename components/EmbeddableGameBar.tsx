@@ -11,6 +11,9 @@ interface EmbeddableGameBarProps {
   initialTeamId?: string;
   height?: string;
   dataOverride?: { leagues: League[]; teams: Team[]; games: Game[] } | null;
+  hideLeagueFilter?: boolean;
+  hideCategoryFilter?: boolean;
+  hideTeamFilter?: boolean;
 }
 
 const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
@@ -18,7 +21,10 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
   initialCategory,
   initialTeamId,
   height = '240px',
-  dataOverride = null
+  dataOverride = null,
+  hideLeagueFilter = false,
+  hideCategoryFilter = false,
+  hideTeamFilter = false
 }) => {
   // Load data from storage (local storage or PocketBase)
   const [leagues, setLeagues] = useState<League[]>([]);
@@ -101,6 +107,9 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
         onLeagueFilterChange={setSelectedLeagueId}
         onCategoryFilterChange={setSelectedCategory}
         hideFilters={hideFilters}
+        hideLeagueFilter={hideLeagueFilter}
+        hideCategoryFilter={hideCategoryFilter}
+        hideTeamFilter={hideTeamFilter}
       />
     </div>
   );

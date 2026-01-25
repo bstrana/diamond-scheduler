@@ -20,6 +20,9 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
   const [scheduleKey, setScheduleKey] = useState<string>('');
   const [publishedSchedules, setPublishedSchedules] = useState<{ id: string; scheduleKey: string; scheduleName?: string }[]>([]);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
+  const [hideLeagueFilter, setHideLeagueFilter] = useState(false);
+  const [hideCategoryFilter, setHideCategoryFilter] = useState(false);
+  const [hideTeamFilter, setHideTeamFilter] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showStyler, setShowStyler] = useState(false);
   const [embedStyles, setEmbedStyles] = useState<EmbedStyles | null>(null);
@@ -67,6 +70,9 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
     if (selectedCategory !== 'all') params.set('category', selectedCategory);
     if (selectedTeamId !== 'all') params.set('team', selectedTeamId);
     if (scheduleKey) params.set('schedule_key', scheduleKey);
+    if (hideLeagueFilter) params.set('hide_league_filter', '1');
+    if (hideCategoryFilter) params.set('hide_category_filter', '1');
+    if (hideTeamFilter) params.set('hide_team_filter', '1');
     if (embedView === 'calendar' && viewType !== 'grid') params.set('view', viewType);
     params.set('height', `${height}px`);
     
@@ -85,7 +91,20 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
     }
     
     return `${baseUrl}/embed.html${params.toString() ? '?' + params.toString() : ''}`;
-  }, [baseUrl, embedView, selectedLeagueId, selectedCategory, selectedTeamId, viewType, height, embedStyles]);
+  }, [
+    baseUrl,
+    embedView,
+    selectedLeagueId,
+    selectedCategory,
+    selectedTeamId,
+    viewType,
+    height,
+    embedStyles,
+    scheduleKey,
+    hideLeagueFilter,
+    hideCategoryFilter,
+    hideTeamFilter
+  ]);
 
   // Generate embed code
   const embedCode = useMemo(() => {
@@ -153,6 +172,40 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
             <p className="text-xs text-slate-500 mt-1">
               Select an active schedule published to the database.
             </p>
+          </div>
+
+          {/* Filter Visibility */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Show Filters</label>
+            <div className="space-y-2 rounded-md border border-slate-200 p-3 text-sm">
+              <label className="flex items-center space-x-2 text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={!hideLeagueFilter}
+                  onChange={(e) => setHideLeagueFilter(!e.target.checked)}
+                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>League filter</span>
+              </label>
+              <label className="flex items-center space-x-2 text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={!hideCategoryFilter}
+                  onChange={(e) => setHideCategoryFilter(!e.target.checked)}
+                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>Category filter</span>
+              </label>
+              <label className="flex items-center space-x-2 text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={!hideTeamFilter}
+                  onChange={(e) => setHideTeamFilter(!e.target.checked)}
+                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>Team filter</span>
+              </label>
+            </div>
           </div>
 
           {/* League Filter */}

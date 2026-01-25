@@ -12,6 +12,9 @@ interface EmbeddableCalendarProps {
   initialView?: 'grid' | 'list';
   height?: string;
   dataOverride?: { leagues: League[]; teams: Team[]; games: Game[] } | null;
+  hideLeagueFilter?: boolean;
+  hideCategoryFilter?: boolean;
+  hideTeamFilter?: boolean;
 }
 
 const EmbeddableCalendar: React.FC<EmbeddableCalendarProps> = ({
@@ -20,7 +23,10 @@ const EmbeddableCalendar: React.FC<EmbeddableCalendarProps> = ({
   initialTeamId,
   initialView = 'grid',
   height = '800px',
-  dataOverride = null
+  dataOverride = null,
+  hideLeagueFilter = false,
+  hideCategoryFilter = false,
+  hideTeamFilter = false
 }) => {
   const [leagues, setLeagues] = useState<League[]>([]);
   const [teams, setTeams] = useState<Team[]>(MOCK_TEAMS);
@@ -179,6 +185,9 @@ const EmbeddableCalendar: React.FC<EmbeddableCalendarProps> = ({
         onLeagueFilterChange={setSelectedLeagueId}
         selectedCategory={selectedCategory}
         onCategoryFilterChange={setSelectedCategory}
+        hideLeagueFilter={hideLeagueFilter}
+        hideCategoryFilter={hideCategoryFilter}
+        hideTeamFilter={hideTeamFilter}
       />
     </div>
   );
