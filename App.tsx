@@ -35,6 +35,12 @@ const App: React.FC = () => {
   const [scheduleKey, setScheduleKey] = useState('');
   const [scheduleName, setScheduleName] = useState('');
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
+  const [scheduleLeagueId, setScheduleLeagueId] = useState<string>('');
+
+  const maxLeagues = Number.parseInt(import.meta.env.VITE_LEAGUE_LIMIT || '', 10);
+  const maxTeams = Number.parseInt(import.meta.env.VITE_TEAM_LIMT || '', 10);
+  const leagueLimit = Number.isFinite(maxLeagues) ? maxLeagues : undefined;
+  const teamLimit = Number.isFinite(maxTeams) ? maxTeams : undefined;
   const navMenuRef = useRef<HTMLDivElement | null>(null);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
@@ -466,6 +472,10 @@ const App: React.FC = () => {
 
   // League Handlers
   const handleLeagueCreated = (league: League) => {
+      if (leagueLimit && leagues.length >= leagueLimit) {
+        alert(`League limit reached (${leagueLimit}).`);
+        return;
+      }
       setLeagues([...leagues, league]);
       // Automatically switch to this league's teams
       setTeams(league.teams);
@@ -484,11 +494,46 @@ const App: React.FC = () => {
     alert(`League "${updatedLeague.name}" updated successfully.`);
   };
 
+  const handleLeagueDeleted = (leagueId: string) => {
+    const leagueToDelete = leagues.find(l => l.id === leagueId);
+    const updatedLeagues = leagues.filter(l => l.id !== leagueId);
+    setLeagues(updatedLeagues);
+
+    const isActiveLeague = teams.length > 0 && leagueToDelete?.teams.some(t => t.id === teams[0].id);
+    if (isActiveLeague) {
+      setTeams([]);
+      setGames([]);
+      setViewMode('league_builder');
+    }
+
+    const updatedGames = games.filter(g => {
+      const gameLeagueIds = g.leagueIds && g.leagueIds.length > 0
+        ? g.leagueIds
+        : g.leagueId
+          ? [g.leagueId]
+          : [];
+      return !gameLeagueIds.includes(leagueId);
+    });
+    setGames(updatedGames);
+
+    if (selectedLeagueId === leagueId) {
+      setSelectedLeagueId('all');
+    }
+    if (scheduleLeagueId === leagueId) {
+      setScheduleLeagueId('');
+    }
+
+    if (leagueToDelete) {
+      alert(`League "${leagueToDelete.name}" deleted.`);
+    }
+  };
+
   const handleLeagueSelectedForSchedule = (leagueId: string) => {
       const league = leagues.find(l => l.id === leagueId);
       if (league) {
           setTeams(league.teams);
       }
+      setScheduleLeagueId(leagueId);
   };
 
   // Filter teams for manual add modal based on selected leagues
@@ -600,6 +645,23 @@ const App: React.FC = () => {
                       </div>
                     )}
                   </div>
+                  <div className="hidden md:flex items-center space-x-1">
+                    {navItems.map(({ mode, label, icon: Icon }) => (
+                      <button
+                        key={mode}
+                        onClick={() => setViewMode(mode)}
+                        className={`p-2 rounded-md transition-colors ${
+                          viewMode === mode
+                            ? 'bg-indigo-600 text-white shadow'
+                            : 'text-slate-500 hover:text-indigo-600 hover:bg-indigo-50'
+                        }`}
+                        title={label}
+                        aria-label={label}
+                      >
+                        <Icon size={18} />
+                      </button>
+                    ))}
+                  </div>
                   <h2 className="text-lg font-semibold text-slate-800 capitalize hidden md:block">
                       {viewMode === 'league_builder' ? 'League Management' : viewMode === 'scheduler' ? 'Scheduler' : viewMode === 'teams' ? 'Teams' : viewMode === 'embed' ? 'Embed Code' : 'Calendar'}
                   </h2>
@@ -708,7 +770,14 @@ const App: React.FC = () => {
                               return;
                             }
                             const trimmedName = scheduleName.trim();
-                            const finalName = trimmedName || trimmedKey;
+                            const baseName = trimmedName || trimmedKey;
+                            const leagueForName = scheduleLeagueId
+                              ? leagues.find((league) => league.id === scheduleLeagueId)
+                              : leagues[0];
+                            const leagueSuffix = leagueForName
+                              ? `${leagueForName.name}${leagueForName.category ? ` ${leagueForName.category}` : ''}`
+                              : '';
+                            const finalName = leagueSuffix ? `${baseName} - ${leagueSuffix}` : baseName;
                             localStorage.setItem('dsa_schedule_publish_key', scheduleKey);
                             localStorage.setItem('dsa_schedule_publish_name', finalName);
                             const result = await storageApi.publishScheduleNow(
@@ -798,12 +867,19 @@ const App: React.FC = () => {
           {viewMode === 'teams' && (
             <TeamList 
               teams={teams}
-              onAddTeam={(t) => setTeams([...teams, t])}
+              onAddTeam={(t) => {
+                if (teamLimit && teams.length >= teamLimit) {
+                  alert(`Team limit reached (${teamLimit}).`);
+                  return;
+                }
+                setTeams([...teams, t]);
+              }}
               onUpdateTeam={handleUpdateTeam}
               onDeleteTeam={(id) => {
                  setTeams(teams.filter(t => t.id !== id));
                  setGames(games.filter(g => g.homeTeamId !== id && g.awayTeamId !== id)); // Cascade delete
               }}
+              maxTeams={teamLimit}
             />
           )}
 
@@ -812,7 +888,10 @@ const App: React.FC = () => {
                 leagues={leagues}
                 onLeagueCreated={handleLeagueCreated}
                 onLeagueUpdated={handleLeagueUpdated}
+                onLeagueDeleted={handleLeagueDeleted}
                 existingTeams={teams}
+                maxLeagues={leagueLimit}
+                maxTeams={teamLimit}
             />
           )}
 

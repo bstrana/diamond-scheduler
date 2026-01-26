@@ -3,6 +3,12 @@ export interface Team {
   name: string;
   city: string;
   abbreviation: string;
+  country?: string;
+  roster?: Array<{
+    number: number;
+    name: string;
+    position: string;
+  }>;
   primaryColor: string;
   secondaryColor?: string;
   logoUrl?: string;

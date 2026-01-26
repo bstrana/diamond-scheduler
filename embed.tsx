@@ -12,7 +12,7 @@ const leagueId = urlParams.get('league') || undefined;
 const category = urlParams.get('category') || undefined;
 const teamId = urlParams.get('team') || undefined;
 const view = (urlParams.get('view') as 'grid' | 'list') || 'grid';
-const height = urlParams.get('height') || (embedType === 'gamebar' ? '240px' : '800px');
+const height = urlParams.get('height') || (embedType === 'gamebar' ? '260px' : '800px');
 const stylesParam = urlParams.get('styles');
 const scheduleKey = urlParams.get('schedule_key') || undefined;
 const hideLeagueFilter = urlParams.get('hide_league_filter') === '1';

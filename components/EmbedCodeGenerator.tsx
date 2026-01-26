@@ -30,7 +30,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
   // Update height when embed view changes
   useEffect(() => {
     if (embedView === 'gamebar') {
-      setHeight('400');
+      setHeight('260');
     } else if (embedView === 'calendar') {
       setHeight('800');
     }
@@ -108,7 +108,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
 
   // Generate embed code
   const embedCode = useMemo(() => {
-    const defaultHeight = embedView === 'gamebar' ? '400' : '800';
+    const defaultHeight = embedView === 'gamebar' ? '260' : '800';
     const finalHeight = height || defaultHeight;
     const borderColor = embedStyles?.borderColor || '#e2e8f0';
     const borderRadius = embedStyles?.borderRadius || '8px';
@@ -289,15 +289,15 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
             <label className="block text-sm font-medium text-slate-700 mb-1">Height (px)</label>
             <input 
               type="number"
-              min={embedView === 'gamebar' ? '300' : '400'}
+              min={embedView === 'gamebar' ? '260' : '400'}
               max="2000"
               value={height}
               onChange={(e) => setHeight(e.target.value)}
               className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              placeholder={embedView === 'gamebar' ? '400' : '800'}
+              placeholder={embedView === 'gamebar' ? '260' : '800'}
             />
             <p className="text-xs text-slate-500 mt-1">
-              Recommended: {embedView === 'gamebar' ? '300-500px' : '600-1000px'}
+              Recommended: {embedView === 'gamebar' ? '260-400px' : '600-1000px'}
             </p>
           </div>
         </div>

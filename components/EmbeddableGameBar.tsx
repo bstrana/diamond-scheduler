@@ -20,7 +20,7 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
   initialLeagueId,
   initialCategory,
   initialTeamId,
-  height = '240px',
+  height = '260px',
   dataOverride = null,
   hideLeagueFilter = false,
   hideCategoryFilter = false,

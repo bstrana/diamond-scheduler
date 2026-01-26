@@ -7,10 +7,21 @@ interface LeagueBuilderProps {
   leagues: League[];
   onLeagueCreated: (league: League) => void;
   onLeagueUpdated: (league: League) => void;
+  onLeagueDeleted: (leagueId: string) => void;
   existingTeams: Team[];
+  maxLeagues?: number;
+  maxTeams?: number;
 }
 
-const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated, onLeagueUpdated, existingTeams }) => {
+const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
+  leagues,
+  onLeagueCreated,
+  onLeagueUpdated,
+  onLeagueDeleted,
+  existingTeams,
+  maxLeagues,
+  maxTeams
+}) => {
   // Mode State
   const [editingLeagueId, setEditingLeagueId] = useState<string>('');
 
@@ -27,8 +38,71 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
   // New Team Form State
   const [newTeam, setNewTeam] = useState<Partial<Team>>({
     primaryColor: '#000000',
-    logoUrl: ''
+    logoUrl: '',
+    country: 'USA'
   });
+  const [rosterText, setRosterText] = useState('');
+
+  const countryOptions = [
+    'USA',
+    'Canada',
+    'Mexico',
+    'United Kingdom',
+    'Ireland',
+    'France',
+    'Germany',
+    'Netherlands',
+    'Italy',
+    'Spain',
+    'Portugal',
+    'Sweden',
+    'Norway',
+    'Denmark',
+    'Finland',
+    'Poland',
+    'Czechia',
+    'Austria',
+    'Switzerland',
+    'Australia',
+    'New Zealand',
+    'Japan',
+    'South Korea',
+    'China',
+    'Taiwan',
+    'Philippines',
+    'India',
+    'South Africa',
+    'Brazil',
+    'Argentina',
+    'Chile',
+    'Colombia',
+    'Dominican Republic',
+    'Venezuela',
+    'Cuba'
+  ];
+
+  const parseRosterText = (value: string): Team['roster'] => {
+    if (!value.trim()) return [];
+    return value
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const parts = line.split(',').map(part => part.trim());
+        const number = Number.parseInt(parts[0] || '', 10);
+        return {
+          number: Number.isFinite(number) ? number : 0,
+          name: parts[1] || '',
+          position: parts[2] || ''
+        };
+      })
+      .filter(player => player.name);
+  };
+
+  const formatRosterText = (roster?: Team['roster']) => {
+    if (!roster || roster.length === 0) return '';
+    return roster.map(player => `${player.number}, ${player.name}, ${player.position}`).join('\n');
+  };
 
   // Handle switching between Create New and Edit Existing
   const handleModeChange = (id: string) => {
@@ -57,11 +131,17 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
   const handleAddTeam = (e: React.FormEvent) => {
     e.preventDefault();
     if (newTeam.name && newTeam.city && newTeam.abbreviation) {
+      if (!editingTeamId && maxTeams && teams.length >= maxTeams) {
+        alert(`Team limit reached (${maxTeams}).`);
+        return;
+      }
       const team: Team = {
         id: editingTeamId || generateUUID(),
         name: newTeam.name,
         city: newTeam.city,
         abbreviation: newTeam.abbreviation,
+        country: newTeam.country,
+        roster: parseRosterText(rosterText),
         primaryColor: newTeam.primaryColor || '#000000',
         logoUrl: newTeam.logoUrl || undefined
       };
@@ -75,8 +155,10 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
         city: '', 
         abbreviation: '', 
         primaryColor: '#000000', 
-        logoUrl: '' 
+        logoUrl: '',
+        country: 'USA'
       });
+      setRosterText('');
       setEditingTeamId(null);
     }
   };
@@ -84,6 +166,10 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
   const addExistingTeam = (team: Team) => {
     // Avoid duplicates
     if (!teams.some(t => t.id === team.id)) {
+        if (maxTeams && teams.length >= maxTeams) {
+          alert(`Team limit reached (${maxTeams}).`);
+          return;
+        }
         setTeams([...teams, team]);
     }
   };
@@ -102,19 +188,26 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
       name: team.name,
       city: team.city,
       abbreviation: team.abbreviation,
+      country: team.country || 'USA',
       primaryColor: team.primaryColor,
       logoUrl: team.logoUrl || ''
     });
+    setRosterText(formatRosterText(team.roster));
   };
 
   const cancelEditTeam = () => {
     setEditingTeamId(null);
-    setNewTeam({ name: '', city: '', abbreviation: '', primaryColor: '#000000', logoUrl: '' });
+    setNewTeam({ name: '', city: '', abbreviation: '', primaryColor: '#000000', logoUrl: '', country: 'USA' });
+    setRosterText('');
   };
 
   const handleSaveLeague = () => {
     if (!leagueName || teams.length < 2) {
       alert("Please provide a league name and at least 2 teams.");
+      return;
+    }
+    if (!editingLeagueId && maxLeagues && leagues.length >= maxLeagues) {
+      alert(`League limit reached (${maxLeagues}).`);
       return;
     }
 
@@ -146,6 +239,16 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
         setCoverImageUrl('');
         setCategory('');
         setTeams([]);
+    }
+  };
+
+  const handleDeleteLeague = () => {
+    if (!editingLeagueId) return;
+    const league = leagues.find(l => l.id === editingLeagueId);
+    const leagueLabel = league ? `${league.name}${league.category ? ` - ${league.category}` : ''}` : 'this league';
+    if (window.confirm(`Delete ${leagueLabel}? This cannot be undone.`)) {
+      onLeagueDeleted(editingLeagueId);
+      handleModeChange('');
     }
   };
 
@@ -257,6 +360,18 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
                 )}
               </div>
             </div>
+            {editingLeagueId && (
+              <div className="pt-4 mt-4 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={handleDeleteLeague}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors"
+                >
+                  <Trash2 size={16} />
+                  <span>Delete League</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <button
@@ -293,6 +408,20 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
                         <input required placeholder="Name" className="w-full border p-2 rounded text-sm" value={newTeam.name || ''} onChange={e => setNewTeam({...newTeam, name: e.target.value})} />
                     </div>
                     <div className="md:col-span-2">
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Country</label>
+                        <select
+                            className="w-full border p-2 rounded text-sm"
+                            value={newTeam.country || 'USA'}
+                            onChange={e => setNewTeam({...newTeam, country: e.target.value})}
+                        >
+                            {countryOptions.map((country) => (
+                                <option key={country} value={country}>
+                                    {country}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="md:col-span-2">
                         <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Abbr</label>
                         <input required maxLength={3} placeholder="ABC" className="w-full border p-2 rounded uppercase text-sm" value={newTeam.abbreviation || ''} onChange={e => setNewTeam({...newTeam, abbreviation: e.target.value.toUpperCase()})} />
                     </div>
@@ -314,6 +443,17 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({ leagues, onLeagueCreated,
                                 <img src={newTeam.logoUrl} alt="Logo preview" className="h-8 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
                             </div>
                         )}
+                    </div>
+                    <div className="md:col-span-12">
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Roster (Number, Name, Position)</label>
+                        <textarea
+                          rows={4}
+                          className="w-full border p-2 rounded text-sm"
+                          placeholder="12, Alex Smith, 1B"
+                          value={rosterText}
+                          onChange={e => setRosterText(e.target.value)}
+                        />
+                        <p className="text-xs text-slate-500 mt-1">One player per line.</p>
                     </div>
                     <div className="md:col-span-2 space-y-2">
                         <button type="submit" className="w-full h-9 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm font-medium">

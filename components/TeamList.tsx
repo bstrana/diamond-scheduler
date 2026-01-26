@@ -8,9 +8,10 @@ interface TeamListProps {
   onAddTeam: (team: Team) => void;
   onUpdateTeam: (team: Team) => void;
   onDeleteTeam: (id: string) => void;
+  maxTeams?: number;
 }
 
-const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onDeleteTeam }) => {
+const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onDeleteTeam, maxTeams }) => {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
@@ -18,12 +19,76 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
 
   const [formTeam, setFormTeam] = useState<Partial<Team>>({
     primaryColor: '#000000',
-    logoUrl: ''
+    logoUrl: '',
+    country: 'USA'
   });
+  const [rosterText, setRosterText] = useState('');
+
+  const countryOptions = [
+    'USA',
+    'Canada',
+    'Mexico',
+    'United Kingdom',
+    'Ireland',
+    'France',
+    'Germany',
+    'Netherlands',
+    'Italy',
+    'Spain',
+    'Portugal',
+    'Sweden',
+    'Norway',
+    'Denmark',
+    'Finland',
+    'Poland',
+    'Czechia',
+    'Austria',
+    'Switzerland',
+    'Australia',
+    'New Zealand',
+    'Japan',
+    'South Korea',
+    'China',
+    'Taiwan',
+    'Philippines',
+    'India',
+    'South Africa',
+    'Brazil',
+    'Argentina',
+    'Chile',
+    'Colombia',
+    'Dominican Republic',
+    'Venezuela',
+    'Cuba'
+  ];
+
+  const parseRosterText = (value: string): Team['roster'] => {
+    if (!value.trim()) return [];
+    return value
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const parts = line.split(',').map(part => part.trim());
+        const number = Number.parseInt(parts[0] || '', 10);
+        return {
+          number: Number.isFinite(number) ? number : 0,
+          name: parts[1] || '',
+          position: parts[2] || ''
+        };
+      })
+      .filter(player => player.name);
+  };
+
+  const formatRosterText = (roster?: Team['roster']) => {
+    if (!roster || roster.length === 0) return '';
+    return roster.map(player => `${player.number}, ${player.name}, ${player.position}`).join('\n');
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formTeam.name && formTeam.city && formTeam.abbreviation) {
+      const roster = parseRosterText(rosterText);
       if (editingId) {
         // Update existing team
         onUpdateTeam({
@@ -31,30 +96,40 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
           name: formTeam.name,
           city: formTeam.city,
           abbreviation: formTeam.abbreviation,
+          country: formTeam.country,
+          roster,
           primaryColor: formTeam.primaryColor || '#000000',
           logoUrl: formTeam.logoUrl || undefined
         });
         setEditingId(null);
       } else {
+        if (maxTeams && teams.length >= maxTeams) {
+          alert(`Team limit reached (${maxTeams}).`);
+          return;
+        }
         // Add new team
         onAddTeam({
           id: generateUUID(),
           name: formTeam.name,
           city: formTeam.city,
           abbreviation: formTeam.abbreviation,
+          country: formTeam.country,
+          roster,
           primaryColor: formTeam.primaryColor || '#000000',
           logoUrl: formTeam.logoUrl || undefined
         });
       }
       
       setIsFormVisible(false);
-      setFormTeam({ primaryColor: '#000000', logoUrl: '' });
+      setFormTeam({ primaryColor: '#000000', logoUrl: '', country: 'USA' });
+      setRosterText('');
     }
   };
 
   const handleEditClick = (team: Team) => {
     setEditingId(team.id);
-    setFormTeam({ ...team });
+    setFormTeam({ ...team, country: team.country || 'USA' });
+    setRosterText(formatRosterText(team.roster));
     setIsFormVisible(true);
     // Smooth scroll to form
     setTimeout(() => {
@@ -65,7 +140,8 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
   const handleCancel = () => {
     setIsFormVisible(false);
     setEditingId(null);
-    setFormTeam({ primaryColor: '#000000', logoUrl: '' });
+    setFormTeam({ primaryColor: '#000000', logoUrl: '', country: 'USA' });
+    setRosterText('');
   };
 
   return (
@@ -74,8 +150,13 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
         <h2 className="text-2xl font-bold text-slate-800">League Teams</h2>
         {!isFormVisible && (
           <button 
-            onClick={() => { setIsFormVisible(true); setEditingId(null); setFormTeam({ primaryColor: '#000000', logoUrl: '' }); }}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center hover:bg-indigo-700 transition-colors"
+            onClick={() => { setIsFormVisible(true); setEditingId(null); setFormTeam({ primaryColor: '#000000', logoUrl: '', country: 'USA' }); }}
+            className={`px-4 py-2 rounded-lg flex items-center transition-colors ${
+              maxTeams && teams.length >= maxTeams
+                ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700'
+            }`}
+            disabled={!!maxTeams && teams.length >= maxTeams}
           >
             <Plus size={18} className="mr-2" />
             Add Manual Team
@@ -91,7 +172,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
                   <X size={20} />
               </button>
           </div>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
             <div className="lg:col-span-1">
               <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">City</label>
               <input required placeholder="e.g. New York" className="w-full border p-2 rounded" value={formTeam.city || ''} onChange={e => setFormTeam({...formTeam, city: e.target.value})} />
@@ -99,6 +180,20 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
             <div className="lg:col-span-1">
               <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Name</label>
               <input required placeholder="e.g. Yankees" className="w-full border p-2 rounded" value={formTeam.name || ''} onChange={e => setFormTeam({...formTeam, name: e.target.value})} />
+            </div>
+            <div className="lg:col-span-1">
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Country</label>
+              <select
+                className="w-full border p-2 rounded text-sm"
+                value={formTeam.country || 'USA'}
+                onChange={(e) => setFormTeam({ ...formTeam, country: e.target.value })}
+              >
+                {countryOptions.map((country) => (
+                  <option key={country} value={country}>
+                    {country}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="lg:col-span-1">
               <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Abbr</label>
@@ -122,6 +217,17 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
                   <img src={formTeam.logoUrl} alt="Logo preview" className="h-12 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
                 </div>
               )}
+            </div>
+            <div className="lg:col-span-6">
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Roster (Number, Name, Position)</label>
+              <textarea
+                rows={4}
+                className="w-full border p-2 rounded text-sm"
+                placeholder="12, Alex Smith, 1B"
+                value={rosterText}
+                onChange={(e) => setRosterText(e.target.value)}
+              />
+              <p className="text-xs text-slate-500 mt-1">One player per line.</p>
             </div>
             <div className="flex space-x-2 lg:col-span-1">
               <button type="button" onClick={handleCancel} className="flex-1 px-4 py-2 border rounded hover:bg-slate-50 text-sm">Cancel</button>
