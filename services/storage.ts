@@ -50,7 +50,9 @@ const parseArray = <T>(value: string | null, fallback: T[]): T[] => {
 const createPocketBaseClient = () => {
   if (!pocketbaseUrl) return null;
   try {
-    return new PocketBase(pocketbaseUrl);
+    const client = new PocketBase(pocketbaseUrl);
+    client.autoCancellation(false);
+    return client;
   } catch {
     return null;
   }
