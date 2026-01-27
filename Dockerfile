@@ -2,6 +2,10 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+RUN apk add --no-cache bash
+
+SHELL ["/bin/bash", "-lc"]
+
 COPY package*.json ./
 RUN npm ci
 
