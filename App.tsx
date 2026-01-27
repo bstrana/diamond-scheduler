@@ -176,12 +176,14 @@ const App: React.FC = () => {
       const publishedSchedules = await storageApi.listPublishedSchedules({ userId, orgId }, { onlyActive: false });
       const hasPublishedSchedules = publishedSchedules && publishedSchedules.length > 0;
       
-      // If no published schedules, clear local storage for teams and leagues
+      // If no published schedules, clear local storage for teams, leagues, and schedule keys
       if (!hasPublishedSchedules) {
         localStorage.removeItem('dsa_leagues');
         localStorage.removeItem('dsa_teams');
         localStorage.removeItem('dsa_games');
         localStorage.removeItem('dsa_games_holding');
+        localStorage.removeItem('dsa_schedule_publish_key');
+        localStorage.removeItem('dsa_schedule_publish_name');
       }
       
       // Always start with empty data by default
@@ -225,20 +227,12 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!showUserMenu) return;
-    const storedKey = localStorage.getItem('dsa_schedule_publish_key') || '';
-    const storedName = localStorage.getItem('dsa_schedule_publish_name') || '';
-    if (!scheduleKey) {
-      setScheduleKey(storedKey || 'default');
-    }
-    if (!scheduleName) {
-      setScheduleName(storedName);
-    }
     const loadSchedules = async () => {
       await loadPublishedSchedules();
     };
     loadSchedules();
     return () => {};
-  }, [showUserMenu, userId, orgId, scheduleKey, scheduleName]);
+  }, [showUserMenu, userId, orgId]);
 
   useEffect(() => {
     if (!showNavMenu) return;

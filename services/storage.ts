@@ -199,9 +199,10 @@ const saveScheduleToPocketBase = async (
     return { ok: false, reason: 'PocketBase client not initialized.' };
   }
   const safeKey = scheduleKey ? sanitizeFilterValue(scheduleKey) : null;
-  const finalKey = safeKey || sanitizeFilterValue(scheduleKeyEnv) || 'default';
+  const envKey = scheduleKeyEnv ? sanitizeFilterValue(scheduleKeyEnv) : null;
+  const finalKey = safeKey || envKey;
   if (!finalKey) {
-    return { ok: false, reason: 'Invalid schedule key.' };
+    return { ok: false, reason: 'Schedule key is required. Please provide a schedule key.' };
   }
   const payload = {
     app_id: appId,
