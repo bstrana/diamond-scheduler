@@ -61,12 +61,28 @@ const createPocketBaseClient = () => {
 
 const pocketbaseClient = createPocketBaseClient();
 
-const loadFromPocketBase = async (): Promise<StorageData | null> => {
+const sanitizeFilterValue = (value: string | undefined): string | null => {
+  if (!value || typeof value !== 'string') return null;
+  return value.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 200);
+};
+
+const loadFromPocketBase = async (context?: StorageContext): Promise<StorageData | null> => {
   if (!pocketbaseClient) return null;
   try {
+    const baseFilter = `app_id="${appId}"`;
+    const safeOrgId = sanitizeFilterValue(context?.orgId);
+    const safeUserId = sanitizeFilterValue(context?.userId);
+    
+    let filter = baseFilter;
+    if (safeOrgId) {
+      filter = `${baseFilter} && org_id="${safeOrgId}"`;
+    } else if (safeUserId) {
+      filter = `${baseFilter} && user_id="${safeUserId}"`;
+    }
+    
     const record = await pocketbaseClient
       .collection(pocketbaseCollection)
-      .getFirstListItem(`app_id="${appId}"`);
+      .getFirstListItem(filter);
     const payload = (record as { payload?: StorageData }).payload;
     if (!payload) return null;
     return payload;
@@ -76,20 +92,43 @@ const loadFromPocketBase = async (): Promise<StorageData | null> => {
   }
 };
 
-const saveToPocketBase = async (data: StorageData) => {
+const saveToPocketBase = async (data: StorageData, context?: StorageContext) => {
   if (!pocketbaseClient) return;
   try {
+    const baseFilter = `app_id="${appId}"`;
+    const safeOrgId = sanitizeFilterValue(context?.orgId);
+    const safeUserId = sanitizeFilterValue(context?.userId);
+    
+    let filter = baseFilter;
+    if (safeOrgId) {
+      filter = `${baseFilter} && org_id="${safeOrgId}"`;
+    } else if (safeUserId) {
+      filter = `${baseFilter} && user_id="${safeUserId}"`;
+    }
+    
     const existing = await pocketbaseClient
       .collection(pocketbaseCollection)
-      .getFirstListItem(`app_id="${appId}"`);
+      .getFirstListItem(filter);
     await pocketbaseClient
       .collection(pocketbaseCollection)
-      .update(existing.id, { app_id: appId, payload: data });
+      .update(existing.id, { 
+        app_id: appId,
+        org_id: safeOrgId || undefined,
+        user_id: safeUserId || undefined,
+        payload: data 
+      });
   } catch (error) {
     try {
+      const safeOrgId = sanitizeFilterValue(context?.orgId);
+      const safeUserId = sanitizeFilterValue(context?.userId);
       await pocketbaseClient
         .collection(pocketbaseCollection)
-        .create({ app_id: appId, payload: data });
+        .create({ 
+          app_id: appId,
+          org_id: safeOrgId || undefined,
+          user_id: safeUserId || undefined,
+          payload: data 
+        });
     } catch (createError) {
       console.warn('PocketBase save failed, keeping local storage only.', createError);
     }
@@ -100,7 +139,7 @@ export const loadStorageData = async (
   defaults: StorageData,
   context?: StorageContext
 ): Promise<StorageData> => {
-  const pocketbaseData = await loadFromPocketBase();
+  const pocketbaseData = await loadFromPocketBase(context);
   const localData = {
     leagues: parseArray(localStorage.getItem(STORAGE_KEYS.leagues), defaults.leagues),
     teams: parseArray(localStorage.getItem(STORAGE_KEYS.teams), defaults.teams),
@@ -209,7 +248,7 @@ export const persistStorageData = async (
   localStorage.setItem(STORAGE_KEYS.games, JSON.stringify(data.games));
   localStorage.setItem(STORAGE_KEYS.gamesInHoldingArea, JSON.stringify(data.gamesInHoldingArea));
 
-  await saveToPocketBase(data);
+  await saveToPocketBase(data, context);
   const result = await saveScheduleToPocketBase(data, context, scheduleKey, scheduleName);
   return result.ok;
 };
@@ -220,11 +259,6 @@ export const publishScheduleNow = async (
   scheduleKey?: string,
   scheduleName?: string
 ): Promise<PublishResult> => saveScheduleToPocketBase(data, context, scheduleKey, scheduleName);
-
-const sanitizeFilterValue = (value: string | undefined): string | null => {
-  if (!value || typeof value !== 'string') return null;
-  return value.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 200);
-};
 
 export const listPublishedSchedules = async (
   context?: StorageContext,

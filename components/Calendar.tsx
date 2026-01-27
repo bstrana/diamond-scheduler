@@ -18,6 +18,7 @@ interface CalendarProps {
   onGameCopy: (game: Game) => void;
   onDeleteGame: (gameId: string) => void;
   onAddToHoldingArea?: (gameId: string) => void;
+  onRemoveAllGames?: () => void;
   // New Props
   viewType: 'grid' | 'list';
   onViewTypeChange: (type: 'grid' | 'list') => void;
@@ -46,6 +47,7 @@ const Calendar: React.FC<CalendarProps> = ({
   onGameCopy,
   onDeleteGame,
   onAddToHoldingArea,
+  onRemoveAllGames,
   viewType,
   onViewTypeChange,
   selectedTeamId,
@@ -247,6 +249,17 @@ const Calendar: React.FC<CalendarProps> = ({
             >
               {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
             </button>
+
+            {/* Remove All Games */}
+            {onRemoveAllGames && (
+              <button
+                onClick={onRemoveAllGames}
+                className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Remove All Games from Schedule"
+              >
+                <Trash2 size={20} />
+              </button>
+            )}
         </div>
       </div>
 

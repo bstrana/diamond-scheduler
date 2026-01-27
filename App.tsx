@@ -177,6 +177,12 @@ const App: React.FC = () => {
       const publishedSchedules = await storageApi.listPublishedSchedules({ userId, orgId }, { onlyActive: false });
       const hasPublishedSchedules = publishedSchedules && publishedSchedules.length > 0;
       
+      // If no published schedules, clear local storage for teams and leagues
+      if (!hasPublishedSchedules) {
+        localStorage.removeItem('dsa_leagues');
+        localStorage.removeItem('dsa_teams');
+      }
+      
       // If no published schedules, start with empty data
       const defaultTeams = hasPublishedSchedules ? MOCK_TEAMS : [];
       const defaultGames = hasPublishedSchedules ? INITIAL_GAMES : [];
@@ -735,16 +741,6 @@ const App: React.FC = () => {
                         </div>
                       </div>
                       <div className="py-2">
-                        <button
-                          onClick={() => {
-                            setShowUserMenu(false);
-                            handleRemoveAllGames();
-                          }}
-                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                        >
-                          <span>Remove All Games from Schedule</span>
-                          <Trash2 size={16} />
-                        </button>
                         <div className="px-3 pb-2 space-y-2">
                           <div className="text-xs font-semibold text-slate-500 uppercase">Schedule</div>
                           <button
@@ -854,6 +850,7 @@ const App: React.FC = () => {
                 onGameCopy={handleGameCopy}
                 onDeleteGame={handleDeleteGame}
                 onAddToHoldingArea={handleAddToHoldingArea}
+                onRemoveAllGames={handleRemoveAllGames}
                 // View Controls
                 viewType={calendarView}
                 onViewTypeChange={setCalendarView}
