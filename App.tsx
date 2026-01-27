@@ -7,7 +7,6 @@ import * as storageApi from './services/storage';
 import Calendar from './components/Calendar';
 import GameHoldingArea from './components/GameHoldingArea';
 import TeamList from './components/TeamList';
-import ImportExport from './components/ImportExport';
 import { 
   Calendar as CalendarIcon, 
   Users, 
@@ -143,9 +142,9 @@ const App: React.FC = () => {
   const [leagues, setLeagues] = useState<League[]>([]);
   
   // Teams represents the currently active roster being viewed or scheduled
-  const [teams, setTeams] = useState<Team[]>(MOCK_TEAMS);
+  const [teams, setTeams] = useState<Team[]>([]);
 
-  const [games, setGames] = useState<Game[]>(INITIAL_GAMES);
+  const [games, setGames] = useState<Game[]>([]);
 
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -174,10 +173,18 @@ const App: React.FC = () => {
   useEffect(() => {
     let isActive = true;
     const hydrate = async () => {
+      // Check if user has any published schedules
+      const publishedSchedules = await storageApi.listPublishedSchedules({ userId, orgId }, { onlyActive: false });
+      const hasPublishedSchedules = publishedSchedules && publishedSchedules.length > 0;
+      
+      // If no published schedules, start with empty data
+      const defaultTeams = hasPublishedSchedules ? MOCK_TEAMS : [];
+      const defaultGames = hasPublishedSchedules ? INITIAL_GAMES : [];
+      
       const data = await storageApi.loadStorageData({
         leagues: [],
-        teams: MOCK_TEAMS,
-        games: INITIAL_GAMES,
+        teams: defaultTeams,
+        games: defaultGames,
         gamesInHoldingArea: []
       }, { userId, orgId });
       if (!isActive) return;
@@ -191,7 +198,7 @@ const App: React.FC = () => {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [userId, orgId]);
 
   useEffect(() => {
     if (initialized) return;
@@ -728,13 +735,6 @@ const App: React.FC = () => {
                         </div>
                       </div>
                       <div className="py-2">
-                        <ImportExport
-                          teams={teams}
-                          allGames={games}
-                          onImportGames={(newGames) => setGames([...games, ...newGames])}
-                          variant="menu"
-                          onAfterAction={() => setShowUserMenu(false)}
-                        />
                         <button
                           onClick={() => {
                             setShowUserMenu(false);
@@ -799,8 +799,8 @@ const App: React.FC = () => {
                                 return;
                               }
                               setLeagues([]);
-                              setTeams(MOCK_TEAMS);
-                              setGames(INITIAL_GAMES);
+                              setTeams([]);
+                              setGames([]);
                               setGamesInHoldingArea([]);
                               setSelectedLeagueId('all');
                               setSelectedCategory('all');
@@ -1201,31 +1201,58 @@ const App: React.FC = () => {
               </select>
 
               {selectedPublishedSchedule && (
-                <div className="space-y-2 text-xs text-slate-500">
-                  <div>Key: {selectedPublishedSchedule.scheduleKey}</div>
-                  <div>Status: {selectedPublishedSchedule.active ? 'Active' : 'Inactive'}</div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      readOnly
-                      value={subscriptionUrl}
-                      className="flex-1 border border-slate-200 rounded px-2 py-1 text-[11px] text-slate-600"
-                    />
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(subscriptionUrl);
-                          setCopiedSubscribeUrl(true);
-                          setTimeout(() => setCopiedSubscribeUrl(false), 2000);
-                        } catch {
-                          alert('Copy failed.');
-                        }
-                      }}
-                      className="px-2 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50"
-                      title="Copy subscription URL"
-                    >
-                      {copiedSubscribeUrl ? <Check size={14} /> : <Copy size={14} />}
-                    </button>
+                <div className="space-y-3 text-xs">
+                  <div className="text-slate-500 space-y-1">
+                    <div>Key: {selectedPublishedSchedule.scheduleKey}</div>
+                    <div>Status: {selectedPublishedSchedule.active ? 'Active' : 'Inactive'}</div>
+                  </div>
+                  <div className="border-t border-slate-200 pt-3">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Calendar Subscription (ICS)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        readOnly
+                        value={subscriptionUrl}
+                        className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-xs text-slate-600 bg-slate-50"
+                        placeholder="Subscription URL will appear here"
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!subscriptionUrl) return;
+                          try {
+                            await navigator.clipboard.writeText(subscriptionUrl);
+                            setCopiedSubscribeUrl(true);
+                            setTimeout(() => setCopiedSubscribeUrl(false), 2000);
+                          } catch {
+                            alert('Copy failed.');
+                          }
+                        }}
+                        disabled={!subscriptionUrl}
+                        className={`px-3 py-1.5 rounded border text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                          subscriptionUrl
+                            ? 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                            : 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed'
+                        }`}
+                        title="Copy subscription URL"
+                      >
+                        {copiedSubscribeUrl ? (
+                          <>
+                            <Check size={14} />
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={14} />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1.5">
+                      Use this URL to subscribe to the schedule in Google Calendar, Outlook, or other calendar apps.
+                    </p>
                   </div>
                 </div>
               )}
