@@ -101,9 +101,9 @@ const App: React.FC = () => {
       return;
     }
     if (!storageApi.loadPublishedScheduleById) return;
-    const data = await storageApi.loadPublishedScheduleById(selectedScheduleId);
+    const data = await storageApi.loadPublishedScheduleById(selectedScheduleId, { userId, orgId });
     if (!data) {
-      alert('Schedule not found.');
+      alert('Schedule not found or access denied.');
       return;
     }
     setLeagues(data.leagues);
@@ -1236,7 +1236,8 @@ const App: React.FC = () => {
                     const nextActive = !selectedPublishedSchedule?.active;
                     const result = await storageApi.updatePublishedScheduleActive(
                       selectedScheduleId,
-                      nextActive
+                      nextActive,
+                      { userId, orgId }
                     );
                     if (!result.ok) {
                       alert(`Update failed. ${result.reason || 'Check PocketBase rules.'}`);
@@ -1255,7 +1256,7 @@ const App: React.FC = () => {
                       return;
                     }
                     if (!confirm('Delete this published schedule? This cannot be undone.')) return;
-                    const result = await storageApi.deletePublishedSchedule(selectedScheduleId);
+                    const result = await storageApi.deletePublishedSchedule(selectedScheduleId, { userId, orgId });
                     if (!result.ok) {
                       alert(`Delete failed. ${result.reason || 'Check PocketBase rules.'}`);
                       return;

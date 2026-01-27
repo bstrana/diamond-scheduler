@@ -236,26 +236,23 @@ export const listPublishedSchedules = async (
     baseFilters.push('active=true');
   }
   const scopedFilters = [...baseFilters];
+  // For logged-in users, enforce org_id filtering - no fallback to all schedules
   const safeOrgId = sanitizeFilterValue(context?.orgId);
   if (safeOrgId) {
     scopedFilters.push(`org_id="${safeOrgId}"`);
-  }
-  const safeUserId = sanitizeFilterValue(context?.userId);
-  if (safeUserId) {
-    scopedFilters.push(`user_id="${safeUserId}"`);
+  } else if (context?.userId) {
+    // If user has userId but no orgId, filter by userId only
+    const safeUserId = sanitizeFilterValue(context.userId);
+    if (safeUserId) {
+      scopedFilters.push(`user_id="${safeUserId}"`);
+    }
   }
   const scopedFilter = scopedFilters.join(' && ');
   try {
     const data = await pocketbaseClient
       .collection(scheduleCollection)
       .getList(1, 200, { filter: scopedFilter, sort: '-updated' });
-    let items = data.items || [];
-    if (items.length === 0 && scopedFilters.length > baseFilters.length) {
-      const fallback = await pocketbaseClient
-        .collection(scheduleCollection)
-        .getList(1, 200, { filter: baseFilters.join(' && '), sort: '-updated' });
-      items = fallback.items || [];
-    }
+    const items = data.items || [];
     return items
       .map((item: any) => ({
         id: item.id,
@@ -271,12 +268,26 @@ export const listPublishedSchedules = async (
 };
 
 export const deletePublishedSchedule = async (
-  recordId: string
+  recordId: string,
+  context?: StorageContext
 ): Promise<{ ok: boolean; reason?: string }> => {
   if (!pocketbaseClient || !scheduleCollection) {
     return { ok: false, reason: 'PocketBase is not configured.' };
   }
   try {
+    // First verify the schedule belongs to the user's org
+    const record = await pocketbaseClient.collection(scheduleCollection).getOne(recordId);
+    const safeOrgId = sanitizeFilterValue(context?.orgId);
+    if (safeOrgId && record.org_id !== safeOrgId) {
+      return { ok: false, reason: 'Schedule not found or access denied.' };
+    }
+    // If user has userId but no orgId, verify by userId
+    if (!safeOrgId && context?.userId) {
+      const safeUserId = sanitizeFilterValue(context.userId);
+      if (safeUserId && record.user_id !== safeUserId) {
+        return { ok: false, reason: 'Schedule not found or access denied.' };
+      }
+    }
     await pocketbaseClient.collection(scheduleCollection).delete(recordId);
     return { ok: true };
   } catch (error) {
@@ -290,12 +301,26 @@ export const deletePublishedSchedule = async (
 
 export const updatePublishedScheduleActive = async (
   recordId: string,
-  active: boolean
+  active: boolean,
+  context?: StorageContext
 ): Promise<{ ok: boolean; reason?: string }> => {
   if (!pocketbaseClient || !scheduleCollection) {
     return { ok: false, reason: 'PocketBase is not configured.' };
   }
   try {
+    // First verify the schedule belongs to the user's org
+    const record = await pocketbaseClient.collection(scheduleCollection).getOne(recordId);
+    const safeOrgId = sanitizeFilterValue(context?.orgId);
+    if (safeOrgId && record.org_id !== safeOrgId) {
+      return { ok: false, reason: 'Schedule not found or access denied.' };
+    }
+    // If user has userId but no orgId, verify by userId
+    if (!safeOrgId && context?.userId) {
+      const safeUserId = sanitizeFilterValue(context.userId);
+      if (safeUserId && record.user_id !== safeUserId) {
+        return { ok: false, reason: 'Schedule not found or access denied.' };
+      }
+    }
     await pocketbaseClient.collection(scheduleCollection).update(recordId, { active });
     return { ok: true };
   } catch (error) {
@@ -332,13 +357,30 @@ export const loadPublishedScheduleByKey = async (
 };
 
 export const loadPublishedScheduleById = async (
-  recordId: string
+  recordId: string,
+  context?: StorageContext
 ): Promise<StorageData | null> => {
   if (!pocketbaseClient || !scheduleCollection || !recordId) return null;
   try {
     const record = await pocketbaseClient
       .collection(scheduleCollection)
       .getOne(recordId);
+    
+    // Verify the schedule belongs to the user's org
+    const safeOrgId = sanitizeFilterValue(context?.orgId);
+    if (safeOrgId && record.org_id !== safeOrgId) {
+      console.warn('Schedule access denied: org_id mismatch');
+      return null;
+    }
+    // If user has userId but no orgId, verify by userId
+    if (!safeOrgId && context?.userId) {
+      const safeUserId = sanitizeFilterValue(context.userId);
+      if (safeUserId && record.user_id !== safeUserId) {
+        console.warn('Schedule access denied: user_id mismatch');
+        return null;
+      }
+    }
+    
     const data = (record as { data?: Partial<StorageData> }).data;
     if (!data) return null;
     return {
