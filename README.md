@@ -51,6 +51,17 @@ Published schedule record fields:
 - `schedule_name` (text, optional)
 - `data` (json) with `{ leagues, teams, games }`
 
+### Calendar Subscription (ICS)
+
+Run the app with `node server.js` (or Docker) to enable calendar subscriptions.
+
+Subscription URL format:
+`/subscribe.ics?schedule_key=YOUR_KEY`
+
+Required env vars:
+- `PB_URL` (or `VITE_PB_URL`)
+- `PB_SCHEDULE_COLLECTION` (or `VITE_PB_SCHEDULE_COLLECTION`)
+
 ### Tailwind CSS
 
 Tailwind is compiled locally via PostCSS. Install dependencies and run Vite as usual.

@@ -19,7 +19,9 @@ import {
   ChevronDown,
   LogOut,
   Send,
-  X
+  X,
+  Copy,
+  Check
 } from 'lucide-react';
 import LeagueBuilder from './components/LeagueBuilder';
 import ScheduleGenerator from './components/ScheduleGenerator';
@@ -38,6 +40,7 @@ const App: React.FC = () => {
   const [scheduleLeagueId, setScheduleLeagueId] = useState<string>('');
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>('');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [copiedSubscribeUrl, setCopiedSubscribeUrl] = useState(false);
 
   const maxLeagues = Number.parseInt(import.meta.env.VITE_LEAGUE_LIMIT || '', 10);
   const maxTeams = Number.parseInt(import.meta.env.VITE_TEAM_LIMT || '', 10);
@@ -88,6 +91,9 @@ const App: React.FC = () => {
   };
 
   const selectedPublishedSchedule = publishedSchedules.find((item) => item.id === selectedScheduleId);
+  const subscriptionUrl = selectedPublishedSchedule
+    ? `${window.location.origin}/subscribe.ics?schedule_key=${encodeURIComponent(selectedPublishedSchedule.scheduleKey)}`
+    : '';
 
   const handleLoadSchedule = async () => {
     if (!selectedScheduleId) {
@@ -1185,6 +1191,29 @@ const App: React.FC = () => {
                 <div className="space-y-2 text-xs text-slate-500">
                   <div>Key: {selectedPublishedSchedule.scheduleKey}</div>
                   <div>Status: {selectedPublishedSchedule.active ? 'Active' : 'Inactive'}</div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      readOnly
+                      value={subscriptionUrl}
+                      className="flex-1 border border-slate-200 rounded px-2 py-1 text-[11px] text-slate-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(subscriptionUrl);
+                          setCopiedSubscribeUrl(true);
+                          setTimeout(() => setCopiedSubscribeUrl(false), 2000);
+                        } catch {
+                          alert('Copy failed.');
+                        }
+                      }}
+                      className="px-2 py-1 rounded border border-slate-200 text-slate-600 hover:bg-slate-50"
+                      title="Copy subscription URL"
+                    >
+                      {copiedSubscribeUrl ? <Check size={14} /> : <Copy size={14} />}
+                    </button>
+                  </div>
                 </div>
               )}
 
