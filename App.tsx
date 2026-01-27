@@ -738,22 +738,11 @@ const App: React.FC = () => {
                         <button
                           onClick={() => {
                             setShowUserMenu(false);
-                            setViewMode('calendar');
-                            handleAddGameClick();
-                          }}
-                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                        >
-                          <span>Add Game</span>
-                          <PlusCircle size={16} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowUserMenu(false);
                             handleRemoveAllGames();
                           }}
                           className="w-full flex items-center justify-between px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                         >
-                          <span>Remove All</span>
+                          <span>Remove All Games from Schedule</span>
                           <Trash2 size={16} />
                         </button>
                         <div className="px-3 pb-2 space-y-2">
