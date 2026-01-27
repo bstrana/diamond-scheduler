@@ -200,10 +200,10 @@ const saveScheduleToPocketBase = async (
   }
   const safeKey = scheduleKey ? sanitizeFilterValue(scheduleKey) : null;
   const envKey = scheduleKeyEnv ? sanitizeFilterValue(scheduleKeyEnv) : null;
-  const finalKey = safeKey || envKey;
-  if (!finalKey) {
-    return { ok: false, reason: 'Schedule key is required. Please provide a schedule key.' };
-  }
+  const finalKey = safeKey || envKey || 'default';
+  
+  // If schedule_key is "default", use empty data
+  const isDefaultKey = finalKey === 'default';
   const payload = {
     app_id: appId,
     active: true,
@@ -211,11 +211,17 @@ const saveScheduleToPocketBase = async (
     user_id: sanitizeFilterValue(context?.userId) || undefined,
     schedule_key: finalKey,
     schedule_name: scheduleName ? scheduleName.slice(0, 200) : undefined,
-    data: {
-      leagues: data.leagues,
-      teams: data.teams,
-      games: data.games
-    }
+    data: isDefaultKey
+      ? {
+          leagues: [],
+          teams: [],
+          games: []
+        }
+      : {
+          leagues: data.leagues,
+          teams: data.teams,
+          games: data.games
+        }
   };
 
   try {
