@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useKeycloak } from '@react-keycloak/web';
 import { Team, Game, ViewMode, League } from './types';
-import { MOCK_TEAMS, INITIAL_GAMES } from './constants';
 import { getMonthDays, formatDate, generateUUID } from './utils';
 import * as storageApi from './services/storage';
 import Calendar from './components/Calendar';
@@ -181,16 +180,15 @@ const App: React.FC = () => {
       if (!hasPublishedSchedules) {
         localStorage.removeItem('dsa_leagues');
         localStorage.removeItem('dsa_teams');
+        localStorage.removeItem('dsa_games');
+        localStorage.removeItem('dsa_games_holding');
       }
       
-      // If no published schedules, start with empty data
-      const defaultTeams = hasPublishedSchedules ? MOCK_TEAMS : [];
-      const defaultGames = hasPublishedSchedules ? INITIAL_GAMES : [];
-      
+      // Always start with empty data by default
       const data = await storageApi.loadStorageData({
         leagues: [],
-        teams: defaultTeams,
-        games: defaultGames,
+        teams: [],
+        games: [],
         gamesInHoldingArea: []
       }, { userId, orgId });
       if (!isActive) return;
