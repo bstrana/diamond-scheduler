@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Team, League } from '../types';
 import { Plus, Trash2, Trophy, Save, Shield, Check, Settings2, FolderOpen, Pencil, X } from 'lucide-react';
-import { generateUUID } from '../utils';
+import { generateUUID, validateLeagueName, validateCategory, validateTeamName, validateAbbreviation, validateCity, sanitizeString } from '../utils';
 
 interface LeagueBuilderProps {
   leagues: League[];
@@ -91,9 +91,9 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
         const parts = line.split(',').map(part => part.trim());
         const number = Number.parseInt(parts[0] || '', 10);
         return {
-          number: Number.isFinite(number) ? number : 0,
-          name: parts[1] || '',
-          position: parts[2] || ''
+          number: Number.isFinite(number) && number >= 0 && number <= 999 ? number : 0,
+          name: sanitizeString(parts[1] || '', 100),
+          position: sanitizeString(parts[2] || '', 50)
         };
       })
       .filter(player => player.name);
@@ -130,37 +130,62 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
 
   const handleAddTeam = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newTeam.name && newTeam.city && newTeam.abbreviation) {
-      if (!editingTeamId && maxTeams && teams.length >= maxTeams) {
-        alert(`Team limit reached (${maxTeams}).`);
-        return;
-      }
-      const team: Team = {
-        id: editingTeamId || generateUUID(),
-        name: newTeam.name,
-        city: newTeam.city,
-        abbreviation: newTeam.abbreviation,
-        country: newTeam.country,
-        roster: parseRosterText(rosterText),
-        primaryColor: newTeam.primaryColor || '#000000',
-        logoUrl: newTeam.logoUrl || undefined
-      };
-      if (editingTeamId) {
-        setTeams(teams.map((existing) => (existing.id === editingTeamId ? team : existing)));
-      } else {
-        setTeams([...teams, team]);
-      }
-      setNewTeam({ 
-        name: '', 
-        city: '', 
-        abbreviation: '', 
-        primaryColor: '#000000', 
-        logoUrl: '',
-        country: 'USA'
-      });
-      setRosterText('');
-      setEditingTeamId(null);
+    
+    // Validate inputs
+    const nameValidation = validateTeamName(newTeam.name);
+    if (!nameValidation.valid) {
+      alert(nameValidation.error);
+      return;
     }
+    
+    const cityValidation = validateCity(newTeam.city);
+    if (!cityValidation.valid) {
+      alert(cityValidation.error);
+      return;
+    }
+    
+    const abbrValidation = validateAbbreviation(newTeam.abbreviation);
+    if (!abbrValidation.valid) {
+      alert(abbrValidation.error);
+      return;
+    }
+    
+    if (!editingTeamId && maxTeams && teams.length >= maxTeams) {
+      alert(`Team limit reached (${maxTeams}).`);
+      return;
+    }
+    
+    // Sanitize inputs
+    const sanitizedName = sanitizeString(newTeam.name);
+    const sanitizedCity = sanitizeString(newTeam.city);
+    const sanitizedAbbr = sanitizeString(newTeam.abbreviation)?.toUpperCase();
+    const sanitizedLogoUrl = newTeam.logoUrl ? sanitizeString(newTeam.logoUrl, 500) : undefined;
+    
+    const team: Team = {
+      id: editingTeamId || generateUUID(),
+      name: sanitizedName,
+      city: sanitizedCity,
+      abbreviation: sanitizedAbbr,
+      country: newTeam.country,
+      roster: parseRosterText(rosterText),
+      primaryColor: newTeam.primaryColor || '#000000',
+      logoUrl: sanitizedLogoUrl
+    };
+    if (editingTeamId) {
+      setTeams(teams.map((existing) => (existing.id === editingTeamId ? team : existing)));
+    } else {
+      setTeams([...teams, team]);
+    }
+    setNewTeam({ 
+      name: '', 
+      city: '', 
+      abbreviation: '', 
+      primaryColor: '#000000', 
+      logoUrl: '',
+      country: 'USA'
+    });
+    setRosterText('');
+    setEditingTeamId(null);
   };
 
   const addExistingTeam = (team: Team) => {
@@ -202,8 +227,22 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
   };
 
   const handleSaveLeague = () => {
-    if (!leagueName || teams.length < 2) {
-      alert("Please provide a league name and at least 2 teams.");
+    // Validate league name
+    const nameValidation = validateLeagueName(leagueName);
+    if (!nameValidation.valid) {
+      alert(nameValidation.error);
+      return;
+    }
+    
+    // Validate category
+    const categoryValidation = validateCategory(category);
+    if (!categoryValidation.valid) {
+      alert(categoryValidation.error);
+      return;
+    }
+    
+    if (teams.length < 2) {
+      alert("Please add at least 2 teams to the league.");
       return;
     }
     if (!editingLeagueId && maxLeagues && leagues.length >= maxLeagues) {
@@ -211,14 +250,20 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
       return;
     }
 
+    // Sanitize inputs
+    const sanitizedName = sanitizeString(leagueName);
+    const sanitizedCategory = category ? sanitizeString(category) : 'General';
+    const sanitizedLogoUrl = logoUrl ? sanitizeString(logoUrl, 500) : undefined;
+    const sanitizedCoverImageUrl = coverImageUrl ? sanitizeString(coverImageUrl, 500) : undefined;
+
     if (editingLeagueId) {
         // Update
         const updatedLeague: League = {
             id: editingLeagueId,
-            name: leagueName,
-            logoUrl: logoUrl || undefined,
-            coverImageUrl: coverImageUrl || undefined,
-            category: category || 'General',
+            name: sanitizedName,
+            logoUrl: sanitizedLogoUrl,
+            coverImageUrl: sanitizedCoverImageUrl,
+            category: sanitizedCategory,
             teams: teams
         };
         onLeagueUpdated(updatedLeague);
@@ -226,10 +271,10 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
         // Create
         const newLeague: League = {
             id: generateUUID(),
-            name: leagueName,
-            logoUrl: logoUrl || undefined,
-            coverImageUrl: coverImageUrl || undefined,
-            category: category || 'General',
+            name: sanitizedName,
+            logoUrl: sanitizedLogoUrl,
+            coverImageUrl: sanitizedCoverImageUrl,
+            category: sanitizedCategory,
             teams: teams
         };
         onLeagueCreated(newLeague);

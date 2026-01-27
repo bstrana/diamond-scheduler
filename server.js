@@ -1,4 +1,5 @@
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -7,6 +8,15 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const distDir = path.join(__dirname, 'dist');
+
+// Rate limiting for ICS endpoint
+const icsRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const pbUrl = process.env.PB_URL || process.env.VITE_PB_URL;
 const scheduleCollection = process.env.PB_SCHEDULE_COLLECTION || process.env.VITE_PB_SCHEDULE_COLLECTION;
@@ -19,6 +29,11 @@ const formatLocalIcsDate = (date) =>
 
 const escapeIcs = (value = '') =>
   value.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+
+const sanitizeScheduleKey = (key) => {
+  if (!key || typeof key !== 'string') return null;
+  return key.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 100);
+};
 
 const buildIcs = (data) => {
   const now = new Date();
@@ -54,28 +69,27 @@ const buildIcs = (data) => {
   ].join('\r\n');
 };
 
-app.get('/subscribe.ics', async (req, res) => {
+app.get('/subscribe.ics', icsRateLimiter, async (req, res) => {
   const scheduleKey = req.query.schedule_key;
   if (!pbUrl || !scheduleCollection) {
-    res.status(500).send('PocketBase is not configured.');
+    res.status(503).send('Service unavailable.');
     return;
   }
-  if (!scheduleKey) {
-    res.status(400).send('Missing schedule_key');
+  const sanitizedKey = sanitizeScheduleKey(scheduleKey);
+  if (!sanitizedKey) {
+    res.status(400).send('Invalid schedule_key');
     return;
   }
 
-  const params = new URLSearchParams({
-    filter: `app_id="${appId}" && schedule_key="${scheduleKey}" && active=true`,
-    perPage: '1'
-  });
+  const params = new URLSearchParams();
+  params.append('filter', `app_id="${appId}" && schedule_key="${sanitizedKey}" && active=true`);
+  params.append('perPage', '1');
   const url = `${pbUrl.replace(/\/$/, '')}/api/collections/${scheduleCollection}/records?${params.toString()}`;
 
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      const text = await response.text();
-      res.status(response.status).send(text || 'Schedule lookup failed.');
+      res.status(404).send('Schedule not found.');
       return;
     }
     const payload = await response.json();
@@ -86,9 +100,10 @@ app.get('/subscribe.ics', async (req, res) => {
     }
     const ics = buildIcs(record.data);
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=300');
     res.send(ics);
   } catch (error) {
-    res.status(500).send('Failed to generate calendar feed.');
+    res.status(500).send('Service error.');
   }
 });
 

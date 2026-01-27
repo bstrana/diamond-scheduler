@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Team } from '../types';
 import { Plus, Trash2, Shield, Pencil, X } from 'lucide-react';
-import { generateUUID } from '../utils';
+import { generateUUID, validateTeamName, validateAbbreviation, validateCity, sanitizeString } from '../utils';
 
 interface TeamListProps {
   teams: Team[];
@@ -72,9 +72,9 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
         const parts = line.split(',').map(part => part.trim());
         const number = Number.parseInt(parts[0] || '', 10);
         return {
-          number: Number.isFinite(number) ? number : 0,
-          name: parts[1] || '',
-          position: parts[2] || ''
+          number: Number.isFinite(number) && number >= 0 && number <= 999 ? number : 0,
+          name: sanitizeString(parts[1] || '', 100),
+          position: sanitizeString(parts[2] || '', 50)
         };
       })
       .filter(player => player.name);
@@ -87,43 +87,67 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formTeam.name && formTeam.city && formTeam.abbreviation) {
-      const roster = parseRosterText(rosterText);
-      if (editingId) {
-        // Update existing team
-        onUpdateTeam({
-          id: editingId,
-          name: formTeam.name,
-          city: formTeam.city,
-          abbreviation: formTeam.abbreviation,
-          country: formTeam.country,
-          roster,
-          primaryColor: formTeam.primaryColor || '#000000',
-          logoUrl: formTeam.logoUrl || undefined
-        });
-        setEditingId(null);
-      } else {
-        if (maxTeams && teams.length >= maxTeams) {
-          alert(`Team limit reached (${maxTeams}).`);
-          return;
-        }
-        // Add new team
-        onAddTeam({
-          id: generateUUID(),
-          name: formTeam.name,
-          city: formTeam.city,
-          abbreviation: formTeam.abbreviation,
-          country: formTeam.country,
-          roster,
-          primaryColor: formTeam.primaryColor || '#000000',
-          logoUrl: formTeam.logoUrl || undefined
-        });
-      }
-      
-      setIsFormVisible(false);
-      setFormTeam({ primaryColor: '#000000', logoUrl: '', country: 'USA' });
-      setRosterText('');
+    
+    // Validate inputs
+    const nameValidation = validateTeamName(formTeam.name);
+    if (!nameValidation.valid) {
+      alert(nameValidation.error);
+      return;
     }
+    
+    const cityValidation = validateCity(formTeam.city);
+    if (!cityValidation.valid) {
+      alert(cityValidation.error);
+      return;
+    }
+    
+    const abbrValidation = validateAbbreviation(formTeam.abbreviation);
+    if (!abbrValidation.valid) {
+      alert(abbrValidation.error);
+      return;
+    }
+    
+    // Sanitize inputs
+    const sanitizedName = sanitizeString(formTeam.name);
+    const sanitizedCity = sanitizeString(formTeam.city);
+    const sanitizedAbbr = sanitizeString(formTeam.abbreviation)?.toUpperCase();
+    const sanitizedLogoUrl = formTeam.logoUrl ? sanitizeString(formTeam.logoUrl, 500) : undefined;
+    
+    const roster = parseRosterText(rosterText);
+    if (editingId) {
+      // Update existing team
+      onUpdateTeam({
+        id: editingId,
+        name: sanitizedName,
+        city: sanitizedCity,
+        abbreviation: sanitizedAbbr,
+        country: formTeam.country,
+        roster,
+        primaryColor: formTeam.primaryColor || '#000000',
+        logoUrl: sanitizedLogoUrl
+      });
+      setEditingId(null);
+    } else {
+      if (maxTeams && teams.length >= maxTeams) {
+        alert(`Team limit reached (${maxTeams}).`);
+        return;
+      }
+      // Add new team
+      onAddTeam({
+        id: generateUUID(),
+        name: sanitizedName,
+        city: sanitizedCity,
+        abbreviation: sanitizedAbbr,
+        country: formTeam.country,
+        roster,
+        primaryColor: formTeam.primaryColor || '#000000',
+        logoUrl: sanitizedLogoUrl
+      });
+    }
+    
+    setIsFormVisible(false);
+    setFormTeam({ primaryColor: '#000000', logoUrl: '', country: 'USA' });
+    setRosterText('');
   };
 
   const handleEditClick = (team: Team) => {

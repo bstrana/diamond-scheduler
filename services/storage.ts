@@ -159,13 +159,18 @@ const saveScheduleToPocketBase = async (
   if (!pocketbaseClient) {
     return { ok: false, reason: 'PocketBase client not initialized.' };
   }
+  const safeKey = scheduleKey ? sanitizeFilterValue(scheduleKey) : null;
+  const finalKey = safeKey || sanitizeFilterValue(scheduleKeyEnv) || 'default';
+  if (!finalKey) {
+    return { ok: false, reason: 'Invalid schedule key.' };
+  }
   const payload = {
     app_id: appId,
     active: true,
-    org_id: context?.orgId,
-    user_id: context?.userId,
-    schedule_key: scheduleKey || scheduleKeyEnv || 'default',
-    schedule_name: scheduleName,
+    org_id: sanitizeFilterValue(context?.orgId) || undefined,
+    user_id: sanitizeFilterValue(context?.userId) || undefined,
+    schedule_key: finalKey,
+    schedule_name: scheduleName ? scheduleName.slice(0, 200) : undefined,
     data: {
       leagues: data.leagues,
       teams: data.teams,
@@ -176,7 +181,7 @@ const saveScheduleToPocketBase = async (
   try {
     const record = await pocketbaseClient
       .collection(scheduleCollection)
-      .getFirstListItem(`app_id="${appId}" && schedule_key="${payload.schedule_key}"`);
+      .getFirstListItem(`app_id="${appId}" && schedule_key="${finalKey}"`);
     await pocketbaseClient.collection(scheduleCollection).update(record.id, payload);
     return { ok: true };
   } catch (error) {
@@ -216,6 +221,11 @@ export const publishScheduleNow = async (
   scheduleName?: string
 ): Promise<PublishResult> => saveScheduleToPocketBase(data, context, scheduleKey, scheduleName);
 
+const sanitizeFilterValue = (value: string | undefined): string | null => {
+  if (!value || typeof value !== 'string') return null;
+  return value.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 200);
+};
+
 export const listPublishedSchedules = async (
   context?: StorageContext,
   options?: { onlyActive?: boolean }
@@ -226,11 +236,13 @@ export const listPublishedSchedules = async (
     baseFilters.push('active=true');
   }
   const scopedFilters = [...baseFilters];
-  if (context?.orgId) {
-    scopedFilters.push(`org_id="${context.orgId}"`);
+  const safeOrgId = sanitizeFilterValue(context?.orgId);
+  if (safeOrgId) {
+    scopedFilters.push(`org_id="${safeOrgId}"`);
   }
-  if (context?.userId) {
-    scopedFilters.push(`user_id="${context.userId}"`);
+  const safeUserId = sanitizeFilterValue(context?.userId);
+  if (safeUserId) {
+    scopedFilters.push(`user_id="${safeUserId}"`);
   }
   const scopedFilter = scopedFilters.join(' && ');
   try {
@@ -299,10 +311,12 @@ export const loadPublishedScheduleByKey = async (
   scheduleKey: string
 ): Promise<StorageData | null> => {
   if (!pocketbaseClient || !scheduleCollection || !scheduleKey) return null;
+  const safeKey = sanitizeFilterValue(scheduleKey);
+  if (!safeKey) return null;
   try {
     const record = await pocketbaseClient
       .collection(scheduleCollection)
-      .getFirstListItem(`app_id="${appId}" && schedule_key="${scheduleKey}" && active=true`);
+      .getFirstListItem(`app_id="${appId}" && schedule_key="${safeKey}" && active=true`);
     const data = (record as { data?: Partial<StorageData> }).data;
     if (!data) return null;
     return {

@@ -258,7 +258,7 @@ const App: React.FC = () => {
   };
 
   // Derived State for Filtering
-  const filteredGames = games.filter(g => {
+  const filteredGames = React.useMemo(() => games.filter(g => {
     // Team filter
     if (selectedTeamId !== 'all') {
       if (g.homeTeamId !== selectedTeamId && g.awayTeamId !== selectedTeamId) {
@@ -285,7 +285,7 @@ const App: React.FC = () => {
     }
     
     return true;
-  });
+  }), [games, selectedTeamId, selectedLeagueId, selectedCategory, leagues]);
 
   // Calendar Helpers (Grid view depends on filtered games)
   const days = getMonthDays(currentDate.getFullYear(), currentDate.getMonth(), filteredGames);

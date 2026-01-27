@@ -5,6 +5,110 @@ export const generateUUID = (): string => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
+// Input validation utilities
+const MAX_NAME_LENGTH = 100;
+const MAX_CATEGORY_LENGTH = 50;
+const MAX_ABBREVIATION_LENGTH = 10;
+const MAX_CITY_LENGTH = 100;
+const MAX_LOCATION_LENGTH = 200;
+
+// Sanitize string to prevent XSS
+export const sanitizeString = (input: string | undefined | null, maxLength: number = MAX_NAME_LENGTH): string => {
+  if (!input || typeof input !== 'string') return '';
+  // Remove HTML tags and dangerous characters
+  let sanitized = input
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/[<>]/g, '') // Remove remaining angle brackets
+    .trim();
+  // Limit length
+  return sanitized.slice(0, maxLength);
+};
+
+// Validate team name
+export const validateTeamName = (name: string | undefined | null): { valid: boolean; error?: string } => {
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    return { valid: false, error: 'Team name is required' };
+  }
+  const sanitized = sanitizeString(name, MAX_NAME_LENGTH);
+  if (sanitized.length < 1) {
+    return { valid: false, error: 'Team name must be at least 1 character' };
+  }
+  if (sanitized.length > MAX_NAME_LENGTH) {
+    return { valid: false, error: `Team name must be ${MAX_NAME_LENGTH} characters or less` };
+  }
+  return { valid: true };
+};
+
+// Validate league name
+export const validateLeagueName = (name: string | undefined | null): { valid: boolean; error?: string } => {
+  if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    return { valid: false, error: 'League name is required' };
+  }
+  const sanitized = sanitizeString(name, MAX_NAME_LENGTH);
+  if (sanitized.length < 1) {
+    return { valid: false, error: 'League name must be at least 1 character' };
+  }
+  if (sanitized.length > MAX_NAME_LENGTH) {
+    return { valid: false, error: `League name must be ${MAX_NAME_LENGTH} characters or less` };
+  }
+  return { valid: true };
+};
+
+// Validate category
+export const validateCategory = (category: string | undefined | null): { valid: boolean; error?: string } => {
+  if (!category || category.trim().length === 0) {
+    return { valid: true }; // Category is optional
+  }
+  const sanitized = sanitizeString(category, MAX_CATEGORY_LENGTH);
+  if (sanitized.length > MAX_CATEGORY_LENGTH) {
+    return { valid: false, error: `Category must be ${MAX_CATEGORY_LENGTH} characters or less` };
+  }
+  return { valid: true };
+};
+
+// Validate abbreviation
+export const validateAbbreviation = (abbr: string | undefined | null): { valid: boolean; error?: string } => {
+  if (!abbr || typeof abbr !== 'string' || abbr.trim().length === 0) {
+    return { valid: false, error: 'Abbreviation is required' };
+  }
+  const sanitized = sanitizeString(abbr, MAX_ABBREVIATION_LENGTH).toUpperCase();
+  if (sanitized.length < 1 || sanitized.length > MAX_ABBREVIATION_LENGTH) {
+    return { valid: false, error: `Abbreviation must be 1-${MAX_ABBREVIATION_LENGTH} characters` };
+  }
+  // Only allow alphanumeric characters
+  if (!/^[A-Z0-9]+$/.test(sanitized)) {
+    return { valid: false, error: 'Abbreviation can only contain letters and numbers' };
+  }
+  return { valid: true };
+};
+
+// Validate city
+export const validateCity = (city: string | undefined | null): { valid: boolean; error?: string } => {
+  if (!city || typeof city !== 'string' || city.trim().length === 0) {
+    return { valid: false, error: 'City is required' };
+  }
+  const sanitized = sanitizeString(city, MAX_CITY_LENGTH);
+  if (sanitized.length < 1) {
+    return { valid: false, error: 'City must be at least 1 character' };
+  }
+  if (sanitized.length > MAX_CITY_LENGTH) {
+    return { valid: false, error: `City must be ${MAX_CITY_LENGTH} characters or less` };
+  }
+  return { valid: true };
+};
+
+// Validate location
+export const validateLocation = (location: string | undefined | null): { valid: boolean; error?: string } => {
+  if (!location) {
+    return { valid: true }; // Location is optional
+  }
+  const sanitized = sanitizeString(location, MAX_LOCATION_LENGTH);
+  if (sanitized.length > MAX_LOCATION_LENGTH) {
+    return { valid: false, error: `Location must be ${MAX_LOCATION_LENGTH} characters or less` };
+  }
+  return { valid: true };
+};
+
 export const formatDate = (date: Date): string => {
   // Use local time components to avoid UTC shifting issues
   const year = date.getFullYear();
