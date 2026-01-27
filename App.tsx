@@ -19,7 +19,8 @@ import {
   Send,
   X,
   Copy,
-  Check
+  Check,
+  Clock
 } from 'lucide-react';
 import LeagueBuilder from './components/LeagueBuilder';
 import ScheduleGenerator from './components/ScheduleGenerator';
@@ -128,7 +129,7 @@ const App: React.FC = () => {
 
   const navItems: { mode: ViewMode; label: string; icon: any }[] = [
     { mode: 'league_builder', label: 'League Creator', icon: Trophy },
-    { mode: 'scheduler', label: 'Scheduler', icon: CalendarIcon },
+    { mode: 'scheduler', label: 'Scheduler', icon: Clock },
     { mode: 'calendar', label: 'Calendar', icon: CalendarIcon },
     { mode: 'embed', label: 'Embed Code', icon: Code }
   ];

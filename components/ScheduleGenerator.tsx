@@ -149,7 +149,7 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
        <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-8 rounded-2xl text-white shadow-xl">
         <div className="flex items-center space-x-4 mb-4">
           <CalIcon className="w-8 h-8" />
-          <h2 className="text-3xl font-bold">Round Robin Scheduler</h2>
+          <h2 className="text-3xl font-bold">Game Scheduler</h2>
         </div>
         <p className="opacity-90">
           Create a balanced, mathematically generated season schedule instantly.
