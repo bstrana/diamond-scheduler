@@ -127,10 +127,9 @@ const App: React.FC = () => {
   };
 
   const navItems: { mode: ViewMode; label: string; icon: any }[] = [
-    { mode: 'calendar', label: 'Calendar', icon: CalendarIcon },
-    { mode: 'teams', label: 'Teams', icon: Users },
     { mode: 'league_builder', label: 'League Creator', icon: Trophy },
     { mode: 'scheduler', label: 'Scheduler', icon: CalendarIcon },
+    { mode: 'calendar', label: 'Calendar', icon: CalendarIcon },
     { mode: 'embed', label: 'Embed Code', icon: Code }
   ];
 
@@ -733,6 +732,16 @@ const App: React.FC = () => {
                         </div>
                       </div>
                       <div className="py-2">
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            setViewMode('teams');
+                          }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                          <span>Teams</span>
+                          <Users size={16} />
+                        </button>
                         <div className="px-3 pb-2 space-y-2">
                           <div className="text-xs font-semibold text-slate-500 uppercase">Schedule</div>
                           <button
@@ -748,6 +757,11 @@ const App: React.FC = () => {
                           </button>
                           <button
                             onClick={async () => {
+                              // Prevent publishing if there are games in edit mode (holding area)
+                              if (gamesInHoldingArea.length > 0) {
+                                alert(`Cannot publish schedule. ${gamesInHoldingArea.length} game(s) are in edit mode. Please move them to calendar slots or delete them before publishing.`);
+                                return;
+                              }
                               const trimmedKey = scheduleKey.trim();
                               const trimmedName = scheduleName.trim();
                               const baseName = trimmedName || trimmedKey;
@@ -789,9 +803,9 @@ const App: React.FC = () => {
                               setViewMode('calendar');
                               alert('Schedule published and unloaded.');
                             }}
-                            disabled={!scheduleKey.trim()}
+                            disabled={!scheduleKey.trim() || gamesInHoldingArea.length > 0}
                             className={`w-full flex items-center justify-between px-3 py-2 text-sm text-white rounded ${
-                              scheduleKey.trim()
+                              scheduleKey.trim() && gamesInHoldingArea.length === 0
                                 ? 'bg-emerald-600 hover:bg-emerald-700'
                                 : 'bg-emerald-300 cursor-not-allowed'
                             }`}
