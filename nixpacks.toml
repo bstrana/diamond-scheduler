@@ -1,2 +1,5 @@
 [phases.setup]
-nixPkgs = ["nodejs_20", "bash"]
+nixPkgs = ["nodejs_20", "bash", "coreutils"]
+
+[phases.build]
+cmds = ["npm ci", "chmod -R +x node_modules/.bin", "npm run build"]
