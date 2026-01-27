@@ -8,17 +8,25 @@ interface EmbedCodeGeneratorProps {
   leagues: League[];
   teams: Team[];
   currentUrl: string;
+  loadedScheduleKey?: string;
+  isPublishedScheduleLoaded: boolean;
 }
 
-const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams, currentUrl }) => {
+const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ 
+  leagues, 
+  teams, 
+  currentUrl,
+  loadedScheduleKey,
+  isPublishedScheduleLoaded
+}) => {
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTeamId, setSelectedTeamId] = useState<string>('all');
   const [embedView, setEmbedView] = useState<'calendar' | 'gamebar'>('calendar');
   const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
   const [height, setHeight] = useState<string>('800');
-  const [scheduleKey, setScheduleKey] = useState<string>('');
-  const [publishedSchedules, setPublishedSchedules] = useState<{ id: string; scheduleKey: string; scheduleName?: string }[]>([]);
+  const [scheduleKey, setScheduleKey] = useState<string>(loadedScheduleKey || '');
+  const [publishedSchedules, setPublishedSchedules] = useState<{ id: string; scheduleKey: string; scheduleName?: string; active: boolean }[]>([]);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
   const [hideLeagueFilter, setHideLeagueFilter] = useState(false);
   const [hideCategoryFilter, setHideCategoryFilter] = useState(false);
@@ -35,6 +43,13 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
       setHeight('800');
     }
   }, [embedView]);
+
+  // Update scheduleKey when loadedScheduleKey changes
+  useEffect(() => {
+    if (loadedScheduleKey) {
+      setScheduleKey(loadedScheduleKey);
+    }
+  }, [loadedScheduleKey]);
 
   useEffect(() => {
     let isActive = true;
@@ -62,14 +77,15 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
     }
   }, [currentUrl]);
 
-  // Build embed URL
+  // Build embed URL - only if scheduleKey is set (published schedule required)
   const embedUrl = useMemo(() => {
+    if (!scheduleKey) return '';
     const params = new URLSearchParams();
     params.set('type', embedView);
     if (selectedLeagueId !== 'all') params.set('league', selectedLeagueId);
     if (selectedCategory !== 'all') params.set('category', selectedCategory);
     if (selectedTeamId !== 'all') params.set('team', selectedTeamId);
-    if (scheduleKey) params.set('schedule_key', scheduleKey);
+    params.set('schedule_key', scheduleKey);
     if (hideLeagueFilter) params.set('hide_league_filter', '1');
     if (hideCategoryFilter) params.set('hide_category_filter', '1');
     if (hideTeamFilter) params.set('hide_team_filter', '1');
@@ -144,9 +160,28 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
           <h2 className="text-2xl font-bold">Embed Calendar</h2>
         </div>
         <p className="opacity-90 text-sm">
-          Generate embed code to display your calendar on WordPress, Squarespace, or any website.
+          Generate embed code to display your published schedule on WordPress, Squarespace, or any website.
         </p>
       </div>
+
+      {!isPublishedScheduleLoaded && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              <svg className="w-5 h-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-amber-800 mb-1">Published Schedule Required</h3>
+              <p className="text-sm text-amber-700">
+                You must load a published schedule before generating embed code. Only active, published schedules can be embedded.
+                Go to the user menu and select "Load Published Schedule" to load an official schedule.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
         <h3 className="text-lg font-semibold text-slate-800">Configure Embed Settings</h3>
@@ -158,19 +193,26 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
             <select
               value={scheduleKey}
               onChange={(e) => setScheduleKey(e.target.value)}
-              className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              disabled={!isPublishedScheduleLoaded}
+              className={`w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                !isPublishedScheduleLoaded ? 'bg-slate-100 cursor-not-allowed' : ''
+              }`}
             >
               <option value="">
-                {isLoadingSchedules ? 'Loading schedules...' : 'Local (current data)'}
+                {isLoadingSchedules ? 'Loading schedules...' : 'Select a published schedule'}
               </option>
-              {publishedSchedules.map((schedule) => (
-                <option key={schedule.id} value={schedule.scheduleKey}>
-                  {schedule.scheduleName || schedule.scheduleKey}
-                </option>
-              ))}
+              {publishedSchedules
+                .filter((schedule) => schedule.active)
+                .map((schedule) => (
+                  <option key={schedule.id} value={schedule.scheduleKey}>
+                    {schedule.scheduleName || schedule.scheduleKey} {schedule.active ? '(Active)' : ''}
+                  </option>
+                ))}
             </select>
             <p className="text-xs text-slate-500 mt-1">
-              Select an active schedule published to the database.
+              {isPublishedScheduleLoaded 
+                ? 'Select an active published schedule to embed. Only active schedules are available.'
+                : 'Load a published schedule first to enable embed code generation.'}
             </p>
           </div>
 
@@ -327,7 +369,12 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
             <label className="block text-sm font-medium text-slate-700">Embed Code</label>
             <button
               onClick={handleCopy}
-              className="flex items-center space-x-2 px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors text-sm"
+              disabled={!scheduleKey || !embedUrl}
+              className={`flex items-center space-x-2 px-3 py-1.5 rounded-md transition-colors text-sm ${
+                scheduleKey && embedUrl
+                  ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+              }`}
             >
               {copied ? (
                 <>
@@ -344,10 +391,21 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
           </div>
           <textarea
             readOnly
-            value={embedCode}
-            className="w-full h-32 p-3 border border-slate-300 rounded-md bg-slate-50 font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+            value={scheduleKey && embedUrl ? embedCode : '// Load a published schedule and select it above to generate embed code.\n// Only active, published schedules can be embedded.'}
+            className={`w-full h-32 p-3 border border-slate-300 rounded-md font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+              scheduleKey && embedUrl ? 'bg-slate-50' : 'bg-slate-100 text-slate-500'
+            }`}
+            onClick={(e) => {
+              if (scheduleKey && embedUrl) {
+                (e.target as HTMLTextAreaElement).select();
+              }
+            }}
           />
+          {!scheduleKey && (
+            <p className="text-xs text-amber-600 mt-1">
+              Select a published schedule above to generate embed code.
+            </p>
+          )}
         </div>
 
         {/* Preview Link */}
@@ -358,10 +416,19 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
               <p className="text-xs text-slate-500">Open in a new tab to see how it looks</p>
             </div>
             <a
-              href={embedUrl}
+              href={scheduleKey && embedUrl ? embedUrl : '#'}
+              onClick={(e) => {
+                if (!scheduleKey || !embedUrl) {
+                  e.preventDefault();
+                }
+              }}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors text-sm ${
+                scheduleKey && embedUrl
+                  ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  : 'bg-slate-300 text-slate-500 cursor-not-allowed pointer-events-none'
+              }`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center space-x-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-md hover:bg-slate-200 transition-colors text-sm"
             >
               <ExternalLink size={16} />
               <span>Open Preview</span>

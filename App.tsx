@@ -100,6 +100,15 @@ const App: React.FC = () => {
       alert('Select a schedule to load.');
       return;
     }
+    const selectedSchedule = publishedSchedules.find((item) => item.id === selectedScheduleId);
+    if (!selectedSchedule) {
+      alert('Selected schedule not found.');
+      return;
+    }
+    if (!selectedSchedule.active) {
+      alert('Only active schedules can be loaded.');
+      return;
+    }
     if (!storageApi.loadPublishedScheduleById) return;
     const data = await storageApi.loadPublishedScheduleById(selectedScheduleId, { userId, orgId });
     if (!data) {
@@ -114,6 +123,8 @@ const App: React.FC = () => {
     setSelectedCategory('all');
     setSelectedTeamId('all');
     setScheduleLeagueId(data.leagues[0]?.id || '');
+    setScheduleKey(selectedSchedule.scheduleKey);
+    setScheduleName(selectedSchedule.scheduleName || '');
     setViewMode('calendar');
   };
 
@@ -916,6 +927,8 @@ const App: React.FC = () => {
                 leagues={leagues}
                 teams={teams}
                 currentUrl={window.location.href}
+                loadedScheduleKey={scheduleKey}
+                isPublishedScheduleLoaded={!!scheduleKey && scheduleKey.trim() !== ''}
             />
           )}
 
