@@ -148,7 +148,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
       if (editingTeamId) {
         setTeams(teams.map((existing) => (existing.id === editingTeamId ? team : existing)));
       } else {
-        setTeams([...teams, team]);
+      setTeams([...teams, team]);
       }
       setNewTeam({ 
         name: '', 
@@ -553,9 +553,9 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                       >
                         <Pencil size={16} />
                       </button>
-                      <button onClick={() => removeTeam(team.id)} className="text-slate-300 hover:text-red-500 p-2">
-                        <Trash2 size={16} />
-                      </button>
+                    <button onClick={() => removeTeam(team.id)} className="text-slate-300 hover:text-red-500 p-2">
+                      <Trash2 size={16} />
+                    </button>
                     </div>
                   </div>
                 ))}

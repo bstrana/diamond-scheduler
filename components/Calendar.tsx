@@ -205,20 +205,20 @@ const Calendar: React.FC<CalendarProps> = ({
             
             {/* Team Filter */}
             {!hideTeamFilter && (
-              <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
-                  <Filter size={16} className="text-slate-400" />
-                  <select 
-                      value={selectedTeamId}
-                      onChange={(e) => onTeamFilterChange(e.target.value)}
-                      className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
-                  >
-                      <option value="all">All Teams</option>
-                      <option disabled>──────────</option>
-                      {teams.map(t => (
-                          <option key={t.id} value={t.id}>{t.city} {t.name}</option>
-                      ))}
-                  </select>
-              </div>
+            <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
+                <Filter size={16} className="text-slate-400" />
+                <select 
+                    value={selectedTeamId}
+                    onChange={(e) => onTeamFilterChange(e.target.value)}
+                    className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
+                >
+                    <option value="all">All Teams</option>
+                    <option disabled>──────────</option>
+                    {teams.map(t => (
+                        <option key={t.id} value={t.id}>{t.city} {t.name}</option>
+                    ))}
+                </select>
+            </div>
             )}
 
             {/* View Toggle */}
