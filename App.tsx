@@ -922,6 +922,8 @@ const App: React.FC = () => {
                 currentUrl={window.location.href}
                 loadedScheduleKey={scheduleKey}
                 isPublishedScheduleLoaded={!!scheduleKey && scheduleKey.trim() !== ''}
+                userId={userId}
+                orgId={orgId}
             />
           )}
 

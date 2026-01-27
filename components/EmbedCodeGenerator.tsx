@@ -10,6 +10,8 @@ interface EmbedCodeGeneratorProps {
   currentUrl: string;
   loadedScheduleKey?: string;
   isPublishedScheduleLoaded: boolean;
+  userId?: string;
+  orgId?: string;
 }
 
 const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ 
@@ -17,7 +19,9 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   teams, 
   currentUrl,
   loadedScheduleKey,
-  isPublishedScheduleLoaded
+  isPublishedScheduleLoaded,
+  userId,
+  orgId
 }) => {
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -56,7 +60,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     const loadSchedules = async () => {
       if (!storageApi.listPublishedSchedules) return;
       setIsLoadingSchedules(true);
-      const items = await storageApi.listPublishedSchedules(undefined, { onlyActive: true });
+      const items = await storageApi.listPublishedSchedules({ userId, orgId }, { onlyActive: true });
       if (!isActive) return;
       setPublishedSchedules(items);
       setIsLoadingSchedules(false);
@@ -65,7 +69,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [userId, orgId]);
 
   // Get base URL (remove hash/query if present)
   const baseUrl = useMemo(() => {
