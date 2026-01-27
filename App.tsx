@@ -31,11 +31,13 @@ const App: React.FC = () => {
   const [showNavMenu, setShowNavMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
-  const [publishedSchedules, setPublishedSchedules] = useState<{ id: string; scheduleKey: string; scheduleName?: string }[]>([]);
+  const [publishedSchedules, setPublishedSchedules] = useState<{ id: string; scheduleKey: string; scheduleName?: string; active: boolean }[]>([]);
   const [scheduleKey, setScheduleKey] = useState('');
   const [scheduleName, setScheduleName] = useState('');
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
   const [scheduleLeagueId, setScheduleLeagueId] = useState<string>('');
+  const [selectedScheduleId, setSelectedScheduleId] = useState<string>('');
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
 
   const maxLeagues = Number.parseInt(import.meta.env.VITE_LEAGUE_LIMIT || '', 10);
   const maxTeams = Number.parseInt(import.meta.env.VITE_TEAM_LIMT || '', 10);
@@ -79,10 +81,34 @@ const App: React.FC = () => {
   const loadPublishedSchedules = async () => {
     setIsLoadingSchedules(true);
     const items = storageApi.listPublishedSchedules
-      ? await storageApi.listPublishedSchedules({ userId, orgId })
+      ? await storageApi.listPublishedSchedules({ userId, orgId }, { onlyActive: false })
       : [];
     setPublishedSchedules(items);
     setIsLoadingSchedules(false);
+  };
+
+  const selectedPublishedSchedule = publishedSchedules.find((item) => item.id === selectedScheduleId);
+
+  const handleLoadSchedule = async () => {
+    if (!selectedScheduleId) {
+      alert('Select a schedule to load.');
+      return;
+    }
+    if (!storageApi.loadPublishedScheduleById) return;
+    const data = await storageApi.loadPublishedScheduleById(selectedScheduleId);
+    if (!data) {
+      alert('Schedule not found.');
+      return;
+    }
+    setLeagues(data.leagues);
+    setTeams(data.teams);
+    setGames(data.games);
+    setGamesInHoldingArea([]);
+    setSelectedLeagueId('all');
+    setSelectedCategory('all');
+    setSelectedTeamId('all');
+    setScheduleLeagueId(data.leagues[0]?.id || '');
+    setViewMode('calendar');
   };
 
   const navItems: { mode: ViewMode; label: string; icon: any }[] = [
@@ -715,100 +741,71 @@ const App: React.FC = () => {
                         </button>
                         <div className="px-3 pb-2 space-y-2">
                           <div className="text-xs font-semibold text-slate-500 uppercase">Schedule</div>
-                          <div className="flex items-center justify-between text-[11px] text-slate-400">
-                            <span>Scope: {scheduleScopeLabel}</span>
-                            <button
-                              type="button"
-                              onClick={loadPublishedSchedules}
-                              className="text-indigo-500 hover:text-indigo-600"
-                            >
-                              Refresh
-                            </button>
-                          </div>
-                          <select
-                            className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm"
-                            value=""
-                            onChange={(e) => {
-                              const selected = publishedSchedules.find((item) => item.id === e.target.value);
-                              if (selected) {
-                                setScheduleKey(selected.scheduleKey);
-                                setScheduleName(selected.scheduleName || '');
-                              }
+                          <button
+                            onClick={async () => {
+                              setShowUserMenu(false);
+                              await loadPublishedSchedules();
+                              setShowScheduleModal(true);
                             }}
+                            className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
                           >
-                            <option value="" disabled>
-                              {isLoadingSchedules
-                                ? 'Loading schedules...'
-                                : publishedSchedules.length === 0
-                                  ? 'No schedules found'
-                                  : 'Select existing schedule'}
-                            </option>
-                            {publishedSchedules.map((item) => (
-                              <option key={item.id} value={item.id}>
-                                {item.scheduleName || item.scheduleKey}
-                              </option>
-                            ))}
-                          </select>
-                          <input
-                            className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm"
-                            placeholder="Schedule name"
-                            value={scheduleName}
-                            onChange={(e) => setScheduleName(e.target.value)}
-                          />
-                          <input
-                            className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm"
-                            placeholder="Schedule key (unique id)"
-                            value={scheduleKey}
-                            onChange={(e) => setScheduleKey(e.target.value)}
-                          />
+                            <span>Load Published Schedule</span>
+                            <Send size={16} />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              const trimmedKey = scheduleKey.trim();
+                              const trimmedName = scheduleName.trim();
+                              const baseName = trimmedName || trimmedKey;
+                              const leagueForName = scheduleLeagueId
+                                ? leagues.find((league) => league.id === scheduleLeagueId)
+                                : leagues[0];
+                              const leagueSuffix = leagueForName
+                                ? `${leagueForName.name}${leagueForName.category ? ` ${leagueForName.category}` : ''}`
+                                : '';
+                              const finalName = leagueSuffix ? `${baseName} - ${leagueSuffix}` : baseName;
+                              localStorage.setItem('dsa_schedule_publish_key', trimmedKey);
+                              localStorage.setItem('dsa_schedule_publish_name', finalName);
+                              const result = await storageApi.publishScheduleNow(
+                                {
+                                  leagues,
+                                  teams,
+                                  games,
+                                  gamesInHoldingArea
+                                },
+                                { userId, orgId },
+                                trimmedKey,
+                                finalName
+                              );
+                              if (!result.ok) {
+                                alert(`Publish failed. ${result.reason || 'Check PocketBase URL and rules.'}`);
+                                return;
+                              }
+                              setLeagues([]);
+                              setTeams(MOCK_TEAMS);
+                              setGames(INITIAL_GAMES);
+                              setGamesInHoldingArea([]);
+                              setSelectedLeagueId('all');
+                              setSelectedCategory('all');
+                              setSelectedTeamId('all');
+                              setScheduleLeagueId('');
+                              setScheduleKey('');
+                              setScheduleName('');
+                              setSelectedScheduleId('');
+                              setViewMode('calendar');
+                              alert('Schedule published and unloaded.');
+                            }}
+                            disabled={!scheduleKey.trim()}
+                            className={`w-full flex items-center justify-between px-3 py-2 text-sm text-white rounded ${
+                              scheduleKey.trim()
+                                ? 'bg-emerald-600 hover:bg-emerald-700'
+                                : 'bg-emerald-300 cursor-not-allowed'
+                            }`}
+                          >
+                            <span>Publish Current Schedule</span>
+                            <Send size={16} />
+                          </button>
                         </div>
-                        <button
-                          onClick={async () => {
-                            const trimmedKey = scheduleKey.trim();
-                            if (!trimmedKey) {
-                              alert('Schedule key is required.');
-                              return;
-                            }
-                            const trimmedName = scheduleName.trim();
-                            const baseName = trimmedName || trimmedKey;
-                            const leagueForName = scheduleLeagueId
-                              ? leagues.find((league) => league.id === scheduleLeagueId)
-                              : leagues[0];
-                            const leagueSuffix = leagueForName
-                              ? `${leagueForName.name}${leagueForName.category ? ` ${leagueForName.category}` : ''}`
-                              : '';
-                            const finalName = leagueSuffix ? `${baseName} - ${leagueSuffix}` : baseName;
-                            localStorage.setItem('dsa_schedule_publish_key', scheduleKey);
-                            localStorage.setItem('dsa_schedule_publish_name', finalName);
-                            const result = await storageApi.publishScheduleNow(
-                              {
-                                leagues,
-                                teams,
-                                games,
-                                gamesInHoldingArea
-                              },
-                              { userId, orgId },
-                              trimmedKey,
-                              finalName
-                            );
-                            if (result.ok) {
-                              const updated = storageApi.listPublishedSchedules
-                                ? await storageApi.listPublishedSchedules({ userId, orgId })
-                                : [];
-                              setPublishedSchedules(updated);
-                            }
-                            setShowUserMenu(false);
-                            alert(
-                              result.ok
-                                ? 'Schedule published to PocketBase.'
-                                : `Schedule publish failed. ${result.reason || 'Check PocketBase URL and rules.'}`
-                            );
-                          }}
-                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                        >
-                          <span>Publish Schedule</span>
-                          <Send size={16} />
-                        </button>
                       </div>
                       <div className="border-t border-slate-100">
                         <button
@@ -1138,6 +1135,116 @@ const App: React.FC = () => {
         })()}
 
       </main>
+      {showScheduleModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-semibold text-slate-800">Published Schedules</h3>
+              <button onClick={() => setShowScheduleModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span>Scope: {scheduleScopeLabel} · {publishedSchedules.length} schedules</span>
+                <button
+                  type="button"
+                  onClick={loadPublishedSchedules}
+                  className="text-indigo-500 hover:text-indigo-600"
+                >
+                  Refresh
+                </button>
+              </div>
+              <select
+                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                value={selectedScheduleId}
+                onChange={(e) => {
+                  const selected = publishedSchedules.find((item) => item.id === e.target.value);
+                  if (selected) {
+                    setScheduleKey(selected.scheduleKey);
+                    setScheduleName(selected.scheduleName || '');
+                    setSelectedScheduleId(selected.id);
+                  }
+                }}
+              >
+                <option value="" disabled>
+                  {isLoadingSchedules
+                    ? 'Loading schedules...'
+                    : publishedSchedules.length === 0
+                      ? 'No schedules found'
+                      : 'Select schedule'}
+                </option>
+                {publishedSchedules.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.scheduleName || item.scheduleKey}
+                  </option>
+                ))}
+              </select>
+
+              {selectedPublishedSchedule && (
+                <div className="space-y-2 text-xs text-slate-500">
+                  <div>Key: {selectedPublishedSchedule.scheduleKey}</div>
+                  <div>Status: {selectedPublishedSchedule.active ? 'Active' : 'Inactive'}</div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                <button
+                  onClick={async () => {
+                    await handleLoadSchedule();
+                    setShowScheduleModal(false);
+                  }}
+                  className="flex-1 min-w-[120px] bg-indigo-600 text-white px-4 py-2 rounded-md text-sm hover:bg-indigo-700"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!selectedScheduleId) {
+                      alert('Select a schedule to toggle.');
+                      return;
+                    }
+                    const nextActive = !selectedPublishedSchedule?.active;
+                    const result = await storageApi.updatePublishedScheduleActive(
+                      selectedScheduleId,
+                      nextActive
+                    );
+                    if (!result.ok) {
+                      alert(`Update failed. ${result.reason || 'Check PocketBase rules.'}`);
+                      return;
+                    }
+                    await loadPublishedSchedules();
+                  }}
+                  className="flex-1 min-w-[160px] border border-slate-200 px-4 py-2 rounded-md text-sm hover:bg-slate-50"
+                >
+                  {selectedPublishedSchedule?.active ? 'Set Inactive' : 'Set Active'}
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!selectedScheduleId) {
+                      alert('Select a schedule to delete.');
+                      return;
+                    }
+                    if (!confirm('Delete this published schedule? This cannot be undone.')) return;
+                    const result = await storageApi.deletePublishedSchedule(selectedScheduleId);
+                    if (!result.ok) {
+                      alert(`Delete failed. ${result.reason || 'Check PocketBase rules.'}`);
+                      return;
+                    }
+                    setSelectedScheduleId('');
+                    setScheduleKey('');
+                    setScheduleName('');
+                    await loadPublishedSchedules();
+                  }}
+                  className="flex-1 min-w-[120px] border border-red-200 text-red-600 px-4 py-2 rounded-md text-sm hover:bg-red-50"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

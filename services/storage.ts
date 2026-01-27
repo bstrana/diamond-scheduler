@@ -17,6 +17,7 @@ export type PublishedScheduleSummary = {
   id: string;
   scheduleKey: string;
   scheduleName?: string;
+  active: boolean;
 };
 
 const STORAGE_KEYS = {
@@ -216,10 +217,14 @@ export const publishScheduleNow = async (
 ): Promise<PublishResult> => saveScheduleToPocketBase(data, context, scheduleKey, scheduleName);
 
 export const listPublishedSchedules = async (
-  context?: StorageContext
+  context?: StorageContext,
+  options?: { onlyActive?: boolean }
 ): Promise<PublishedScheduleSummary[]> => {
   if (!pocketbaseClient || !scheduleCollection) return [];
-  const baseFilters = [`app_id="${appId}"`, 'active=true'];
+  const baseFilters = [`app_id="${appId}"`];
+  if (options?.onlyActive) {
+    baseFilters.push('active=true');
+  }
   const scopedFilters = [...baseFilters];
   if (context?.orgId) {
     scopedFilters.push(`org_id="${context.orgId}"`);
@@ -243,12 +248,50 @@ export const listPublishedSchedules = async (
       .map((item: any) => ({
         id: item.id,
         scheduleKey: item.schedule_key || 'default',
-        scheduleName: item.schedule_name || undefined
+        scheduleName: item.schedule_name || undefined,
+        active: item.active !== false
       }))
       .filter((item) => item.scheduleKey);
   } catch (error) {
     console.warn('PocketBase schedule list failed.', error);
     return [];
+  }
+};
+
+export const deletePublishedSchedule = async (
+  recordId: string
+): Promise<{ ok: boolean; reason?: string }> => {
+  if (!pocketbaseClient || !scheduleCollection) {
+    return { ok: false, reason: 'PocketBase is not configured.' };
+  }
+  try {
+    await pocketbaseClient.collection(scheduleCollection).delete(recordId);
+    return { ok: true };
+  } catch (error) {
+    console.warn('PocketBase schedule delete failed.', error);
+    return {
+      ok: false,
+      reason: formatPocketbaseError(error)
+    };
+  }
+};
+
+export const updatePublishedScheduleActive = async (
+  recordId: string,
+  active: boolean
+): Promise<{ ok: boolean; reason?: string }> => {
+  if (!pocketbaseClient || !scheduleCollection) {
+    return { ok: false, reason: 'PocketBase is not configured.' };
+  }
+  try {
+    await pocketbaseClient.collection(scheduleCollection).update(recordId, { active });
+    return { ok: true };
+  } catch (error) {
+    console.warn('PocketBase schedule update failed.', error);
+    return {
+      ok: false,
+      reason: formatPocketbaseError(error)
+    };
   }
 };
 
@@ -260,6 +303,28 @@ export const loadPublishedScheduleByKey = async (
     const record = await pocketbaseClient
       .collection(scheduleCollection)
       .getFirstListItem(`app_id="${appId}" && schedule_key="${scheduleKey}" && active=true`);
+    const data = (record as { data?: Partial<StorageData> }).data;
+    if (!data) return null;
+    return {
+      leagues: data.leagues || [],
+      teams: data.teams || [],
+      games: data.games || [],
+      gamesInHoldingArea: []
+    };
+  } catch (error) {
+    console.warn('PocketBase schedule fetch failed.', error);
+    return null;
+  }
+};
+
+export const loadPublishedScheduleById = async (
+  recordId: string
+): Promise<StorageData | null> => {
+  if (!pocketbaseClient || !scheduleCollection || !recordId) return null;
+  try {
+    const record = await pocketbaseClient
+      .collection(scheduleCollection)
+      .getOne(recordId);
     const data = (record as { data?: Partial<StorageData> }).data;
     if (!data) return null;
     return {

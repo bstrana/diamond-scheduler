@@ -41,7 +41,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ leagues, teams,
     const loadSchedules = async () => {
       if (!storageApi.listPublishedSchedules) return;
       setIsLoadingSchedules(true);
-      const items = await storageApi.listPublishedSchedules();
+      const items = await storageApi.listPublishedSchedules(undefined, { onlyActive: true });
       if (!isActive) return;
       setPublishedSchedules(items);
       setIsLoadingSchedules(false);
