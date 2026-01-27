@@ -7,7 +7,7 @@ RUN apk add --no-cache bash
 SHELL ["/bin/bash", "-lc"]
 
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 COPY . .
 RUN npm run build
