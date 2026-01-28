@@ -70,17 +70,26 @@ const buildIcs = (data) => {
 };
 
 app.get('/subscribe.ics', icsRateLimiter, async (req, res) => {
+  // Require schedule_key parameter
   const scheduleKey = req.query.schedule_key;
+  if (!scheduleKey) {
+    res.status(400).send('Schedule key required.');
+    return;
+  }
+  
   if (!pbUrl || !scheduleCollection) {
     res.status(503).send('Service unavailable.');
     return;
   }
+  
+  // Sanitize and validate schedule_key
   const sanitizedKey = sanitizeScheduleKey(scheduleKey);
   if (!sanitizedKey) {
     res.status(400).send('Invalid schedule_key');
     return;
   }
 
+  // Only fetch active published schedules - never serve inactive or unpublished schedules
   const params = new URLSearchParams();
   params.append('filter', `app_id="${appId}" && schedule_key="${sanitizedKey}" && active=true`);
   params.append('perPage', '1');
@@ -94,10 +103,24 @@ app.get('/subscribe.ics', icsRateLimiter, async (req, res) => {
     }
     const payload = await response.json();
     const record = payload.items?.[0];
+    
+    // Verify record exists and is active
+    if (!record) {
+      res.status(404).send('Schedule not found.');
+      return;
+    }
+    
+    // Double-check active status (defense in depth)
+    if (record.active !== true) {
+      res.status(404).send('Schedule not found.');
+      return;
+    }
+    
     if (!record?.data) {
       res.status(404).send('Schedule not found.');
       return;
     }
+    
     const ics = buildIcs(record.data);
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=300');

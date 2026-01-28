@@ -80,12 +80,14 @@ if (!rootElement) {
     const [isLoading, setIsLoading] = useState(!!scheduleKey);
 
     useEffect(() => {
+      // Require schedule_key parameter - no data without it
       if (!scheduleKey) {
         setIsLoading(false);
         return;
       }
       let isActive = true;
       const loadSchedule = async () => {
+        // Only load from published schedules - never from local storage
         const data = await loadPublishedScheduleByKey(scheduleKey);
         if (!isActive) return;
         setScheduleData(data);
@@ -95,7 +97,16 @@ if (!rootElement) {
       return () => {
         isActive = false;
       };
-    }, []);
+    }, [scheduleKey]);
+
+    // Require schedule_key - show error if missing
+    if (!scheduleKey) {
+      return (
+        <div className="min-h-screen flex items-center justify-center text-slate-500">
+          Schedule key required. Please provide a valid schedule_key parameter.
+        </div>
+      );
+    }
 
     if (isLoading) {
       return (
@@ -105,10 +116,11 @@ if (!rootElement) {
       );
     }
 
-    if (scheduleKey && !scheduleData) {
+    // Require valid published schedule - show error if not found
+    if (!scheduleData) {
       return (
         <div className="min-h-screen flex items-center justify-center text-slate-500">
-          Schedule not found.
+          Schedule not found or not available.
         </div>
       );
     }

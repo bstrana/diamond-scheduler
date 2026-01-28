@@ -73,6 +73,7 @@ const loadFromPocketBase = async (context?: StorageContext): Promise<StorageData
     const safeOrgId = sanitizeFilterValue(context?.orgId);
     const safeUserId = sanitizeFilterValue(context?.userId);
     
+    // Try with org_id/user_id filter first
     let filter = baseFilter;
     if (safeOrgId) {
       filter = `${baseFilter} && org_id="${safeOrgId}"`;
@@ -80,12 +81,27 @@ const loadFromPocketBase = async (context?: StorageContext): Promise<StorageData
       filter = `${baseFilter} && user_id="${safeUserId}"`;
     }
     
-    const record = await pocketbaseClient
-      .collection(pocketbaseCollection)
-      .getFirstListItem(filter);
-    const payload = (record as { payload?: StorageData }).payload;
-    if (!payload) return null;
-    return payload;
+    try {
+      const record = await pocketbaseClient
+        .collection(pocketbaseCollection)
+        .getFirstListItem(filter);
+      const payload = (record as { payload?: StorageData }).payload;
+      if (!payload) return null;
+      return payload;
+    } catch (filterError: any) {
+      // If filter fails (e.g., field doesn't exist), try without org_id/user_id
+      // This handles cases where the schema hasn't been updated yet
+      if (filterError?.status === 400 && (safeOrgId || safeUserId)) {
+        console.warn('PocketBase filter failed, trying without org_id/user_id filter.', filterError);
+        const record = await pocketbaseClient
+          .collection(pocketbaseCollection)
+          .getFirstListItem(baseFilter);
+        const payload = (record as { payload?: StorageData }).payload;
+        if (!payload) return null;
+        return payload;
+      }
+      throw filterError;
+    }
   } catch (error) {
     console.warn('PocketBase load failed, falling back to local storage.', error);
     return null;
@@ -99,6 +115,7 @@ const saveToPocketBase = async (data: StorageData, context?: StorageContext) => 
     const safeOrgId = sanitizeFilterValue(context?.orgId);
     const safeUserId = sanitizeFilterValue(context?.userId);
     
+    // Try with org_id/user_id filter first
     let filter = baseFilter;
     if (safeOrgId) {
       filter = `${baseFilter} && org_id="${safeOrgId}"`;
@@ -106,17 +123,37 @@ const saveToPocketBase = async (data: StorageData, context?: StorageContext) => 
       filter = `${baseFilter} && user_id="${safeUserId}"`;
     }
     
-    const existing = await pocketbaseClient
-      .collection(pocketbaseCollection)
-      .getFirstListItem(filter);
-    await pocketbaseClient
-      .collection(pocketbaseCollection)
-      .update(existing.id, { 
-        app_id: appId,
-        org_id: safeOrgId || undefined,
-        user_id: safeUserId || undefined,
-        payload: data 
-      });
+    try {
+      const existing = await pocketbaseClient
+        .collection(pocketbaseCollection)
+        .getFirstListItem(filter);
+      await pocketbaseClient
+        .collection(pocketbaseCollection)
+        .update(existing.id, { 
+          app_id: appId,
+          org_id: safeOrgId || undefined,
+          user_id: safeUserId || undefined,
+          payload: data 
+        });
+    } catch (filterError: any) {
+      // If filter fails (e.g., field doesn't exist), try without org_id/user_id
+      if (filterError?.status === 400 && (safeOrgId || safeUserId)) {
+        console.warn('PocketBase filter failed, trying without org_id/user_id filter.', filterError);
+        const existing = await pocketbaseClient
+          .collection(pocketbaseCollection)
+          .getFirstListItem(baseFilter);
+        await pocketbaseClient
+          .collection(pocketbaseCollection)
+          .update(existing.id, { 
+            app_id: appId,
+            org_id: safeOrgId || undefined,
+            user_id: safeUserId || undefined,
+            payload: data 
+          });
+        return;
+      }
+      throw filterError;
+    }
   } catch (error) {
     try {
       const safeOrgId = sanitizeFilterValue(context?.orgId);
