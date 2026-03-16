@@ -19,6 +19,7 @@ const scheduleKey = urlParams.get('schedule_key') || undefined;
 const hideLeagueFilter = urlParams.get('hide_league_filter') === '1';
 const hideCategoryFilter = urlParams.get('hide_category_filter') === '1';
 const hideTeamFilter = urlParams.get('hide_team_filter') === '1';
+const hideStatusFilter = urlParams.get('hide_status_filter') === '1';
 
 // Sanitize CSS property values to prevent CSS injection
 const sanitizeCssColor = (value: unknown, fallback: string): string => {
@@ -178,6 +179,7 @@ if (!rootElement) {
           hideLeagueFilter={hideLeagueFilter}
           hideCategoryFilter={hideCategoryFilter}
           hideTeamFilter={hideTeamFilter}
+          hideStatusFilter={hideStatusFilter}
         />
       );
     }

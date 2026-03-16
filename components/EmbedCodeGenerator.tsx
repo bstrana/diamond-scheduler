@@ -40,6 +40,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   const [hideLeagueFilter, setHideLeagueFilter] = useState(false);
   const [hideCategoryFilter, setHideCategoryFilter] = useState(false);
   const [hideTeamFilter, setHideTeamFilter] = useState(false);
+  const [hideStatusFilter, setHideStatusFilter] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showStyler, setShowStyler] = useState(false);
   const [embedStyles, setEmbedStyles] = useState<EmbedStyles | null>(null);
@@ -101,6 +102,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
       if (hideLeagueFilter) params.set('hide_league_filter', '1');
       if (hideCategoryFilter) params.set('hide_category_filter', '1');
       if (hideTeamFilter) params.set('hide_team_filter', '1');
+      if (embedView === 'gamebar' && hideStatusFilter) params.set('hide_status_filter', '1');
       if (embedView === 'calendar' && viewType !== 'grid') params.set('view', viewType);
     }
     params.set('height', `${height}px`);
@@ -129,7 +131,8 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     scheduleKey,
     hideLeagueFilter,
     hideCategoryFilter,
-    hideTeamFilter
+    hideTeamFilter,
+    hideStatusFilter
   ]);
 
   // Generate embed code
@@ -258,6 +261,17 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                   />
                   <span>Team filter</span>
                 </label>
+                {embedView === 'gamebar' && (
+                  <label className="flex items-center space-x-2 text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={!hideStatusFilter}
+                      onChange={(e) => setHideStatusFilter(!e.target.checked)}
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span>Game status filter</span>
+                  </label>
+                )}
               </div>
             </div>
           )}
