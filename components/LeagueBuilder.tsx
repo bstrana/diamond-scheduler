@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Team, League } from '../types';
 import { Plus, Trash2, Trophy, Save, Shield, Check, Settings2, FolderOpen, Pencil, X } from 'lucide-react';
-import { generateUUID, validateLeagueName, validateCategory, validateTeamName, validateAbbreviation, validateCity, sanitizeString } from '../utils';
+import { generateUUID, validateLeagueName, validateCategory, validateTeamName, validateAbbreviation, validateCity, validateLocation, sanitizeString } from '../utils';
 
 interface LeagueBuilderProps {
   leagues: League[];
@@ -149,24 +149,32 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
       alert(abbrValidation.error);
       return;
     }
-    
+
+    const fieldValidation = validateLocation(newTeam.field);
+    if (!fieldValidation.valid) {
+      alert(fieldValidation.error);
+      return;
+    }
+
     if (!editingTeamId && maxTeams && teams.length >= maxTeams) {
       alert(`Team limit reached (${maxTeams}).`);
       return;
     }
-    
+
     // Sanitize inputs
     const sanitizedName = sanitizeString(newTeam.name);
     const sanitizedCity = sanitizeString(newTeam.city);
     const sanitizedAbbr = sanitizeString(newTeam.abbreviation)?.toUpperCase();
     const sanitizedLogoUrl = newTeam.logoUrl ? sanitizeString(newTeam.logoUrl, 500) : undefined;
-    
+    const sanitizedField = newTeam.field ? sanitizeString(newTeam.field, 200) : undefined;
+
     const team: Team = {
       id: editingTeamId || generateUUID(),
       name: sanitizedName,
       city: sanitizedCity,
       abbreviation: sanitizedAbbr,
       country: newTeam.country,
+      field: sanitizedField,
       roster: parseRosterText(rosterText),
       primaryColor: newTeam.primaryColor || '#000000',
       logoUrl: sanitizedLogoUrl
@@ -214,6 +222,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
       city: team.city,
       abbreviation: team.abbreviation,
       country: team.country || 'USA',
+      field: team.field || '',
       primaryColor: team.primaryColor,
       logoUrl: team.logoUrl || ''
     });
@@ -476,18 +485,28 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                     </div>
                     <div className="md:col-span-3">
                         <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Logo URL</label>
-                        <input 
-                            type="url" 
-                            placeholder="https://..." 
-                            className="w-full border p-2 rounded text-sm" 
-                            value={newTeam.logoUrl || ''} 
-                            onChange={e => setNewTeam({...newTeam, logoUrl: e.target.value})} 
+                        <input
+                            type="url"
+                            placeholder="https://..."
+                            className="w-full border p-2 rounded text-sm"
+                            value={newTeam.logoUrl || ''}
+                            onChange={e => setNewTeam({...newTeam, logoUrl: e.target.value})}
                         />
                         {newTeam.logoUrl && (
                             <div className="mt-1 p-1 border border-slate-100 rounded bg-slate-50 flex justify-center">
                                 <img src={newTeam.logoUrl} alt="Logo preview" className="h-8 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
                             </div>
                         )}
+                    </div>
+                    <div className="md:col-span-6">
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Home Field</label>
+                        <input
+                            type="text"
+                            placeholder="e.g. Yankee Stadium"
+                            className="w-full border p-2 rounded text-sm"
+                            value={newTeam.field || ''}
+                            onChange={e => setNewTeam({...newTeam, field: e.target.value})}
+                        />
                     </div>
                     <div className="md:col-span-12">
                         <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Roster (Number, Name, Position)</label>
@@ -588,6 +607,9 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                             <span className="font-mono">{team.abbreviation}</span>
                             <span className="mx-1.5 w-2 h-2 rounded-full" style={{backgroundColor: team.primaryColor}}></span>
                         </div>
+                        {team.field && (
+                          <div className="text-xs text-slate-400 truncate max-w-[200px]" title={team.field}>{team.field}</div>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center space-x-1">
