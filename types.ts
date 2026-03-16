@@ -38,7 +38,7 @@ export interface Game {
   };
   leagueId?: string; // Deprecated: kept for backward compatibility
   leagueIds?: string[]; // New: array of league IDs
-  gameNumber?: number;
+  gameNumber?: string;
   seriesName?: string; // Name of the series (e.g., "Semifinal", "Final")
 }
 

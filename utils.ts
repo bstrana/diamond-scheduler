@@ -302,7 +302,7 @@ export const generateRoundRobinSchedule = (
               time: time,
               location: location,
               status: 'scheduled',
-              gameNumber: games.length + 1,
+              gameNumber: String(games.length + 1),
               seriesName: matchup.seriesName
             });
             
@@ -348,7 +348,7 @@ export const generateRoundRobinSchedule = (
             time: time,
             location: location,
             status: 'scheduled',
-            gameNumber: games.length + 1,
+            gameNumber: String(games.length + 1),
             seriesName: matchup.seriesName
           });
           
@@ -395,7 +395,7 @@ export const generateRoundRobinSchedule = (
         time: time1,
         location: location1,
         status: 'scheduled',
-        gameNumber: games.length + 1
+        gameNumber: String(games.length + 1)
       });
 
       if (doubleHeaderMode === 'same_day') {
@@ -412,7 +412,7 @@ export const generateRoundRobinSchedule = (
           time: time2,
           location: location1,
           status: 'scheduled',
-          gameNumber: games.length + 1
+          gameNumber: String(games.length + 1)
         });
       } else if (doubleHeaderMode === 'consecutive') {
         // Game 2 on next calendar day (same home team, same location)
@@ -429,7 +429,7 @@ export const generateRoundRobinSchedule = (
           time: time2,
           location: location1, // Same location
           status: 'scheduled',
-          gameNumber: games.length + 1
+          gameNumber: String(games.length + 1)
         });
       }
 
@@ -459,7 +459,7 @@ export const generateRoundRobinSchedule = (
           time: time3,
           location: location2,
           status: 'scheduled',
-          gameNumber: games.length + 1
+          gameNumber: String(games.length + 1)
         });
 
         // Game 2 of Series 2 on next day
@@ -476,7 +476,7 @@ export const generateRoundRobinSchedule = (
           time: time4,
           location: location2, // Same location
           status: 'scheduled',
-          gameNumber: games.length + 1
+          gameNumber: String(games.length + 1)
         });
 
         // Advance date after Series 2

@@ -168,7 +168,7 @@ const App: React.FC = () => {
     date: formatDate(new Date()),
     time: '19:00',
     location: 'Main Stadium',
-    gameNumber: 1,
+    gameNumber: '',
     leagueIds: []
   });
 
@@ -385,7 +385,7 @@ const App: React.FC = () => {
     const newGame: Game = {
         ...game,
         id: generateUUID(),
-        gameNumber: (game.gameNumber || 0) + 1 // Increment game number on copy
+        gameNumber: game.gameNumber
     };
     setGames([...games, newGame]);
   };
@@ -465,7 +465,7 @@ const App: React.FC = () => {
       date: formatDate(new Date()),
       time: '19:00',
       location: 'Main Stadium',
-      gameNumber: 1,
+      gameNumber: '',
       leagueIds: []
     });
   };
@@ -476,12 +476,12 @@ const App: React.FC = () => {
       return;
     }
     const defaultLeague = leagues.find(l => l.teams.some(t => t.id === teams[0]?.id)) || leagues[0];
-    setNewGameForm({ 
-        date: formatDate(date), 
+    setNewGameForm({
+        date: formatDate(date),
         time: '19:00',
         location: 'Main Stadium',
         leagueIds: defaultLeague ? [defaultLeague.id] : [],
-        gameNumber: 1
+        gameNumber: ''
     });
     setShowAddModal(true);
   };
@@ -497,7 +497,7 @@ const App: React.FC = () => {
         time: '19:00',
         location: 'Main Stadium',
         leagueIds: defaultLeague ? [defaultLeague.id] : [],
-        gameNumber: 1
+        gameNumber: ''
     });
     setShowAddModal(true);
   };
@@ -952,12 +952,11 @@ const App: React.FC = () => {
 
                          <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Game Number</label>
-                            <input 
-                                type="number" 
-                                min="1"
-                                className="w-full border rounded-md p-2" 
-                                value={newGameForm.gameNumber} 
-                                onChange={e => setNewGameForm({...newGameForm, gameNumber: parseInt(e.target.value)})} 
+                            <input
+                                type="text"
+                                className="w-full border rounded-md p-2"
+                                value={newGameForm.gameNumber ?? ''}
+                                onChange={e => setNewGameForm({...newGameForm, gameNumber: e.target.value})}
                             />
                          </div>
 
@@ -1008,7 +1007,7 @@ const App: React.FC = () => {
               date: formatDate(new Date()),
               time: '19:00',
               location: 'Main Stadium',
-              gameNumber: 1,
+              gameNumber: '',
               leagueIds: []
             });
           };
@@ -1064,12 +1063,11 @@ const App: React.FC = () => {
 
                          <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Game Number</label>
-                            <input 
-                                type="number" 
-                                min="1"
-                                className="w-full border rounded-md p-2" 
-                                value={newGameForm.gameNumber !== undefined ? newGameForm.gameNumber : (editingGame.gameNumber || 1)} 
-                                onChange={e => setNewGameForm({...newGameForm, gameNumber: parseInt(e.target.value)})} 
+                            <input
+                                type="text"
+                                className="w-full border rounded-md p-2"
+                                value={newGameForm.gameNumber !== undefined ? newGameForm.gameNumber : (editingGame.gameNumber ?? '')}
+                                onChange={e => setNewGameForm({...newGameForm, gameNumber: e.target.value})}
                             />
                          </div>
 
