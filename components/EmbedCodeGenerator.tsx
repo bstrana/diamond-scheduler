@@ -412,12 +412,12 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
           )}
         </div>
 
-        {/* Preview Link */}
+        {/* Preview */}
         <div className="pt-4 border-t border-slate-200">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-sm font-medium text-slate-700 mb-1">Preview Embed</p>
-              <p className="text-xs text-slate-500">Open in a new tab to see how it looks</p>
+              <p className="text-xs text-slate-500">Live preview of how the embed will look</p>
             </div>
             <a
               href={scheduleKey && embedUrl ? embedUrl : '#'}
@@ -435,9 +435,26 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
               rel="noopener noreferrer"
             >
               <ExternalLink size={16} />
-              <span>Open Preview</span>
+              <span>Open in New Tab</span>
             </a>
           </div>
+          {scheduleKey && embedUrl ? (
+            <div className="rounded-lg overflow-hidden border border-slate-200" style={{ height: `${Math.min(parseInt(height) || 800, 600)}px` }}>
+              <iframe
+                key={embedUrl}
+                src={embedUrl}
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                scrolling="auto"
+                title="Embed Preview"
+              />
+            </div>
+          ) : (
+            <div className="rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center" style={{ height: '200px' }}>
+              <p className="text-sm text-slate-400">Select a published schedule above to see the preview</p>
+            </div>
+          )}
         </div>
 
         {/* Instructions */}
