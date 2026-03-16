@@ -125,7 +125,7 @@ const GameHoldingArea: React.FC<GameHoldingAreaProps> = ({
                         )}
                         {gameLeagues.length > 0 && (
                           <span className="bg-slate-100 px-1 py-0.5 rounded text-slate-600">
-                            {gameLeagues[0].name}
+                            {gameLeagues[0].shortName || gameLeagues[0].name}
                           </span>
                         )}
                         {game.gameNumber && (

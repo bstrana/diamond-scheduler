@@ -472,7 +472,7 @@ const GameBar: React.FC<GameBarProps> = ({
                                       color: 'var(--embed-text, #475569)'
                                     }}
                                   >
-                                    {league.name}
+                                    {league.shortName || league.name}
                                   </span>
                                   {league.category && (
                                     <span 

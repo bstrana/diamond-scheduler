@@ -18,6 +18,7 @@ export interface Team {
 export interface League {
   id: string;
   name: string;
+  shortName?: string;
   logoUrl?: string;
   coverImageUrl?: string;
   category: string;

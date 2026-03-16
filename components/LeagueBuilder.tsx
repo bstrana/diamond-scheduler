@@ -27,6 +27,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
 
   // League Details State
   const [leagueName, setLeagueName] = useState('');
+  const [shortName, setShortName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [category, setCategory] = useState('');
@@ -148,6 +149,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
     if (id === '') {
         // Create Mode - Reset
         setLeagueName('');
+        setShortName('');
         setLogoUrl('');
         setCoverImageUrl('');
         setCategory('');
@@ -157,6 +159,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
         const league = leagues.find(l => l.id === id);
         if (league) {
             setLeagueName(league.name);
+            setShortName(league.shortName || '');
             setLogoUrl(league.logoUrl || '');
             setCoverImageUrl(league.coverImageUrl || '');
             setCategory(league.category);
@@ -298,6 +301,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
 
     // Sanitize inputs
     const sanitizedName = sanitizeString(leagueName);
+    const sanitizedShortName = shortName ? sanitizeString(shortName, 20) : undefined;
     const sanitizedCategory = category ? sanitizeString(category) : 'General';
     const sanitizedLogoUrl = logoUrl ? sanitizeString(logoUrl, 500) : undefined;
     const sanitizedCoverImageUrl = coverImageUrl ? sanitizeString(coverImageUrl, 500) : undefined;
@@ -307,6 +311,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
         const updatedLeague: League = {
             id: editingLeagueId,
             name: sanitizedName,
+            shortName: sanitizedShortName,
             logoUrl: sanitizedLogoUrl,
             coverImageUrl: sanitizedCoverImageUrl,
             category: sanitizedCategory,
@@ -318,6 +323,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
         const newLeague: League = {
             id: generateUUID(),
             name: sanitizedName,
+            shortName: sanitizedShortName,
             logoUrl: sanitizedLogoUrl,
             coverImageUrl: sanitizedCoverImageUrl,
             category: sanitizedCategory,
@@ -326,6 +332,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
         onLeagueCreated(newLeague);
         // Reset form after create
         setLeagueName('');
+        setShortName('');
         setLogoUrl('');
         setCoverImageUrl('');
         setCategory('');
@@ -398,13 +405,26 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">League Name</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={leagueName}
                   onChange={(e) => setLeagueName(e.target.value)}
                   className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   placeholder="e.g. Major League Baseball"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Short Name <span className="text-slate-400 font-normal">(optional)</span></label>
+                <input
+                  type="text"
+                  value={shortName}
+                  onChange={(e) => setShortName(e.target.value)}
+                  maxLength={20}
+                  className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  placeholder="e.g. MLB"
+                />
+                <p className="text-xs text-slate-500 mt-1">Used in embed views where space is limited.</p>
               </div>
 
               <div>

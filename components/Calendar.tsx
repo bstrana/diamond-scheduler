@@ -513,7 +513,7 @@ const Calendar: React.FC<CalendarProps> = ({
                                                     {game.seriesName && gameLeagues.length > 0 && <span className="text-slate-300">|</span>}
                                                     {gameLeagues.map((league, idx) => (
                                                         <React.Fragment key={league.id}>
-                                                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{league.name}</span>
+                                                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{league.shortName || league.name}</span>
                                                             {league.category && <span>• {league.category}</span>}
                                                             {idx < gameLeagues.length - 1 && <span className="text-slate-300">|</span>}
                                                         </React.Fragment>
