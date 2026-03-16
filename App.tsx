@@ -449,7 +449,10 @@ const App: React.FC = () => {
       awayTeamId: newGameForm.awayTeamId || editingGame.awayTeamId,
       leagueIds: newGameForm.leagueIds || getGameLeagueIds(editingGame),
       gameNumber: newGameForm.gameNumber || editingGame.gameNumber,
-      seriesName: newGameForm.seriesName !== undefined ? newGameForm.seriesName : editingGame.seriesName
+      seriesName: newGameForm.seriesName !== undefined ? newGameForm.seriesName : editingGame.seriesName,
+      status: (newGameForm.status || editingGame.status) as Game['status'],
+      scores: newGameForm.scores !== undefined ? newGameForm.scores : editingGame.scores,
+      recap: newGameForm.recap !== undefined ? newGameForm.recap : editingGame.recap,
     };
 
     if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
@@ -1103,7 +1106,126 @@ const App: React.FC = () => {
                              <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
                              <input className="w-full border rounded-md p-2" placeholder="Stadium Name" value={newGameForm.location || editingGame.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})} />
                         </div>
-                        
+
+                        {/* Status */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+                            <div className="flex rounded-md border overflow-hidden divide-x">
+                                {(['scheduled', 'live', 'final'] as const).map(s => {
+                                    const current = newGameForm.status !== undefined ? newGameForm.status : editingGame.status;
+                                    const isActive = current === s;
+                                    const activeClass = s === 'live'
+                                        ? 'bg-green-500 text-white'
+                                        : s === 'final'
+                                            ? 'bg-slate-700 text-white'
+                                            : 'bg-indigo-600 text-white';
+                                    return (
+                                        <button
+                                            key={s}
+                                            type="button"
+                                            onClick={() => setNewGameForm({...newGameForm, status: s})}
+                                            className={`flex-1 py-2 text-sm font-medium capitalize transition-colors ${isActive ? activeClass : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                                        >
+                                            {s === 'live' ? '● Live' : s === 'final' ? 'Final' : 'Scheduled'}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Score by Inning */}
+                        {(() => {
+                            const currentStatus = newGameForm.status !== undefined ? newGameForm.status : editingGame.status;
+                            if (currentStatus !== 'live' && currentStatus !== 'final') return null;
+                            const currentScores = newGameForm.scores !== undefined ? newGameForm.scores : editingGame.scores;
+                            const innings = currentScores?.innings || [];
+                            const homeTeamId = newGameForm.homeTeamId || editingGame.homeTeamId;
+                            const awayTeamId = newGameForm.awayTeamId || editingGame.awayTeamId;
+                            const homeTeam = teams.find((t: Team) => t.id === homeTeamId);
+                            const awayTeam = teams.find((t: Team) => t.id === awayTeamId);
+
+                            const updateInning = (idx: number, side: 'home' | 'away', val: string) => {
+                                const newInnings = [...innings];
+                                if (!newInnings[idx]) newInnings[idx] = { home: null, away: null };
+                                newInnings[idx] = { ...newInnings[idx], [side]: val === '' ? null : parseInt(val) };
+                                const totalHome = newInnings.reduce((s, i) => s + (i?.home ?? 0), 0);
+                                const totalAway = newInnings.reduce((s, i) => s + (i?.away ?? 0), 0);
+                                setNewGameForm({...newGameForm, scores: { home: totalHome, away: totalAway, innings: newInnings }});
+                            };
+                            const addInning = () => {
+                                const newInnings = [...innings, { home: null, away: null }];
+                                const totalHome = newInnings.reduce((s, i) => s + (i?.home ?? 0), 0);
+                                const totalAway = newInnings.reduce((s, i) => s + (i?.away ?? 0), 0);
+                                setNewGameForm({...newGameForm, scores: { home: totalHome, away: totalAway, innings: newInnings }});
+                            };
+                            const removeLastInning = () => {
+                                const newInnings = innings.slice(0, -1);
+                                const totalHome = newInnings.reduce((s, i) => s + (i?.home ?? 0), 0);
+                                const totalAway = newInnings.reduce((s, i) => s + (i?.away ?? 0), 0);
+                                setNewGameForm({...newGameForm, scores: newInnings.length > 0 ? { home: totalHome, away: totalAway, innings: newInnings } : undefined});
+                            };
+
+                            return (
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="block text-sm font-medium text-slate-700">Score by Inning</label>
+                                        <div className="flex gap-1">
+                                            <button type="button" onClick={removeLastInning} disabled={innings.length === 0} className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 disabled:opacity-40">− Inning</button>
+                                            <button type="button" onClick={addInning} className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200">+ Inning</button>
+                                        </div>
+                                    </div>
+                                    {innings.length === 0 ? (
+                                        <p className="text-xs text-slate-400 text-center py-3 border rounded-md bg-slate-50">Click "+ Inning" to start entering scores</p>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs border-collapse border border-slate-200 rounded-md overflow-hidden">
+                                                <thead>
+                                                    <tr className="bg-slate-100">
+                                                        <th className="text-left px-2 py-1.5 font-semibold text-slate-600 w-16 border-r border-slate-200">Team</th>
+                                                        {innings.map((_, i) => <th key={i} className="px-1 py-1.5 font-medium text-slate-500 w-9 border-r border-slate-200">{i + 1}</th>)}
+                                                        <th className="px-2 py-1.5 font-bold text-slate-800 w-9">R</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {([{team: awayTeam, side: 'away'}, {team: homeTeam, side: 'home'}] as const).map(({team, side}) => (
+                                                        <tr key={side} className="border-t border-slate-200">
+                                                            <td className="px-2 py-1 font-semibold text-slate-700 border-r border-slate-200">{team?.abbreviation || side}</td>
+                                                            {innings.map((inning, i) => (
+                                                                <td key={i} className="p-0.5 border-r border-slate-200">
+                                                                    <input
+                                                                        type="number"
+                                                                        min="0"
+                                                                        className="w-8 text-center border border-slate-200 rounded p-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                                                        value={inning[side] ?? ''}
+                                                                        onChange={e => updateInning(i, side, e.target.value)}
+                                                                    />
+                                                                </td>
+                                                            ))}
+                                                            <td className="px-2 py-1 font-bold text-center text-slate-800">
+                                                                {innings.reduce((s, i) => s + (i[side] ?? 0), 0)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
+                        {/* Recap */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Recap (optional)</label>
+                            <textarea
+                                className="w-full border rounded-md p-2 text-sm resize-none"
+                                rows={3}
+                                placeholder="Game recap..."
+                                value={newGameForm.recap !== undefined ? newGameForm.recap : (editingGame.recap || '')}
+                                onChange={e => setNewGameForm({...newGameForm, recap: e.target.value})}
+                            />
+                        </div>
+
                         <div className="pt-2 flex space-x-2">
                             <button type="button" onClick={closeEditModal} className="flex-1 bg-slate-200 text-slate-700 py-2 rounded-lg font-medium hover:bg-slate-300 transition-colors">
                                 Cancel

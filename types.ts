@@ -32,11 +32,13 @@ export interface Game {
   date: string; // ISO String YYYY-MM-DD
   time: string; // HH:MM 24h format
   location: string;
-  status: 'scheduled' | 'in-progress' | 'completed' | 'postponed';
+  status: 'scheduled' | 'live' | 'final' | 'in-progress' | 'completed' | 'postponed';
   scores?: {
     home: number;
     away: number;
+    innings?: Array<{ home: number | null; away: number | null }>;
   };
+  recap?: string;
   leagueId?: string; // Deprecated: kept for backward compatibility
   leagueIds?: string[]; // New: array of league IDs
   gameNumber?: string;
