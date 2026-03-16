@@ -4,6 +4,7 @@ import { Copy, Check, Code, ExternalLink } from 'lucide-react';
 import EmbedStyler, { EmbedStyles } from './EmbedStyler';
 import EmbeddableCalendar from './EmbeddableCalendar';
 import EmbeddableGameBar from './EmbeddableGameBar';
+import EmbeddableStandings from './EmbeddableStandings';
 import * as storageApi from '../services/storage';
 
 interface EmbedCodeGeneratorProps {
@@ -30,7 +31,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTeamId, setSelectedTeamId] = useState<string>('all');
-  const [embedView, setEmbedView] = useState<'calendar' | 'gamebar'>('calendar');
+  const [embedView, setEmbedView] = useState<'calendar' | 'gamebar' | 'standings'>('calendar');
   const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
   const [height, setHeight] = useState<string>('800');
   const [scheduleKey, setScheduleKey] = useState<string>(loadedScheduleKey || '');
@@ -47,7 +48,9 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   useEffect(() => {
     if (embedView === 'gamebar') {
       setHeight('260');
-    } else if (embedView === 'calendar') {
+    } else if (embedView === 'standings') {
+      setHeight('500');
+    } else {
       setHeight('800');
     }
   }, [embedView]);
@@ -91,21 +94,20 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     const params = new URLSearchParams();
     params.set('type', embedView);
     if (selectedLeagueId !== 'all') params.set('league', selectedLeagueId);
-    if (selectedCategory !== 'all') params.set('category', selectedCategory);
-    if (selectedTeamId !== 'all') params.set('team', selectedTeamId);
     params.set('schedule_key', scheduleKey);
-    if (hideLeagueFilter) params.set('hide_league_filter', '1');
-    if (hideCategoryFilter) params.set('hide_category_filter', '1');
-    if (hideTeamFilter) params.set('hide_team_filter', '1');
-    if (embedView === 'calendar' && viewType !== 'grid') params.set('view', viewType);
+    if (embedView !== 'standings') {
+      if (selectedCategory !== 'all') params.set('category', selectedCategory);
+      if (selectedTeamId !== 'all') params.set('team', selectedTeamId);
+      if (hideLeagueFilter) params.set('hide_league_filter', '1');
+      if (hideCategoryFilter) params.set('hide_category_filter', '1');
+      if (hideTeamFilter) params.set('hide_team_filter', '1');
+      if (embedView === 'calendar' && viewType !== 'grid') params.set('view', viewType);
+    }
     params.set('height', `${height}px`);
-    
-    // Add style parameters if custom styles are set
-    // Note: For very long style strings, consider using localStorage or a different approach
+
     if (embedStyles) {
       try {
         const stylesJson = JSON.stringify(embedStyles);
-        // Only add if it's not too long (URLs have length limits)
         if (stylesJson.length < 2000) {
           params.set('styles', encodeURIComponent(stylesJson));
         }
@@ -113,7 +115,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
         console.error('Failed to stringify styles:', e);
       }
     }
-    
+
     return `${baseUrl}/embed.html${params.toString() ? '?' + params.toString() : ''}`;
   }, [
     baseUrl,
@@ -132,7 +134,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
 
   // Generate embed code
   const embedCode = useMemo(() => {
-    const defaultHeight = embedView === 'gamebar' ? '260' : '800';
+    const defaultHeight = embedView === 'gamebar' ? '260' : embedView === 'standings' ? '500' : '800';
     const finalHeight = height || defaultHeight;
     const borderColor = embedStyles?.borderColor || '#e2e8f0';
     const borderRadius = embedStyles?.borderRadius || '8px';
@@ -224,39 +226,41 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
             </p>
           </div>
 
-          {/* Filter Visibility */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Show Filters</label>
-            <div className="space-y-2 rounded-md border border-slate-200 p-3 text-sm">
-              <label className="flex items-center space-x-2 text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={!hideLeagueFilter}
-                  onChange={(e) => setHideLeagueFilter(!e.target.checked)}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span>League filter</span>
-              </label>
-              <label className="flex items-center space-x-2 text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={!hideCategoryFilter}
-                  onChange={(e) => setHideCategoryFilter(!e.target.checked)}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span>Category filter</span>
-              </label>
-              <label className="flex items-center space-x-2 text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={!hideTeamFilter}
-                  onChange={(e) => setHideTeamFilter(!e.target.checked)}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span>Team filter</span>
-              </label>
+          {/* Filter Visibility (not applicable for standings) */}
+          {embedView !== 'standings' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Show Filters</label>
+              <div className="space-y-2 rounded-md border border-slate-200 p-3 text-sm">
+                <label className="flex items-center space-x-2 text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={!hideLeagueFilter}
+                    onChange={(e) => setHideLeagueFilter(!e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>League filter</span>
+                </label>
+                <label className="flex items-center space-x-2 text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={!hideCategoryFilter}
+                    onChange={(e) => setHideCategoryFilter(!e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>Category filter</span>
+                </label>
+                <label className="flex items-center space-x-2 text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={!hideTeamFilter}
+                    onChange={(e) => setHideTeamFilter(!e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>Team filter</span>
+                </label>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* League Filter */}
           <div>
@@ -309,13 +313,14 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
           {/* Embed Type */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Embed Type</label>
-            <select 
+            <select
               value={embedView}
-              onChange={(e) => setEmbedView(e.target.value as 'calendar' | 'gamebar')}
+              onChange={(e) => setEmbedView(e.target.value as 'calendar' | 'gamebar' | 'standings')}
               className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             >
               <option value="calendar">Calendar View</option>
               <option value="gamebar">Game Bar</option>
+              <option value="standings">League Standings</option>
             </select>
           </div>
 
@@ -323,7 +328,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
           {embedView === 'calendar' && (
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Calendar View</label>
-              <select 
+              <select
                 value={viewType}
                 onChange={(e) => setViewType(e.target.value as 'grid' | 'list')}
                 className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
@@ -334,20 +339,27 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
             </div>
           )}
 
+          {/* Standings note */}
+          {embedView === 'standings' && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-md p-3 text-sm text-indigo-800">
+              Standings are calculated from completed games (status: <em>final</em> or <em>completed</em>) with recorded scores. Select a specific league above for a focused standings table.
+            </div>
+          )}
+
           {/* Height */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Height (px)</label>
-            <input 
+            <input
               type="number"
-              min={embedView === 'gamebar' ? '260' : '400'}
+              min={embedView === 'gamebar' ? '260' : embedView === 'standings' ? '300' : '400'}
               max="2000"
               value={height}
               onChange={(e) => setHeight(e.target.value)}
               className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              placeholder={embedView === 'gamebar' ? '260' : '800'}
+              placeholder={embedView === 'gamebar' ? '260' : embedView === 'standings' ? '500' : '800'}
             />
             <p className="text-xs text-slate-500 mt-1">
-              Recommended: {embedView === 'gamebar' ? '260-400px' : '600-1000px'}
+              Recommended: {embedView === 'gamebar' ? '260–400px' : embedView === 'standings' ? '400–700px' : '600–1000px'}
             </p>
           </div>
         </div>
@@ -453,6 +465,11 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                 hideCategoryFilter={hideCategoryFilter}
                 hideTeamFilter={hideTeamFilter}
               />
+            ) : embedView === 'standings' ? (
+              <EmbeddableStandings
+                leagueId={selectedLeagueId !== 'all' ? selectedLeagueId : undefined}
+                dataOverride={{ leagues, teams, games }}
+              />
             ) : (
               <EmbeddableCalendar
                 initialLeagueId={selectedLeagueId !== 'all' ? selectedLeagueId : undefined}
@@ -486,6 +503,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
               <li>Supports filtering by league, category, and team</li>
               <li>Calendar view supports both grid and list layouts</li>
               <li>Game bar shows upcoming scheduled games in a horizontal timeline</li>
+              <li>League standings shows W, L, PCT, GB, RS, RA, and DIFF for each team</li>
             </ul>
           </div>
         </div>

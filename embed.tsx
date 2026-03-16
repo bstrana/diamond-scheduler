@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import EmbeddableCalendar from './components/EmbeddableCalendar';
 import EmbeddableGameBar from './components/EmbeddableGameBar';
+import EmbeddableStandings from './components/EmbeddableStandings';
 import './index.css';
 import { loadPublishedScheduleByKey, StorageData } from './services/storage';
 
@@ -177,6 +178,20 @@ if (!rootElement) {
           hideLeagueFilter={hideLeagueFilter}
           hideCategoryFilter={hideCategoryFilter}
           hideTeamFilter={hideTeamFilter}
+        />
+      );
+    }
+
+    if (embedType === 'standings') {
+      return (
+        <EmbeddableStandings
+          leagueId={leagueId}
+          scheduleKey={scheduleKey}
+          dataOverride={scheduleData ? {
+            leagues: scheduleData.leagues,
+            teams: scheduleData.teams,
+            games: scheduleData.games
+          } : null}
         />
       );
     }
