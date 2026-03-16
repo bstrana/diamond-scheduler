@@ -69,6 +69,20 @@ const buildIcs = (data) => {
   ].join('\r\n');
 };
 
+// Security headers middleware
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https:; frame-ancestors 'self';"
+  );
+  next();
+});
+
 app.get('/subscribe.ics', icsRateLimiter, async (req, res) => {
   // Require schedule_key parameter
   const scheduleKey = req.query.schedule_key;

@@ -69,14 +69,23 @@ const ImportExport: React.FC<ImportExportProps> = ({
     if(fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const csvEscape = (value: string): string => {
+    // If value contains comma, double-quote, newline, or starts with a formula character, quote it
+    const needsQuoting = /[,"\n\r]/.test(value) || /^[=+\-@\t]/.test(value);
+    if (needsQuoting) {
+      return `"${value.replace(/"/g, '""')}"`;
+    }
+    return value;
+  };
+
   const downloadCSV = () => {
     const headers = "Date,Time,Home,Away,Location\n";
     const rows = allGames.map(g => {
         const h = teams.find(t => t.id === g.homeTeamId)?.name || 'Unknown';
         const a = teams.find(t => t.id === g.awayTeamId)?.name || 'Unknown';
-        return `${g.date},${g.time},${h},${a},${g.location}`;
+        return [g.date, g.time, h, a, g.location || ''].map(csvEscape).join(',');
     }).join('\n');
-    
+
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -85,6 +94,7 @@ const ImportExport: React.FC<ImportExportProps> = ({
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     onAfterAction?.();
   };
 

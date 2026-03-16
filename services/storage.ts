@@ -292,8 +292,10 @@ export const persistStorageData = async (
   localStorage.setItem(STORAGE_KEYS.games, JSON.stringify(data.games));
   localStorage.setItem(STORAGE_KEYS.gamesInHoldingArea, JSON.stringify(data.gamesInHoldingArea));
 
-  await saveToPocketBase(data, context);
-  const result = await saveScheduleToPocketBase(data, context, scheduleKey, scheduleName);
+  const [, result] = await Promise.all([
+    saveToPocketBase(data, context),
+    saveScheduleToPocketBase(data, context, scheduleKey, scheduleName)
+  ]);
   return result.ok;
 };
 
