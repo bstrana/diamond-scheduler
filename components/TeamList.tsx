@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Team } from '../types';
 import { Plus, Trash2, Shield, Pencil, X } from 'lucide-react';
-import { generateUUID, validateTeamName, validateAbbreviation, validateCity, sanitizeString } from '../utils';
+import { generateUUID, validateTeamName, validateAbbreviation, validateCity, validateLocation, sanitizeString } from '../utils';
 
 interface TeamListProps {
   teams: Team[];
@@ -106,13 +106,20 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
       alert(abbrValidation.error);
       return;
     }
-    
+
+    const fieldValidation = validateLocation(formTeam.field);
+    if (!fieldValidation.valid) {
+      alert(fieldValidation.error);
+      return;
+    }
+
     // Sanitize inputs
     const sanitizedName = sanitizeString(formTeam.name);
     const sanitizedCity = sanitizeString(formTeam.city);
     const sanitizedAbbr = sanitizeString(formTeam.abbreviation)?.toUpperCase();
     const sanitizedLogoUrl = formTeam.logoUrl ? sanitizeString(formTeam.logoUrl, 500) : undefined;
-    
+    const sanitizedField = formTeam.field ? sanitizeString(formTeam.field, 200) : undefined;
+
     const roster = parseRosterText(rosterText);
     if (editingId) {
       // Update existing team
@@ -122,6 +129,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
         city: sanitizedCity,
         abbreviation: sanitizedAbbr,
         country: formTeam.country,
+        field: sanitizedField,
         roster,
         primaryColor: formTeam.primaryColor || '#000000',
         logoUrl: sanitizedLogoUrl
@@ -139,6 +147,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
         city: sanitizedCity,
         abbreviation: sanitizedAbbr,
         country: formTeam.country,
+        field: sanitizedField,
         roster,
         primaryColor: formTeam.primaryColor || '#000000',
         logoUrl: sanitizedLogoUrl
@@ -242,6 +251,16 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
                 </div>
               )}
             </div>
+            <div className="lg:col-span-3">
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Home Field</label>
+              <input
+                type="text"
+                placeholder="e.g. Yankee Stadium"
+                className="w-full border p-2 rounded text-sm"
+                value={formTeam.field || ''}
+                onChange={e => setFormTeam({...formTeam, field: e.target.value})}
+              />
+            </div>
             <div className="lg:col-span-6">
               <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Roster (Number, Name, Position)</label>
               <textarea
@@ -294,6 +313,9 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
                     <span className="font-mono bg-slate-100 px-1.5 rounded">{team.abbreviation}</span>
                     <span className="w-3 h-3 rounded-full border border-slate-300" style={{backgroundColor: team.primaryColor}}></span>
                   </div>
+                  {team.field && (
+                    <p className="text-xs text-slate-400 mt-0.5 truncate max-w-[160px]" title={team.field}>{team.field}</p>
+                  )}
                 </div>
               </div>
               

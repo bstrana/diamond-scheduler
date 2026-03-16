@@ -4,6 +4,7 @@ export interface Team {
   city: string;
   abbreviation: string;
   country?: string;
+  field?: string;
   roster?: Array<{
     number: number;
     name: string;

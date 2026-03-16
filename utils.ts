@@ -280,7 +280,7 @@ export const generateRoundRobinSchedule = (
         while (remainingGames > 0) {
           const homeTeam = currentSeries % 2 === 1 ? team1 : team2;
           const awayTeam = currentSeries % 2 === 1 ? team2 : team1;
-          const location = `${homeTeam.city} Field`;
+          const location = homeTeam.field || `${homeTeam.city} Field`;
           
           // Schedule 2 games at this location (back-to-back)
           const gamesThisSeries = Math.min(2, remainingGames);
@@ -336,7 +336,7 @@ export const generateRoundRobinSchedule = (
           const homeTeam = isTeam1Home ? team1 : team2;
           const awayTeam = isTeam1Home ? team2 : team1;
           
-          const location = `${homeTeam.city} Field`;
+          const location = homeTeam.field || `${homeTeam.city} Field`;
           const dayName = getDayName(currentDate);
           const time = dayTimes[dayName] || '19:00';
           
@@ -382,7 +382,7 @@ export const generateRoundRobinSchedule = (
     for (const pair of allPairs) {
       // Series 1: Team 1 at home
       const homeTeam1 = teams.find(t => t.id === pair.team1);
-      const location1 = homeTeam1 ? `${homeTeam1.city} Field` : 'Stadium';
+      const location1 = homeTeam1 ? (homeTeam1.field || `${homeTeam1.city} Field`) : 'Stadium';
       const dayName1 = getDayName(currentDate);
       const time1 = dayTimes[dayName1] || '19:00';
 
@@ -446,7 +446,7 @@ export const generateRoundRobinSchedule = (
       // Series 2: Team 2 at home (only for consecutive mode to ensure home/away balance)
       if (doubleHeaderMode === 'consecutive') {
         const homeTeam2 = teams.find(t => t.id === pair.team2);
-        const location2 = homeTeam2 ? `${homeTeam2.city} Field` : 'Stadium';
+        const location2 = homeTeam2 ? (homeTeam2.field || `${homeTeam2.city} Field`) : 'Stadium';
         const dayName2 = getDayName(currentDate);
         const time3 = dayTimes[dayName2] || '19:00';
 
