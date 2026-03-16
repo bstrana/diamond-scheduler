@@ -39,6 +39,10 @@ const App: React.FC = () => {
   const [scheduleLeagueId, setScheduleLeagueId] = useState<string>('');
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>('');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [publishKeyDraft, setPublishKeyDraft] = useState('');
+  const [publishNameDraft, setPublishNameDraft] = useState('');
+  const [isPublishing, setIsPublishing] = useState(false);
   const [copiedSubscribeUrl, setCopiedSubscribeUrl] = useState(false);
 
   const maxLeagues = Number.parseInt(import.meta.env.VITE_LEAGUE_LIMIT || '', 10);
@@ -184,6 +188,14 @@ const App: React.FC = () => {
         localStorage.removeItem('dsa_games_holding');
         localStorage.removeItem('dsa_schedule_publish_key');
         localStorage.removeItem('dsa_schedule_publish_name');
+      } else {
+        // Restore schedule key from localStorage so the Publish button stays enabled after reload
+        const savedKey = localStorage.getItem('dsa_schedule_publish_key') || '';
+        const savedName = localStorage.getItem('dsa_schedule_publish_name') || '';
+        if (savedKey) {
+          setScheduleKey(savedKey);
+          setScheduleName(savedName);
+        }
       }
       
       // Always start with empty data by default
@@ -757,56 +769,15 @@ const App: React.FC = () => {
                             <Send size={16} />
                           </button>
                           <button
-                            onClick={async () => {
-                              // Prevent publishing if there are games in edit mode (holding area)
-                              if (gamesInHoldingArea.length > 0) {
-                                alert(`Cannot publish schedule. ${gamesInHoldingArea.length} game(s) are in edit mode. Please move them to calendar slots or delete them before publishing.`);
-                                return;
-                              }
-                              const trimmedKey = scheduleKey.trim();
-                              const trimmedName = scheduleName.trim();
-                              const baseName = trimmedName || trimmedKey;
-                              const leagueForName = scheduleLeagueId
-                                ? leagues.find((league) => league.id === scheduleLeagueId)
-                                : leagues[0];
-                              const leagueSuffix = leagueForName
-                                ? `${leagueForName.name}${leagueForName.category ? ` ${leagueForName.category}` : ''}`
-                                : '';
-                              const finalName = leagueSuffix ? `${baseName} - ${leagueSuffix}` : baseName;
-                              localStorage.setItem('dsa_schedule_publish_key', trimmedKey);
-                              localStorage.setItem('dsa_schedule_publish_name', finalName);
-                              const result = await storageApi.publishScheduleNow(
-                                {
-                                  leagues,
-                                  teams,
-                                  games,
-                                  gamesInHoldingArea
-                                },
-                                { userId, orgId },
-                                trimmedKey,
-                                finalName
-                              );
-                              if (!result.ok) {
-                                alert(`Publish failed. ${result.reason || 'Check PocketBase URL and rules.'}`);
-                                return;
-                              }
-                              setLeagues([]);
-                              setTeams([]);
-                              setGames([]);
-                              setGamesInHoldingArea([]);
-                              setSelectedLeagueId('all');
-                              setSelectedCategory('all');
-                              setSelectedTeamId('all');
-                              setScheduleLeagueId('');
-                              setScheduleKey('');
-                              setScheduleName('');
-                              setSelectedScheduleId('');
-                              setViewMode('calendar');
-                              alert('Schedule published and unloaded.');
+                            onClick={() => {
+                              setShowUserMenu(false);
+                              setPublishKeyDraft(scheduleKey);
+                              setPublishNameDraft(scheduleName);
+                              setShowPublishModal(true);
                             }}
-                            disabled={!scheduleKey.trim() || gamesInHoldingArea.length > 0}
+                            disabled={gamesInHoldingArea.length > 0}
                             className={`w-full flex items-center justify-between px-3 py-2 text-sm text-white rounded ${
-                              scheduleKey.trim() && gamesInHoldingArea.length === 0
+                              gamesInHoldingArea.length === 0
                                 ? 'bg-emerald-600 hover:bg-emerald-700'
                                 : 'bg-emerald-300 cursor-not-allowed'
                             }`}
@@ -1149,6 +1120,104 @@ const App: React.FC = () => {
         })()}
 
       </main>
+      {showPublishModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-semibold text-slate-800">Publish Schedule</h3>
+              <button onClick={() => setShowPublishModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Schedule Key <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={publishKeyDraft}
+                  onChange={(e) => setPublishKeyDraft(e.target.value)}
+                  placeholder="e.g. summer-2025"
+                  className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  A unique identifier for this schedule (letters, numbers, hyphens). Used in embed URLs and ICS subscriptions.
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Schedule Name</label>
+                <input
+                  type="text"
+                  value={publishNameDraft}
+                  onChange={(e) => setPublishNameDraft(e.target.value)}
+                  placeholder="e.g. Summer League 2025"
+                  className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => setShowPublishModal(false)}
+                  className="flex-1 border border-slate-200 px-4 py-2 rounded-md text-sm hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={!publishKeyDraft.trim() || isPublishing}
+                  onClick={async () => {
+                    const trimmedKey = publishKeyDraft.trim();
+                    if (!trimmedKey) return;
+                    const baseName = publishNameDraft.trim() || trimmedKey;
+                    const leagueForName = scheduleLeagueId
+                      ? leagues.find((league) => league.id === scheduleLeagueId)
+                      : leagues[0];
+                    const leagueSuffix = leagueForName
+                      ? `${leagueForName.name}${leagueForName.category ? ` ${leagueForName.category}` : ''}`
+                      : '';
+                    const finalName = leagueSuffix ? `${baseName} - ${leagueSuffix}` : baseName;
+                    setIsPublishing(true);
+                    localStorage.setItem('dsa_schedule_publish_key', trimmedKey);
+                    localStorage.setItem('dsa_schedule_publish_name', finalName);
+                    const result = await storageApi.publishScheduleNow(
+                      { leagues, teams, games, gamesInHoldingArea },
+                      { userId, orgId },
+                      trimmedKey,
+                      finalName
+                    );
+                    setIsPublishing(false);
+                    if (!result.ok) {
+                      alert(`Publish failed. ${result.reason || 'Check PocketBase URL and rules.'}`);
+                      return;
+                    }
+                    setScheduleKey(trimmedKey);
+                    setScheduleName(finalName);
+                    setShowPublishModal(false);
+                    setLeagues([]);
+                    setTeams([]);
+                    setGames([]);
+                    setGamesInHoldingArea([]);
+                    setSelectedLeagueId('all');
+                    setSelectedCategory('all');
+                    setSelectedTeamId('all');
+                    setScheduleLeagueId('');
+                    setSelectedScheduleId('');
+                    setViewMode('calendar');
+                    alert('Schedule published and unloaded.');
+                  }}
+                  className={`flex-1 px-4 py-2 rounded-md text-sm text-white font-medium ${
+                    publishKeyDraft.trim() && !isPublishing
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : 'bg-emerald-300 cursor-not-allowed'
+                  }`}
+                >
+                  {isPublishing ? 'Publishing...' : 'Publish'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showScheduleModal && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
