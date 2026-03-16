@@ -890,6 +890,7 @@ const App: React.FC = () => {
             <EmbedCodeGenerator
                 leagues={leagues}
                 teams={teams}
+                games={games}
                 currentUrl={window.location.href}
                 loadedScheduleKey={scheduleKey}
                 isPublishedScheduleLoaded={!!scheduleKey && scheduleKey.trim() !== ''}

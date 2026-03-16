@@ -1,12 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { League, Team } from '../types';
+import { League, Team, Game } from '../types';
 import { Copy, Check, Code, ExternalLink } from 'lucide-react';
 import EmbedStyler, { EmbedStyles } from './EmbedStyler';
+import EmbeddableCalendar from './EmbeddableCalendar';
+import EmbeddableGameBar from './EmbeddableGameBar';
 import * as storageApi from '../services/storage';
 
 interface EmbedCodeGeneratorProps {
   leagues: League[];
   teams: Team[];
+  games: Game[];
   currentUrl: string;
   loadedScheduleKey?: string;
   isPublishedScheduleLoaded: boolean;
@@ -14,9 +17,10 @@ interface EmbedCodeGeneratorProps {
   orgId?: string;
 }
 
-const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({ 
-  leagues, 
-  teams, 
+const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
+  leagues,
+  teams,
+  games,
   currentUrl,
   loadedScheduleKey,
   isPublishedScheduleLoaded,
@@ -421,11 +425,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
             </div>
             <a
               href={scheduleKey && embedUrl ? embedUrl : '#'}
-              onClick={(e) => {
-                if (!scheduleKey || !embedUrl) {
-                  e.preventDefault();
-                }
-              }}
+              onClick={(e) => { if (!scheduleKey || !embedUrl) e.preventDefault(); }}
               className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors text-sm ${
                 scheduleKey && embedUrl
                   ? 'bg-indigo-600 text-white hover:bg-indigo-700'
@@ -438,23 +438,35 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
               <span>Open in New Tab</span>
             </a>
           </div>
-          {scheduleKey && embedUrl ? (
-            <div className="rounded-lg overflow-hidden border border-slate-200" style={{ height: `${Math.min(parseInt(height) || 800, 600)}px` }}>
-              <iframe
-                key={embedUrl}
-                src={embedUrl}
-                width="100%"
-                height="100%"
-                frameBorder="0"
-                scrolling="auto"
-                title="Embed Preview"
+          <div
+            className="rounded-lg overflow-hidden border border-slate-200"
+            style={{ height: `${Math.min(parseInt(height) || 800, 600)}px` }}
+          >
+            {embedView === 'gamebar' ? (
+              <EmbeddableGameBar
+                initialLeagueId={selectedLeagueId !== 'all' ? selectedLeagueId : undefined}
+                initialCategory={selectedCategory !== 'all' ? selectedCategory : undefined}
+                initialTeamId={selectedTeamId !== 'all' ? selectedTeamId : undefined}
+                height={`${Math.min(parseInt(height) || 260, 600)}px`}
+                dataOverride={{ leagues, teams, games }}
+                hideLeagueFilter={hideLeagueFilter}
+                hideCategoryFilter={hideCategoryFilter}
+                hideTeamFilter={hideTeamFilter}
               />
-            </div>
-          ) : (
-            <div className="rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center" style={{ height: '200px' }}>
-              <p className="text-sm text-slate-400">Select a published schedule above to see the preview</p>
-            </div>
-          )}
+            ) : (
+              <EmbeddableCalendar
+                initialLeagueId={selectedLeagueId !== 'all' ? selectedLeagueId : undefined}
+                initialCategory={selectedCategory !== 'all' ? selectedCategory : undefined}
+                initialTeamId={selectedTeamId !== 'all' ? selectedTeamId : undefined}
+                initialView={viewType}
+                height={`${Math.min(parseInt(height) || 800, 600)}px`}
+                dataOverride={{ leagues, teams, games }}
+                hideLeagueFilter={hideLeagueFilter}
+                hideCategoryFilter={hideCategoryFilter}
+                hideTeamFilter={hideTeamFilter}
+              />
+            )}
+          </div>
         </div>
 
         {/* Instructions */}
