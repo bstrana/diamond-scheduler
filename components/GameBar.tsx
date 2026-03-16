@@ -14,10 +14,12 @@ interface GameBarProps {
   onTeamFilterChange: (id: string) => void;
   onLeagueFilterChange: (id: string) => void;
   onCategoryFilterChange: (category: string) => void;
-  hideFilters?: boolean; // Hide filters for single team embeds
+  hideFilters?: boolean;
   hideLeagueFilter?: boolean;
   hideCategoryFilter?: boolean;
   hideTeamFilter?: boolean;
+  /** Include games from this many days in the past (default 0 = only future games) */
+  includePastDays?: number;
 }
 
 const GameBar: React.FC<GameBarProps> = ({
@@ -34,15 +36,18 @@ const GameBar: React.FC<GameBarProps> = ({
   hideFilters = false,
   hideLeagueFilter = false,
   hideCategoryFilter = false,
-  hideTeamFilter = false
+  hideTeamFilter = false,
+  includePastDays = 0,
 }) => {
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const [scrollPosition, setScrollPosition] = React.useState(0);
   const [showFiltersMenu, setShowFiltersMenu] = React.useState(false);
   const filtersMenuRef = React.useRef<HTMLDivElement>(null);
 
-  // Get today's date string for filtering
-  const todayStr = formatDate(new Date());
+  // Get cutoff date string for filtering
+  const cutoffDate = new Date();
+  if (includePastDays > 0) cutoffDate.setDate(cutoffDate.getDate() - includePastDays);
+  const todayStr = formatDate(cutoffDate);
 
   // Helper functions (defined before useMemo)
   const getTeam = (id: string) => teams.find(t => t.id === id);

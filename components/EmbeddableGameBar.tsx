@@ -28,8 +28,8 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
 }) => {
   // Load data from storage (local storage or PocketBase)
   const [leagues, setLeagues] = useState<League[]>([]);
-  const [teams, setTeams] = useState<Team[]>(MOCK_TEAMS);
-  const [games, setGames] = useState<Game[]>(INITIAL_GAMES);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [games, setGames] = useState<Game[]>([]);
 
   const [selectedTeamId, setSelectedTeamId] = useState<string>(initialTeamId || 'all');
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>(initialLeagueId || 'all');
@@ -88,9 +88,9 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
   const hideFilters = !!initialTeamId;
 
   return (
-    <div 
-      style={{ 
-        height, 
+    <div
+      style={{
+        height,
         width: '100%',
         backgroundColor: 'var(--embed-bg, #f8fafc)'
       }}
@@ -110,6 +110,7 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
         hideLeagueFilter={hideLeagueFilter}
         hideCategoryFilter={hideCategoryFilter}
         hideTeamFilter={hideTeamFilter}
+        includePastDays={30}
       />
     </div>
   );
