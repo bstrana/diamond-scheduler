@@ -34,6 +34,7 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
   const [selectedTeamId, setSelectedTeamId] = useState<string>(initialTeamId || 'all');
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>(initialLeagueId || 'all');
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
   // Apply initial filters from URL params
   useEffect(() => {
@@ -106,6 +107,8 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
         onTeamFilterChange={setSelectedTeamId}
         onLeagueFilterChange={setSelectedLeagueId}
         onCategoryFilterChange={setSelectedCategory}
+        selectedStatus={selectedStatus}
+        onStatusFilterChange={setSelectedStatus}
         hideFilters={hideFilters}
         hideLeagueFilter={hideLeagueFilter}
         hideCategoryFilter={hideCategoryFilter}
