@@ -1288,14 +1288,7 @@ const App: React.FC = () => {
                   onClick={async () => {
                     const trimmedKey = publishKeyDraft.trim();
                     if (!trimmedKey) return;
-                    const baseName = publishNameDraft.trim() || trimmedKey;
-                    const leagueForName = scheduleLeagueId
-                      ? leagues.find((league) => league.id === scheduleLeagueId)
-                      : leagues[0];
-                    const leagueSuffix = leagueForName
-                      ? `${leagueForName.name}${leagueForName.category ? ` ${leagueForName.category}` : ''}`
-                      : '';
-                    const finalName = leagueSuffix ? `${baseName} - ${leagueSuffix}` : baseName;
+                    const finalName = publishNameDraft.trim() || trimmedKey;
                     setIsPublishing(true);
                     localStorage.setItem('dsa_schedule_publish_key', trimmedKey);
                     localStorage.setItem('dsa_schedule_publish_name', finalName);
