@@ -1091,12 +1091,12 @@ const App: React.FC = () => {
           
           return (
             <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={closeEditModal}>
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-                    <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
                         <h3 className="font-bold text-slate-800">Edit Game</h3>
                         <button onClick={closeEditModal}><X size={20} className="text-slate-400 hover:text-slate-600" /></button>
                     </div>
-                    <form onSubmit={handleGameUpdate} className="p-6 space-y-4">
+                    <form onSubmit={handleGameUpdate} className="p-6 space-y-4 overflow-y-auto">
                         
                         {/* League Selection - Multi-select */}
                         <div>
