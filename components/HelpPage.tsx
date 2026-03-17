@@ -107,7 +107,7 @@ const HelpPage: React.FC = () => {
             </div>
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
               <p className="font-semibold text-emerald-800 mb-1 flex items-center gap-1.5"><Send size={14} /> Publish to server</p>
-              <p>Publishing pushes your full schedule — leagues, teams, games, and scores — to the connected PocketBase server under a unique <strong>schedule key</strong>.</p>
+              <p>Publishing pushes your full schedule — leagues, teams, games, and scores — to the connected database server under a unique <strong>schedule key</strong>.</p>
               <p className="mt-1.5 text-xs text-emerald-600">Once published, any iframe embed on your website reads data live from the server.</p>
             </div>
           </div>

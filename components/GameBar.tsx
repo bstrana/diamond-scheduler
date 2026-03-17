@@ -442,6 +442,7 @@ const GameBar: React.FC<GameBarProps> = ({
                     className="flex-shrink-0 w-72 mx-2 rounded-lg p-4 transition-all cursor-pointer group"
                     style={{
                       position: 'relative',
+                      overflow: 'hidden',
                       backgroundColor: 'var(--embed-card-bg, #ffffff)',
                       border: isLive
                         ? '1.5px solid #22c55e'
@@ -463,6 +464,21 @@ const GameBar: React.FC<GameBarProps> = ({
                         : 'var(--embed-card-shadow, 0 1px 3px 0 rgba(0, 0, 0, 0.1))';
                     }}
                   >
+                    {/* League cover image background */}
+                    {gameLeagues[0]?.coverImageUrl && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          backgroundImage: `url(${gameLeagues[0].coverImageUrl})`,
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          opacity: 0.07,
+                          pointerEvents: 'none',
+                        }}
+                      />
+                    )}
+
                     {/* Share button — top-right corner of card */}
                     <button
                       onClick={(e) => {

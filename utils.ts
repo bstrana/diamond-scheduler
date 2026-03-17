@@ -217,8 +217,6 @@ export function buildGameShareText(
   if (game.location) lines.push(game.location);
   if (game.seriesName) lines.push(game.seriesName);
   if (leagueNames && leagueNames.length > 0) lines.push(leagueNames.join(', '));
-  lines.push('');
-  lines.push('Diamond Manager');
   return lines.join('\n');
 }
 
@@ -246,7 +244,7 @@ export function buildStandingsShareText(rows: ShareStandingsRow[], leagueName: s
     ).padStart(4);
     return `${rank}. ${abbr} ${wl} ${pct}  ${gb}`;
   });
-  return [header, '', ...tableRows, '', 'Diamond Manager'].join('\n');
+  return [header, '', ...tableRows].join('\n');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

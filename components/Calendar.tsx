@@ -508,28 +508,28 @@ const Calendar: React.FC<CalendarProps> = ({
                                       }
                                   }
                                   
-                                  // Get league logo from first league if available
-                                  const leagueLogo = gameLeagues.length > 0 && gameLeagues[0].logoUrl 
-                                    ? gameLeagues[0].logoUrl 
+                                  // Get cover image from first league if available, fall back to logo
+                                  const leagueCoverImage = gameLeagues.length > 0
+                                    ? (gameLeagues[0].coverImageUrl || gameLeagues[0].logoUrl || null)
                                     : null;
 
                                   return (
-                                    <div 
+                                    <div
                                         key={game.id}
                                         onClick={() => onGameClick(game)}
                                         className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer relative group overflow-hidden"
                                     >
-                                        {/* League logo in bottom right as background */}
-                                        {leagueLogo && (
-                                          <div 
-                                            className="absolute bottom-0 right-0 w-24 h-24 opacity-10 z-0"
+                                        {/* League cover image as card background */}
+                                        {leagueCoverImage && (
+                                          <div
+                                            className="absolute inset-0 z-0"
                                             style={{
-                                              backgroundImage: `url(${leagueLogo})`,
-                                              backgroundSize: 'contain',
-                                              backgroundPosition: 'bottom right',
-                                              backgroundRepeat: 'no-repeat'
+                                              backgroundImage: `url(${leagueCoverImage})`,
+                                              backgroundSize: 'cover',
+                                              backgroundPosition: 'center',
+                                              opacity: 0.07,
                                             }}
-                                          ></div>
+                                          />
                                         )}
                                         
                                         {/* Content wrapper with relative positioning */}
