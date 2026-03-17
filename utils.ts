@@ -217,6 +217,25 @@ export function buildGameShareText(
   if (game.location) lines.push(game.location);
   if (game.seriesName) lines.push(game.seriesName);
   if (leagueNames && leagueNames.length > 0) lines.push(leagueNames.join(', '));
+
+  // Inning-by-inning box score
+  const innings = game.scores?.innings;
+  if (isScored && innings && innings.length > 0) {
+    const pad = (v: number | null, fallback = ' x') => v === null ? fallback : String(v).padStart(2);
+    const header = '      ' + innings.map((_, i) => String(i + 1).padStart(2)).join('') + '   R';
+    const awayRow = away.abbreviation.padEnd(6) + innings.map(inn => pad(inn.away, ' 0')).join('') + '  ' + String(game.scores!.away).padStart(2);
+    const homeRow = home.abbreviation.padEnd(6) + innings.map(inn => pad(inn.home)).join('') + '  ' + String(game.scores!.home).padStart(2);
+    lines.push('');
+    lines.push(header);
+    lines.push(awayRow);
+    lines.push(homeRow);
+  }
+
+  if (game.recap) {
+    lines.push('');
+    lines.push(game.recap);
+  }
+
   return lines.join('\n');
 }
 
