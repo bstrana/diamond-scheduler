@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { League, Team, Game } from '../types';
+import { buildStandingsShareText } from '../utils';
+import { Share2, Copy, Check } from 'lucide-react';
 import * as storageApi from '../services/storage';
 
 interface StandingsRow {
@@ -87,6 +89,9 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
   );
   const [isLoading, setIsLoading] = useState(!dataOverride && !!scheduleKey);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>(leagueId || '');
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (dataOverride) { setData(dataOverride); return; }
@@ -105,6 +110,17 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
       setSelectedLeagueId(leagueId || data.leagues[0]?.id || '');
     }
   }, [data, leagueId, selectedLeagueId]);
+
+  useEffect(() => {
+    if (!showShareMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (shareMenuRef.current && !shareMenuRef.current.contains(e.target as Node)) {
+        setShowShareMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showShareMenu]);
 
   const league = useMemo(
     () => data?.leagues?.find(l => l.id === selectedLeagueId) ?? data?.leagues?.[0] ?? null,
@@ -172,15 +188,88 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
       )}
 
       {/* Header */}
-      <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        {league.logoUrl && (
-          <img src={league.logoUrl} alt={league.name} style={{ width: '34px', height: '34px', objectFit: 'contain' }} />
-        )}
-        <div>
-          <h2 style={{ margin: 0, fontSize: '1.1em', fontWeight: 700 }}>
-            {league.name}{league.category ? ` – ${league.category}` : ''}
-          </h2>
-          <p style={{ margin: 0, fontSize: '0.78em', opacity: 0.6 }}>League Standings</p>
+      <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {league.logoUrl && (
+            <img src={league.logoUrl} alt={league.name} style={{ width: '34px', height: '34px', objectFit: 'contain' }} />
+          )}
+          <div>
+            <h2 style={{ margin: 0, fontSize: '1.1em', fontWeight: 700 }}>
+              {league.name}{league.category ? ` – ${league.category}` : ''}
+            </h2>
+            <p style={{ margin: 0, fontSize: '0.78em', opacity: 0.6 }}>League Standings</p>
+          </div>
+        </div>
+
+        {/* Share button */}
+        <div ref={shareMenuRef} style={{ position: 'relative', flexShrink: 0 }}>
+          <button
+            onClick={() => setShowShareMenu(p => !p)}
+            title="Share standings"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '5px',
+              borderRadius: '6px',
+              border: '1px solid var(--embed-border, #e2e8f0)',
+              backgroundColor: 'var(--embed-card-bg, #ffffff)',
+              color: 'var(--embed-text, #64748b)',
+              cursor: 'pointer',
+              lineHeight: 0,
+            }}
+          >
+            <Share2 size={15} />
+          </button>
+
+          {showShareMenu && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '30px',
+                right: 0,
+                zIndex: 30,
+                padding: '6px',
+                width: '148px',
+                borderRadius: '8px',
+                border: '1px solid var(--embed-border, #e2e8f0)',
+                backgroundColor: 'var(--embed-card-bg, #ffffff)',
+                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+              }}
+            >
+              <button
+                onClick={async () => {
+                  const leagueLabel = league.name + (league.category ? ` – ${league.category}` : '');
+                  const text = buildStandingsShareText(standings, leagueLabel);
+                  await navigator.clipboard.writeText(text);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  width: '100%',
+                  padding: '6px 8px',
+                  fontSize: '0.8125rem',
+                  color: copied ? '#16a34a' : 'var(--embed-text, #334155)',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--embed-bg, #f8fafc)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              >
+                {copied
+                  ? <Check size={14} style={{ color: '#16a34a', flexShrink: 0 }} />
+                  : <Copy size={14} style={{ flexShrink: 0 }} />
+                }
+                {copied ? 'Copied!' : 'Copy text'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect } from 'react';
 import { Game, Team, League } from '../types';
-import { formatDate } from '../utils';
-import { ChevronLeft, ChevronRight, MapPin, Calendar as CalIcon, Clock, ChevronDown, SlidersHorizontal, Radio } from 'lucide-react';
+import { formatDate, buildGameShareText } from '../utils';
+import { ChevronLeft, ChevronRight, MapPin, Calendar as CalIcon, Clock, ChevronDown, SlidersHorizontal, Radio, Share2, Copy, Check } from 'lucide-react';
 
 interface GameBarProps {
   games: Game[];
@@ -49,6 +49,9 @@ const GameBar: React.FC<GameBarProps> = ({
   const [scrollPosition, setScrollPosition] = React.useState(0);
   const [showFiltersMenu, setShowFiltersMenu] = React.useState(false);
   const filtersMenuRef = React.useRef<HTMLDivElement>(null);
+  const [shareGameId, setShareGameId] = React.useState<string | null>(null);
+  const [copiedGameId, setCopiedGameId] = React.useState<string | null>(null);
+  const sharePopoverRef = React.useRef<HTMLDivElement>(null);
 
   // Get cutoff date string for filtering
   const cutoffDate = new Date();
@@ -158,6 +161,17 @@ const GameBar: React.FC<GameBarProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showFiltersMenu]);
+
+  useEffect(() => {
+    if (!shareGameId) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sharePopoverRef.current && !sharePopoverRef.current.contains(event.target as Node)) {
+        setShareGameId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [shareGameId]);
 
   const renderStatusBadge = (status: Game['status']) => {
     if (status === 'live') {
@@ -427,6 +441,7 @@ const GameBar: React.FC<GameBarProps> = ({
                     onClick={() => onGameClick(game)}
                     className="flex-shrink-0 w-72 mx-2 rounded-lg p-4 transition-all cursor-pointer group"
                     style={{
+                      position: 'relative',
                       backgroundColor: 'var(--embed-card-bg, #ffffff)',
                       border: isLive
                         ? '1.5px solid #22c55e'
@@ -448,6 +463,77 @@ const GameBar: React.FC<GameBarProps> = ({
                         : 'var(--embed-card-shadow, 0 1px 3px 0 rgba(0, 0, 0, 0.1))';
                     }}
                   >
+                    {/* Share button — top-right corner of card */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShareGameId(shareGameId === game.id ? null : game.id);
+                      }}
+                      className="absolute opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                      style={{
+                        top: '6px',
+                        right: '6px',
+                        padding: '4px',
+                        borderRadius: '6px',
+                        backgroundColor: 'var(--embed-card-bg, #ffffff)',
+                        border: '1px solid var(--embed-border, #e2e8f0)',
+                        color: 'var(--embed-text, #64748b)',
+                        cursor: 'pointer',
+                        lineHeight: 0,
+                      }}
+                      title="Share game"
+                    >
+                      <Share2 size={13} />
+                    </button>
+
+                    {/* Share popover */}
+                    {shareGameId === game.id && (
+                      <div
+                        ref={sharePopoverRef}
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute z-20 rounded-lg shadow-xl"
+                        style={{
+                          top: '28px',
+                          right: '6px',
+                          padding: '6px',
+                          width: '148px',
+                          backgroundColor: 'var(--embed-card-bg, #ffffff)',
+                          border: '1px solid var(--embed-border, #e2e8f0)',
+                        }}
+                      >
+                        <button
+                          onClick={async () => {
+                            const text = buildGameShareText(
+                              game,
+                              home,
+                              away,
+                              gameLeagues.map(l => l.shortName || l.name)
+                            );
+                            await navigator.clipboard.writeText(text);
+                            setCopiedGameId(game.id);
+                            setTimeout(() => setCopiedGameId(null), 2000);
+                          }}
+                          className="flex items-center gap-2 w-full text-left rounded-md"
+                          style={{
+                            padding: '6px 8px',
+                            fontSize: '0.8125rem',
+                            color: copiedGameId === game.id ? '#16a34a' : 'var(--embed-text, #334155)',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--embed-bg, #f8fafc)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          {copiedGameId === game.id
+                            ? <Check size={14} style={{ color: '#16a34a', flexShrink: 0 }} />
+                            : <Copy size={14} style={{ flexShrink: 0 }} />
+                          }
+                          {copiedGameId === game.id ? 'Copied!' : 'Copy text'}
+                        </button>
+                      </div>
+                    )}
+
                     {/* Date Header with Time, Location and Status Badge */}
                     <div
                       className="mb-3 px-3 py-2 rounded-lg"

@@ -188,6 +188,69 @@ export const downloadJSON = (data: any, filename: string) => {
   URL.revokeObjectURL(url);
 };
 
+// ─── Social share text builders ──────────────────────────────────────────────
+
+/**
+ * Builds a plain-text summary of a single game suitable for clipboard sharing.
+ */
+export function buildGameShareText(
+  game: Game,
+  home: Team,
+  away: Team,
+  leagueNames?: string[]
+): string {
+  const gameDate = new Date(game.date + 'T00:00:00');
+  const dateStr = gameDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+
+  const isScored = (game.status === 'live' || game.status === 'final') && game.scores != null;
+  let line1: string;
+  if (isScored) {
+    const label = game.status === 'live' ? 'LIVE' : 'Final';
+    line1 = `⚾ ${away.abbreviation} ${game.scores!.away} – ${home.abbreviation} ${game.scores!.home} | ${label}`;
+  } else {
+    line1 = `⚾ ${away.abbreviation} @ ${home.abbreviation}`;
+  }
+
+  const lines: string[] = [line1];
+  const timePart = !isScored ? ` · ${game.time}` : '';
+  lines.push(`${dateStr}${timePart}`);
+  if (game.location) lines.push(game.location);
+  if (game.seriesName) lines.push(game.seriesName);
+  if (leagueNames && leagueNames.length > 0) lines.push(leagueNames.join(', '));
+  lines.push('');
+  lines.push('Diamond Manager');
+  return lines.join('\n');
+}
+
+interface ShareStandingsRow {
+  team: { abbreviation: string };
+  w: number;
+  l: number;
+  pct: number;
+  gb: number | null;
+}
+
+/**
+ * Builds a plain-text standings table suitable for clipboard sharing.
+ */
+export function buildStandingsShareText(rows: ShareStandingsRow[], leagueName: string): string {
+  const header = `🏆 ${leagueName} Standings`;
+  const tableRows = rows.map((r, i) => {
+    const rank = String(i + 1).padStart(2);
+    const abbr = r.team.abbreviation.padEnd(6);
+    const wl = `${r.w}-${r.l}`.padEnd(6);
+    const pct = (r.w + r.l === 0 ? '.000' : r.pct.toFixed(3).replace(/^0/, '')).padStart(5);
+    const gb = (r.gb === null || r.gb === 0
+      ? '—'
+      : r.gb % 1 === 0 ? String(r.gb) : r.gb.toFixed(1)
+    ).padStart(4);
+    return `${rank}. ${abbr} ${wl} ${pct}  ${gb}`;
+  });
+  return [header, '', ...tableRows, '', 'Diamond Manager'].join('\n');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const generateRoundRobinSchedule = (
   teams: Team[],
   startDateStr: string,
