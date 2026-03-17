@@ -20,11 +20,13 @@ import {
   X,
   Copy,
   Check,
-  Clock
+  Clock,
+  HelpCircle
 } from 'lucide-react';
 import LeagueBuilder from './components/LeagueBuilder';
 import ScheduleGenerator from './components/ScheduleGenerator';
 import EmbedCodeGenerator from './components/EmbedCodeGenerator';
+import HelpPage from './components/HelpPage';
 
 const App: React.FC = () => {
   const { keycloak, initialized } = useKeycloak();
@@ -798,7 +800,7 @@ const App: React.FC = () => {
                     ))}
                   </div>
                   <h2 className="text-lg font-semibold text-slate-800 capitalize hidden md:block">
-                      {viewMode === 'league_builder' ? 'League Management' : viewMode === 'scheduler' ? 'Scheduler' : viewMode === 'teams' ? 'Teams' : viewMode === 'embed' ? 'Embed Code' : 'Calendar'}
+                      {viewMode === 'league_builder' ? 'League Management' : viewMode === 'scheduler' ? 'Scheduler' : viewMode === 'teams' ? 'Teams' : viewMode === 'embed' ? 'Embed Code' : viewMode === 'help' ? 'Help & Guide' : 'Calendar'}
                   </h2>
                 </div>
 
@@ -863,6 +865,13 @@ const App: React.FC = () => {
                         </div>
                       </div>
                       <div className="border-t border-slate-100">
+                        <button
+                          onClick={() => { setShowUserMenu(false); setViewMode('help'); }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                          <span>Help & Guide</span>
+                          <HelpCircle size={16} />
+                        </button>
                         <button
                           onClick={() => keycloak.logout()}
                           className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
@@ -974,6 +983,8 @@ const App: React.FC = () => {
                 orgId={orgId}
             />
           )}
+
+          {viewMode === 'help' && <HelpPage />}
 
         </div>
 

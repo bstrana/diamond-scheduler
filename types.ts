@@ -47,7 +47,7 @@ export interface Game {
   streamUrl?: string; // Optional live stream URL
 }
 
-export type ViewMode = 'calendar' | 'list' | 'teams' | 'leagues' | 'league_builder' | 'scheduler' | 'embed' | 'gamebar';
+export type ViewMode = 'calendar' | 'list' | 'teams' | 'leagues' | 'league_builder' | 'scheduler' | 'embed' | 'gamebar' | 'help';
 
 export interface CalendarDay {
   date: Date;
