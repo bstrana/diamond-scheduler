@@ -85,6 +85,22 @@ const Calendar: React.FC<CalendarProps> = ({
     return leagueIds.map(id => getLeague(id)).filter(Boolean) as League[];
   };
 
+  // W-L records from all final games in the current filtered set
+  const teamRecords = useMemo(() => {
+    const records: Record<string, { w: number; l: number }> = {};
+    filteredGames.forEach(game => {
+      if (game.status !== 'final' || !game.scores) return;
+      const { home, away } = game.scores;
+      if (home === away) return;
+      const homeWon = home > away;
+      if (!records[game.homeTeamId]) records[game.homeTeamId] = { w: 0, l: 0 };
+      if (!records[game.awayTeamId]) records[game.awayTeamId] = { w: 0, l: 0 };
+      if (homeWon) { records[game.homeTeamId].w++; records[game.awayTeamId].l++; }
+      else { records[game.awayTeamId].w++; records[game.homeTeamId].l++; }
+    });
+    return records;
+  }, [filteredGames]);
+
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -576,6 +592,7 @@ const Calendar: React.FC<CalendarProps> = ({
                                                     <div className="flex flex-col">
                                                         <span className="font-bold text-base" style={{color: opponent.primaryColor}}>{opponent.abbreviation}</span>
                                                         <span className="text-xs text-slate-500">{opponent.city}</span>
+                                                        {teamRecords[opponent.id] && <span className="text-xs text-slate-400">({teamRecords[opponent.id].w}-{teamRecords[opponent.id].l})</span>}
                                                     </div>
                                                 </div>
                                             ) : (
@@ -599,6 +616,7 @@ const Calendar: React.FC<CalendarProps> = ({
                                                         <div className="flex flex-col">
                                                             <span className="font-bold text-base" style={{color: away.primaryColor}}>{away.abbreviation}</span>
                                                             <span className="text-xs text-slate-500">{away.city}</span>
+                                                            {teamRecords[away.id] && <span className="text-xs text-slate-400">({teamRecords[away.id].w}-{teamRecords[away.id].l})</span>}
                                                         </div>
                                                     </div>
                                                     {/* Home Team */}
@@ -620,6 +638,7 @@ const Calendar: React.FC<CalendarProps> = ({
                                                         <div className="flex flex-col">
                                                             <span className="font-bold text-base" style={{color: home.primaryColor}}>{home.abbreviation}</span>
                                                             <span className="text-xs text-slate-500">{home.city}</span>
+                                                            {teamRecords[home.id] && <span className="text-xs text-slate-400">({teamRecords[home.id].w}-{teamRecords[home.id].l})</span>}
                                                         </div>
                                                     </div>
                                                 </div>
