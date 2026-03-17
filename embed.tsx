@@ -138,9 +138,9 @@ if (!rootElement) {
       };
     }, [scheduleKey]);
 
-    // Poll for updates every 60 seconds when showing the game bar
+    // Poll for updates every 60 seconds for all embed types
     useEffect(() => {
-      if (embedType !== 'gamebar' || !scheduleKey) return;
+      if (!scheduleKey) return;
       const interval = setInterval(async () => {
         const data = await loadPublishedScheduleByKey(scheduleKey);
         if (data) setScheduleData(data);
