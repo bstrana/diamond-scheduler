@@ -668,6 +668,7 @@ const App: React.FC = () => {
   const formTeams = formLeagues.length > 0
     ? Array.from(new Map(formLeagues.flatMap(l => l.teams).map(t => [t.id, t])).values())
     : [];
+  const formFields = Array.from(new Set(formLeagues.flatMap(l => l.fields || [])));
 
   // All teams across all leagues (used by Calendar so games from any league render correctly)
   const allTeams = React.useMemo(() => {
@@ -1038,8 +1039,7 @@ const App: React.FC = () => {
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Home Team</label>
                                 <select required className="w-full border rounded-md p-2" value={newGameForm.homeTeamId || ''} onChange={e => {
-                                    const team = formTeams.find((t: Team) => t.id === e.target.value);
-                                    setNewGameForm({...newGameForm, homeTeamId: e.target.value, location: team?.field || newGameForm.location || ''});
+                                    setNewGameForm({...newGameForm, homeTeamId: e.target.value});
                                 }}>
                                     <option value="">Select...</option>
                                     {formTeams.map((t: Team) => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -1056,9 +1056,16 @@ const App: React.FC = () => {
 
                         <div>
                              <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
-                             <input className="w-full border rounded-md p-2" placeholder="Stadium Name" value={newGameForm.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})} />
+                             {formFields.length > 0 ? (
+                               <select className="w-full border rounded-md p-2" value={newGameForm.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})}>
+                                 <option value="">Select field...</option>
+                                 {formFields.map(f => <option key={f} value={f}>{f}</option>)}
+                               </select>
+                             ) : (
+                               <input className="w-full border rounded-md p-2" placeholder="Stadium Name" value={newGameForm.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})} />
+                             )}
                         </div>
-                        
+
                         <div className="pt-2">
                             <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
                                 Add to Schedule
@@ -1076,6 +1083,7 @@ const App: React.FC = () => {
           const editFormTeams = editFormLeagues.length > 0
             ? Array.from(new Map(editFormLeagues.flatMap(l => l.teams).map(t => [t.id, t])).values())
             : [];
+          const editFormFields = Array.from(new Set(editFormLeagues.flatMap(l => l.fields || [])));
           
           const closeEditModal = () => {
             setShowEditModal(false);
@@ -1162,8 +1170,7 @@ const App: React.FC = () => {
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Home Team</label>
                                 <select required className="w-full border rounded-md p-2" value={newGameForm.homeTeamId || editingGame.homeTeamId || ''} onChange={e => {
-                                    const team = editFormTeams.find((t: Team) => t.id === e.target.value);
-                                    setNewGameForm({...newGameForm, homeTeamId: e.target.value, location: team?.field || newGameForm.location || editingGame.location || ''});
+                                    setNewGameForm({...newGameForm, homeTeamId: e.target.value});
                                 }}>
                                     <option value="">Select...</option>
                                     {editFormTeams.map((t: Team) => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -1180,7 +1187,14 @@ const App: React.FC = () => {
 
                         <div>
                              <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
-                             <input className="w-full border rounded-md p-2" placeholder="Stadium Name" value={newGameForm.location || editingGame.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})} />
+                             {editFormFields.length > 0 ? (
+                               <select className="w-full border rounded-md p-2" value={newGameForm.location || editingGame.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})}>
+                                 <option value="">Select field...</option>
+                                 {editFormFields.map(f => <option key={f} value={f}>{f}</option>)}
+                               </select>
+                             ) : (
+                               <input className="w-full border rounded-md p-2" placeholder="Stadium Name" value={newGameForm.location || editingGame.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})} />
+                             )}
                         </div>
 
                         {/* Status */}

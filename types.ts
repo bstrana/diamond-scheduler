@@ -23,6 +23,7 @@ export interface League {
   coverImageUrl?: string;
   category: string;
   teams: Team[];
+  fields?: string[];
 }
 
 export interface Game {

@@ -150,17 +150,20 @@ const Calendar: React.FC<CalendarProps> = ({
       {/* Header */}
       <div className="flex flex-col md:flex-row items-center justify-between p-4 border-b border-slate-200 bg-slate-50 gap-4 shrink-0">
         
-        {/* Month Navigation (Only for Grid) */}
+        {/* Month Navigation (Only for Grid, desktop only) */}
         {viewType === 'grid' ? (
-             <div className="flex items-center space-x-4">
-                <div className="flex space-x-1">
-                    <button onClick={onPrevMonth} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"><ChevronLeft size={18} /></button>
-                    <button onClick={onNextMonth} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"><ChevronRight size={18} /></button>
+            <>
+                <div className="hidden md:flex items-center space-x-4">
+                    <div className="flex space-x-1">
+                        <button onClick={onPrevMonth} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"><ChevronLeft size={18} /></button>
+                        <button onClick={onNextMonth} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"><ChevronRight size={18} /></button>
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-800">
+                        {MONTH_NAMES[currentDate.getMonth()]} {currentDate.getFullYear()}
+                    </h2>
                 </div>
-                <h2 className="text-xl font-bold text-slate-800">
-                    {MONTH_NAMES[currentDate.getMonth()]} {currentDate.getFullYear()}
-                </h2>
-            </div>
+                <h2 className="text-xl font-bold text-slate-800 md:hidden">Upcoming Schedule</h2>
+            </>
         ) : (
             <h2 className="text-xl font-bold text-slate-800">Upcoming Schedule</h2>
         )}
@@ -225,8 +228,8 @@ const Calendar: React.FC<CalendarProps> = ({
             </div>
             )}
 
-            {/* View Toggle */}
-            <div className="flex bg-slate-200 p-1 rounded-lg">
+            {/* View Toggle - desktop only */}
+            <div className="hidden md:flex bg-slate-200 p-1 rounded-lg">
                 <button 
                     onClick={() => onViewTypeChange('grid')}
                     className={`p-1.5 rounded-md transition-all ${viewType === 'grid' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
@@ -278,10 +281,10 @@ const Calendar: React.FC<CalendarProps> = ({
       </div>
 
       {/* View Content */}
-      {viewType === 'grid' ? (
+      {viewType === 'grid' && (
           <>
-            {/* Weekday Headers */}
-            <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-100 shrink-0">
+            {/* Weekday Headers - desktop only */}
+            <div className="hidden md:grid grid-cols-7 border-b border-slate-200 bg-slate-100 shrink-0">
                 {WEEKDAYS.map(day => (
                 <div key={day} className="py-2 text-center text-sm font-semibold text-slate-500 uppercase tracking-wider">
                     {day}
@@ -289,8 +292,8 @@ const Calendar: React.FC<CalendarProps> = ({
                 ))}
             </div>
 
-            {/* Grid */}
-            <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-slate-200 gap-px overflow-y-auto">
+            {/* Grid - desktop only */}
+            <div className="hidden md:grid grid-cols-7 flex-1 auto-rows-fr bg-slate-200 gap-px overflow-y-auto">
                 {days.map((day, idx) => (
                 <div 
                     key={idx} 
@@ -443,9 +446,10 @@ const Calendar: React.FC<CalendarProps> = ({
                 ))}
             </div>
           </>
-      ) : (
-          /* List View */
-          <div className="flex-1 overflow-y-auto bg-slate-50 p-6 space-y-6">
+      )}
+      {/* List View - always on mobile; on desktop when viewType === 'list' */}
+      {(viewType === 'list' || viewType === 'grid') && (
+          <div className={`flex-1 overflow-y-auto bg-slate-50 p-6 space-y-6${viewType === 'grid' ? ' md:hidden' : ''}`}>
               {Object.keys(gamesByDate).length === 0 ? (
                   <div className="text-center py-20 opacity-50">
                       <p className="text-xl font-medium">No upcoming games scheduled.</p>

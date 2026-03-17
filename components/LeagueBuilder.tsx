@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Team, League } from '../types';
-import { Plus, Trash2, Trophy, Save, Shield, Check, Settings2, FolderOpen, Pencil, X } from 'lucide-react';
-import { generateUUID, validateLeagueName, validateCategory, validateTeamName, validateAbbreviation, validateCity, validateLocation, sanitizeString } from '../utils';
+import { Plus, Trash2, Trophy, Save, Shield, Check, Settings2, FolderOpen, Pencil, X, MapPin } from 'lucide-react';
+import { generateUUID, validateLeagueName, validateCategory, validateTeamName, validateAbbreviation, validateCity, sanitizeString } from '../utils';
 
 interface LeagueBuilderProps {
   leagues: League[];
@@ -32,6 +32,10 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [category, setCategory] = useState('');
   
+  // Fields State
+  const [fields, setFields] = useState<string[]>([]);
+  const [newFieldName, setNewFieldName] = useState('');
+
   // Teams State
   const [teams, setTeams] = useState<Team[]>([]);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
@@ -154,6 +158,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
         setCoverImageUrl('');
         setCategory('');
         setTeams([]);
+        setFields([]);
     } else {
         // Edit Mode - Load Data
         const league = leagues.find(l => l.id === id);
@@ -164,6 +169,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
             setCoverImageUrl(league.coverImageUrl || '');
             setCategory(league.category);
             setTeams([...league.teams]);
+            setFields([...(league.fields || [])]);
         }
     }
   };
@@ -190,12 +196,6 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
       return;
     }
 
-    const fieldValidation = validateLocation(newTeam.field);
-    if (!fieldValidation.valid) {
-      alert(fieldValidation.error);
-      return;
-    }
-
     if (!editingTeamId && maxTeams && teams.length >= maxTeams) {
       alert(`Team limit reached (${maxTeams}).`);
       return;
@@ -206,7 +206,6 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
     const sanitizedCity = sanitizeString(newTeam.city);
     const sanitizedAbbr = sanitizeString(newTeam.abbreviation)?.toUpperCase();
     const sanitizedLogoUrl = newTeam.logoUrl ? sanitizeString(newTeam.logoUrl, 500) : undefined;
-    const sanitizedField = newTeam.field ? sanitizeString(newTeam.field, 200) : undefined;
 
     const team: Team = {
       id: editingTeamId || generateUUID(),
@@ -214,7 +213,6 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
       city: sanitizedCity,
       abbreviation: sanitizedAbbr,
       country: newTeam.country,
-      field: sanitizedField,
       roster: parseRosterText(rosterText),
       primaryColor: newTeam.primaryColor || '#000000',
       logoUrl: sanitizedLogoUrl
@@ -262,7 +260,6 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
       city: team.city,
       abbreviation: team.abbreviation,
       country: team.country || 'USA',
-      field: team.field || '',
       primaryColor: team.primaryColor,
       logoUrl: team.logoUrl || ''
     });
@@ -315,7 +312,8 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
             logoUrl: sanitizedLogoUrl,
             coverImageUrl: sanitizedCoverImageUrl,
             category: sanitizedCategory,
-            teams: teams
+            teams: teams,
+            fields: fields
         };
         onLeagueUpdated(updatedLeague);
     } else {
@@ -327,7 +325,8 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
             logoUrl: sanitizedLogoUrl,
             coverImageUrl: sanitizedCoverImageUrl,
             category: sanitizedCategory,
-            teams: teams
+            teams: teams,
+            fields: fields
         };
         onLeagueCreated(newLeague);
         // Reset form after create
@@ -337,6 +336,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
         setCoverImageUrl('');
         setCategory('');
         setTeams([]);
+        setFields([]);
     }
   };
 
@@ -471,6 +471,50 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                 )}
               </div>
             </div>
+            {/* Playing Fields */}
+            <div className="pt-4 mt-4 border-t border-slate-200">
+              <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center">
+                <MapPin size={14} className="mr-1.5 text-indigo-500" />
+                Playing Fields
+              </label>
+              <div className="space-y-2">
+                {fields.map((field, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-md px-3 py-2">
+                    <span className="text-sm text-slate-700 truncate">{field}</span>
+                    <button type="button" onClick={() => setFields(fields.filter((_, i) => i !== idx))} className="ml-2 shrink-0 text-slate-300 hover:text-red-500 transition-colors">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="e.g. Yankee Stadium"
+                    className="flex-1 border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    value={newFieldName}
+                    onChange={e => setNewFieldName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const trimmed = newFieldName.trim();
+                        if (trimmed && !fields.includes(trimmed)) { setFields([...fields, trimmed]); setNewFieldName(''); }
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const trimmed = newFieldName.trim();
+                      if (trimmed && !fields.includes(trimmed)) { setFields([...fields, trimmed]); setNewFieldName(''); }
+                    }}
+                    className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 text-sm font-medium"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {editingLeagueId && (
               <div className="pt-4 mt-4 border-t border-slate-200">
                 <button
@@ -554,16 +598,6 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                                 <img src={newTeam.logoUrl} alt="Logo preview" className="h-8 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
                             </div>
                         )}
-                    </div>
-                    <div className="md:col-span-6">
-                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Home Field</label>
-                        <input
-                            type="text"
-                            placeholder="e.g. Yankee Stadium"
-                            className="w-full border p-2 rounded text-sm"
-                            value={newTeam.field || ''}
-                            onChange={e => setNewTeam({...newTeam, field: e.target.value})}
-                        />
                     </div>
                     <div className="md:col-span-12">
                         <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Roster (Number, Name, Position)</label>
@@ -664,9 +698,6 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                             <span className="font-mono">{team.abbreviation}</span>
                             <span className="mx-1.5 w-2 h-2 rounded-full" style={{backgroundColor: team.primaryColor}}></span>
                         </div>
-                        {team.field && (
-                          <div className="text-xs text-slate-400 truncate max-w-[200px]" title={team.field}>{team.field}</div>
-                        )}
                       </div>
                     </div>
                     <div className="flex items-center space-x-1">
