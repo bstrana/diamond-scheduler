@@ -1330,17 +1330,7 @@ const App: React.FC = () => {
                     setScheduleKey(trimmedKey);
                     setScheduleName(finalName);
                     setShowPublishModal(false);
-                    setLeagues([]);
-                    setTeams([]);
-                    setGames([]);
-                    setGamesInHoldingArea([]);
-                    setSelectedLeagueId('all');
-                    setSelectedCategory('all');
-                    setSelectedTeamId('all');
-                    setScheduleLeagueId('');
-                    setSelectedScheduleId('');
-                    setViewMode('calendar');
-                    alert('Schedule published and unloaded.');
+                    alert('Schedule published successfully.');
                   }}
                   className={`flex-1 px-4 py-2 rounded-md text-sm text-white font-medium ${
                     publishKeyDraft.trim() && !isPublishing
