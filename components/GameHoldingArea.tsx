@@ -20,7 +20,7 @@ const GameHoldingArea: React.FC<GameHoldingAreaProps> = ({
   onGameRemove,
   onGameClick
 }) => {
-  const [isExpanded, setIsExpanded] = React.useState(true);
+  const [isExpanded, setIsExpanded] = React.useState(false);
 
   const getTeam = (id: string) => teams.find(t => t.id === id);
   const getLeague = (id?: string) => leagues.find(l => l.id === id);

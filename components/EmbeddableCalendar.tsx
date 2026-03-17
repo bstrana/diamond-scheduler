@@ -188,6 +188,7 @@ const EmbeddableCalendar: React.FC<EmbeddableCalendarProps> = ({
         hideLeagueFilter={hideLeagueFilter}
         hideCategoryFilter={hideCategoryFilter}
         hideTeamFilter={hideTeamFilter}
+        hideViewToggle={initialView === 'list'}
       />
     </div>
   );
