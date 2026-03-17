@@ -166,7 +166,7 @@ const App: React.FC = () => {
   // New Game Form State
   const [newGameForm, setNewGameForm] = useState<Partial<Game> & { leagueIds?: string[] }>({
     date: formatDate(new Date()),
-    time: '19:00',
+    time: '15:00',
     location: 'Main Stadium',
     gameNumber: '',
     leagueIds: []
@@ -466,7 +466,7 @@ const App: React.FC = () => {
     // Reset form
     setNewGameForm({
       date: formatDate(new Date()),
-      time: '19:00',
+      time: '15:00',
       location: 'Main Stadium',
       gameNumber: '',
       leagueIds: []
@@ -481,7 +481,7 @@ const App: React.FC = () => {
     const defaultLeague = leagues.find(l => l.teams.some(t => t.id === teams[0]?.id)) || leagues[0];
     setNewGameForm({
         date: formatDate(date),
-        time: '19:00',
+        time: '15:00',
         location: 'Main Stadium',
         leagueIds: defaultLeague ? [defaultLeague.id] : [],
         gameNumber: ''
@@ -497,7 +497,7 @@ const App: React.FC = () => {
     const defaultLeague = leagues.find(l => l.teams.some(t => t.id === teams[0]?.id)) || leagues[0];
     setNewGameForm({
         date: formatDate(new Date()),
-        time: '19:00',
+        time: '15:00',
         location: 'Main Stadium',
         leagueIds: defaultLeague ? [defaultLeague.id] : [],
         gameNumber: ''
@@ -528,7 +528,7 @@ const App: React.FC = () => {
         homeTeamId: newGameForm.homeTeamId,
         awayTeamId: newGameForm.awayTeamId,
         date: newGameForm.date,
-        time: newGameForm.time || '19:00',
+        time: newGameForm.time || '15:00',
         location: newGameForm.location || 'Stadium',
         status: 'scheduled',
         leagueIds: newGameForm.leagueIds,
@@ -610,12 +610,19 @@ const App: React.FC = () => {
   };
 
   // Filter teams for manual add modal based on selected leagues
-  const formLeagues = newGameForm.leagueIds 
+  const formLeagues = newGameForm.leagueIds
     ? leagues.filter(l => newGameForm.leagueIds!.includes(l.id))
     : [];
   const formTeams = formLeagues.length > 0
     ? Array.from(new Map(formLeagues.flatMap(l => l.teams).map(t => [t.id, t])).values())
     : [];
+
+  // All teams across all leagues (used by Calendar so games from any league render correctly)
+  const allTeams = React.useMemo(() => {
+    const leagueTeams = leagues.flatMap(l => l.teams || []);
+    const merged = [...teams, ...leagueTeams];
+    return Array.from(new Map(merged.map(t => [t.id, t])).values());
+  }, [teams, leagues]);
 
   if (missingKeycloakEnv.length > 0) {
     return (
@@ -827,11 +834,11 @@ const App: React.FC = () => {
                 onGameRemove={handleRemoveFromHoldingArea}
                 onGameClick={handleGameClick}
               />
-              <Calendar 
+              <Calendar
                 currentDate={currentDate}
                 days={days} // Contains filtered games for Grid
                 filteredGames={filteredGames} // Contains filtered games for List
-                teams={teams}
+                teams={allTeams}
                 leagues={leagues}
                 onPrevMonth={handlePrevMonth}
                 onNextMonth={handleNextMonth}
@@ -1020,7 +1027,7 @@ const App: React.FC = () => {
             setEditingGame(null);
             setNewGameForm({
               date: formatDate(new Date()),
-              time: '19:00',
+              time: '15:00',
               location: 'Main Stadium',
               gameNumber: '',
               leagueIds: []

@@ -47,7 +47,7 @@ const ImportExport: React.FC<ImportExportProps> = ({
               homeTeamId: homeTeam.id,
               awayTeamId: awayTeam.id,
               date,
-              time: time || '19:00',
+              time: time || '15:00',
               location: location || 'Main Stadium',
               status: 'scheduled'
             });
@@ -100,7 +100,7 @@ const ImportExport: React.FC<ImportExportProps> = ({
 
   const formatICSDate = (date: string, time: string) => {
     const [year, month, day] = date.split('-').map(Number);
-    const [hour, minute] = (time || '19:00').split(':').map(Number);
+    const [hour, minute] = (time || '15:00').split(':').map(Number);
     const dt = new Date(year, (month || 1) - 1, day || 1, hour || 0, minute || 0, 0);
     const pad = (value: number) => String(value).padStart(2, '0');
     return `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
@@ -114,8 +114,8 @@ const ImportExport: React.FC<ImportExportProps> = ({
     const events = allGames.map((g) => {
       const home = teams.find(t => t.id === g.homeTeamId)?.name || 'Unknown';
       const away = teams.find(t => t.id === g.awayTeamId)?.name || 'Unknown';
-      const start = formatICSDate(g.date, g.time || '19:00');
-      const endDate = new Date(`${g.date}T${g.time || '19:00'}:00`);
+      const start = formatICSDate(g.date, g.time || '15:00');
+      const endDate = new Date(`${g.date}T${g.time || '15:00'}:00`);
       endDate.setHours(endDate.getHours() + 2);
       const pad = (value: number) => String(value).padStart(2, '0');
       const end = `${endDate.getFullYear()}${pad(endDate.getMonth() + 1)}${pad(endDate.getDate())}T${pad(endDate.getHours())}${pad(endDate.getMinutes())}00`;

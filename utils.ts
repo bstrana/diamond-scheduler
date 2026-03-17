@@ -292,7 +292,7 @@ export const generateRoundRobinSchedule = (
             }
             
             const dayName = getDayName(currentDate);
-            const time = dayTimes[dayName] || '19:00';
+            const time = dayTimes[dayName] || '15:00';
             
             games.push({
               id: generateUUID(),
@@ -338,7 +338,7 @@ export const generateRoundRobinSchedule = (
           
           const location = homeTeam.field || `${homeTeam.city} Field`;
           const dayName = getDayName(currentDate);
-          const time = dayTimes[dayName] || '19:00';
+          const time = dayTimes[dayName] || '15:00';
           
           games.push({
             id: generateUUID(),
@@ -384,7 +384,7 @@ export const generateRoundRobinSchedule = (
       const homeTeam1 = teams.find(t => t.id === pair.team1);
       const location1 = homeTeam1 ? (homeTeam1.field || `${homeTeam1.city} Field`) : 'Stadium';
       const dayName1 = getDayName(currentDate);
-      const time1 = dayTimes[dayName1] || '19:00';
+      const time1 = dayTimes[dayName1] || '15:00';
 
       // Game 1 of Series 1
       games.push({
@@ -448,7 +448,7 @@ export const generateRoundRobinSchedule = (
         const homeTeam2 = teams.find(t => t.id === pair.team2);
         const location2 = homeTeam2 ? (homeTeam2.field || `${homeTeam2.city} Field`) : 'Stadium';
         const dayName2 = getDayName(currentDate);
-        const time3 = dayTimes[dayName2] || '19:00';
+        const time3 = dayTimes[dayName2] || '15:00';
 
         // Game 1 of Series 2
         games.push({

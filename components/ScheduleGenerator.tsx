@@ -29,11 +29,11 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
   // Time config per day
   const [dayTimes, setDayTimes] = useState<Record<string, string>>({
     'Sun': '13:00',
-    'Mon': '19:00',
-    'Tue': '19:00',
-    'Wed': '19:00',
-    'Thu': '19:00',
-    'Fri': '19:00',
+    'Mon': '15:00',
+    'Tue': '15:00',
+    'Wed': '15:00',
+    'Thu': '15:00',
+    'Fri': '15:00',
     'Sat': '13:00'
   });
 

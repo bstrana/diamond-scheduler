@@ -44,7 +44,7 @@ const buildIcs = (data) => {
   const events = games.map((game) => {
     const home = teamsById.get(game.homeTeamId);
     const away = teamsById.get(game.awayTeamId);
-    const start = new Date(`${game.date}T${game.time || '19:00'}:00`);
+    const start = new Date(`${game.date}T${game.time || '15:00'}:00`);
     const end = new Date(start.getTime() + defaultDurationMinutes * 60000);
     const summary = `${away?.name || 'Away'} @ ${home?.name || 'Home'}`;
     return [
