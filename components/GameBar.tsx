@@ -190,7 +190,7 @@ const GameBar: React.FC<GameBarProps> = ({
         borderRadius: 'var(--embed-radius, 0.75rem)'
       }}
     >
-      {!hideFilters && (
+      {!hideFilters && (!hideLeagueFilter || !hideCategoryFilter || !hideTeamFilter || !hideStatusFilter) && (
         <div
           className="relative border-b px-3 py-2"
           style={{

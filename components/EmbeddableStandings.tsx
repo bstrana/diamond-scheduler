@@ -147,8 +147,8 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
 
   return (
     <div style={root}>
-      {/* League selector */}
-      {data.leagues.length > 1 && (
+      {/* League selector — only when multiple leagues exist and none was pre-selected */}
+      {data.leagues.length > 1 && !leagueId && (
         <div style={{ marginBottom: '12px' }}>
           <select
             value={selectedLeagueId}

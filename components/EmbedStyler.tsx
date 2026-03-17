@@ -262,14 +262,29 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Font Size</label>
-              <input
-                type="text"
-                value={styles.fontSize}
-                onChange={(e) => handleStyleChange('fontSize', e.target.value)}
-                className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-sm"
-                placeholder="14px"
-              />
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Font Size — <span className="font-bold text-indigo-600">{styles.fontSize}</span>
+              </label>
+              <div className="flex items-center space-x-3">
+                <input
+                  type="range"
+                  min="10"
+                  max="24"
+                  step="1"
+                  value={parseInt(styles.fontSize) || 14}
+                  onChange={(e) => handleStyleChange('fontSize', `${e.target.value}px`)}
+                  className="flex-1 accent-indigo-600"
+                />
+                <input
+                  type="number"
+                  min="10"
+                  max="24"
+                  value={parseInt(styles.fontSize) || 14}
+                  onChange={(e) => handleStyleChange('fontSize', `${e.target.value}px`)}
+                  className="w-16 border border-slate-300 rounded-md px-2 py-1.5 text-sm text-center"
+                />
+                <span className="text-sm text-slate-500">px</span>
+              </div>
             </div>
           </>
         )}
