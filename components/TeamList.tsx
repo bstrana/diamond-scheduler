@@ -266,13 +266,14 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
             </div>
             <div className="lg:col-span-1">
               <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Logo URL</label>
-              <input 
-                type="url" 
-                placeholder="https://example.com/logo.png" 
-                className="w-full border p-2 rounded text-sm" 
-                value={formTeam.logoUrl || ''} 
-                onChange={e => setFormTeam({...formTeam, logoUrl: e.target.value})} 
+              <input
+                type="url"
+                placeholder="https://example.com/logo.png"
+                className="w-full border p-2 rounded text-sm"
+                value={formTeam.logoUrl || ''}
+                onChange={e => setFormTeam({...formTeam, logoUrl: e.target.value})}
               />
+              <p className="text-xs text-slate-500 mt-1">Square image · 128 × 128 px minimum</p>
               {formTeam.logoUrl && (
                 <div className="mt-2 p-2 border border-slate-100 rounded bg-slate-50 flex justify-center">
                   <img src={formTeam.logoUrl} alt="Logo preview" className="h-12 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />

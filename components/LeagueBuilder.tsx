@@ -440,13 +440,14 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Logo URL</label>
-                <input 
-                  type="url" 
+                <input
+                  type="url"
                   value={logoUrl}
                   onChange={(e) => setLogoUrl(e.target.value)}
                   className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   placeholder="https://..."
                 />
+                <p className="text-xs text-slate-500 mt-1">Square image recommended · 128 × 128 px minimum</p>
                 {logoUrl && (
                   <div className="mt-2 p-2 border border-slate-100 rounded bg-slate-50 flex justify-center">
                     <img src={logoUrl} alt="Preview" className="h-16 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
@@ -463,7 +464,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                   className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                   placeholder="https://..."
                 />
-                <p className="text-xs text-slate-500 mt-1">Used as background for game cards in list view</p>
+                <p className="text-xs text-slate-500 mt-1">Used as background for game cards · Wide image recommended · 1280 × 720 px or larger</p>
                 {coverImageUrl && (
                   <div className="mt-2 p-2 border border-slate-100 rounded bg-slate-50 flex justify-center">
                     <img src={coverImageUrl} alt="Cover Preview" className="h-24 w-full object-cover rounded" onError={(e) => (e.currentTarget.style.display = 'none')} />
@@ -593,6 +594,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                             value={newTeam.logoUrl || ''}
                             onChange={e => setNewTeam({...newTeam, logoUrl: e.target.value})}
                         />
+                        <p className="text-xs text-slate-500 mt-1">Square · 128 × 128 px min</p>
                         {newTeam.logoUrl && (
                             <div className="mt-1 p-1 border border-slate-100 rounded bg-slate-50 flex justify-center">
                                 <img src={newTeam.logoUrl} alt="Logo preview" className="h-8 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
