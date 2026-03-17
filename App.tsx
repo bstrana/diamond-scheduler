@@ -1109,7 +1109,10 @@ const App: React.FC = () => {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Home Team</label>
-                                <select required className="w-full border rounded-md p-2" value={newGameForm.homeTeamId || editingGame.homeTeamId || ''} onChange={e => setNewGameForm({...newGameForm, homeTeamId: e.target.value})}>
+                                <select required className="w-full border rounded-md p-2" value={newGameForm.homeTeamId || editingGame.homeTeamId || ''} onChange={e => {
+                                    const team = editFormTeams.find((t: Team) => t.id === e.target.value);
+                                    setNewGameForm({...newGameForm, homeTeamId: e.target.value, location: team?.field || newGameForm.location || editingGame.location || ''});
+                                }}>
                                     <option value="">Select...</option>
                                     {editFormTeams.map((t: Team) => <option key={t.id} value={t.id}>{t.name}</option>)}
                                 </select>

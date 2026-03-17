@@ -64,8 +64,11 @@ const buildIcs = (data) => {
     'VERSION:2.0',
     'PRODID:-//Diamond Manager//Scheduler//EN',
     'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'X-WR-CALNAME:Diamond Schedule',
     ...events,
-    'END:VCALENDAR'
+    'END:VCALENDAR',
+    ''
   ].join('\r\n');
 };
 
@@ -137,6 +140,7 @@ app.get('/subscribe.ics', icsRateLimiter, async (req, res) => {
     
     const ics = buildIcs(record.data);
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="schedule.ics"');
     res.setHeader('Cache-Control', 'public, max-age=300');
     res.send(ics);
   } catch (error) {
