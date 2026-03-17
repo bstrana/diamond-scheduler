@@ -507,25 +507,35 @@ const App: React.FC = () => {
 
   const handleAddGame = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newGameForm.homeTeamId && newGameForm.awayTeamId && newGameForm.date && newGameForm.leagueIds && newGameForm.leagueIds.length > 0) {
-        if(newGameForm.homeTeamId === newGameForm.awayTeamId) {
-            alert("Home and Away teams must be different.");
-            return;
-        }
-        const game: Game = {
-            id: generateUUID(),
-            homeTeamId: newGameForm.homeTeamId,
-            awayTeamId: newGameForm.awayTeamId,
-            date: newGameForm.date,
-            time: newGameForm.time || '19:00',
-            location: newGameForm.location || 'Stadium',
-            status: 'scheduled',
-            leagueIds: newGameForm.leagueIds,
-            gameNumber: newGameForm.gameNumber
-        };
-        setGames([...games, game]);
-        setShowAddModal(false);
+    if (!newGameForm.leagueIds || newGameForm.leagueIds.length === 0) {
+        alert("Please select at least one league.");
+        return;
     }
+    if (!newGameForm.homeTeamId || !newGameForm.awayTeamId) {
+        alert("Please select both a home team and an away team.");
+        return;
+    }
+    if (!newGameForm.date) {
+        alert("Please select a date.");
+        return;
+    }
+    if(newGameForm.homeTeamId === newGameForm.awayTeamId) {
+        alert("Home and Away teams must be different.");
+        return;
+    }
+    const game: Game = {
+        id: generateUUID(),
+        homeTeamId: newGameForm.homeTeamId,
+        awayTeamId: newGameForm.awayTeamId,
+        date: newGameForm.date,
+        time: newGameForm.time || '19:00',
+        location: newGameForm.location || 'Stadium',
+        status: 'scheduled',
+        leagueIds: newGameForm.leagueIds,
+        gameNumber: newGameForm.gameNumber
+    };
+    setGames([...games, game]);
+    setShowAddModal(false);
   };
 
   // Team Logic
@@ -827,6 +837,7 @@ const App: React.FC = () => {
                 onNextMonth={handleNextMonth}
                 onGameClick={handleGameClick}
                 onDateClick={handleDateClick}
+                onAddGame={handleAddGameClick}
                 onGameMove={handleGameMove}
                 onGameCopy={handleGameCopy}
                 onDeleteGame={handleDeleteGame}

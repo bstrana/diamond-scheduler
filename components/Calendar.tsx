@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Game, Team, CalendarDay, League } from '../types';
 import { WEEKDAYS, MONTH_NAMES } from '../constants';
-import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle } from 'lucide-react';
 import { formatDate } from '../utils';
 
 interface CalendarProps {
@@ -19,6 +19,7 @@ interface CalendarProps {
   onDeleteGame: (gameId: string) => void;
   onAddToHoldingArea?: (gameId: string) => void;
   onRemoveAllGames?: () => void;
+  onAddGame?: () => void;
   // New Props
   viewType: 'grid' | 'list';
   onViewTypeChange: (type: 'grid' | 'list') => void;
@@ -48,6 +49,7 @@ const Calendar: React.FC<CalendarProps> = ({
   onDeleteGame,
   onAddToHoldingArea,
   onRemoveAllGames,
+  onAddGame,
   viewType,
   onViewTypeChange,
   selectedTeamId,
@@ -249,6 +251,18 @@ const Calendar: React.FC<CalendarProps> = ({
             >
               {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
             </button>
+
+            {/* Add Game */}
+            {onAddGame && (
+              <button
+                onClick={onAddGame}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                title="Add Game"
+              >
+                <PlusCircle size={16} />
+                <span>Add Game</span>
+              </button>
+            )}
 
             {/* Remove All Games */}
             {onRemoveAllGames && (
