@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Game, Team, CalendarDay, League } from '../types';
 import { WEEKDAYS, MONTH_NAMES } from '../constants';
-import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio } from 'lucide-react';
 import { formatDate } from '../utils';
 
 interface CalendarProps {
@@ -516,9 +516,18 @@ const Calendar: React.FC<CalendarProps> = ({
                                         
                                         {/* Content wrapper with relative positioning */}
                                         <div className="relative z-10">
-                                        {/* Time in top right corner */}
-                                        <div className="absolute top-4 right-4 text-lg font-bold text-slate-800">
-                                            {game.time}
+                                        {/* Time / Status badge in top right corner */}
+                                        <div className="absolute top-4 right-4 flex flex-col items-end space-y-1">
+                                            {game.status === 'live' ? (
+                                                <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-green-500 text-white">
+                                                    <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span></span>
+                                                    LIVE
+                                                </span>
+                                            ) : game.status === 'final' ? (
+                                                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-700 text-white">FINAL</span>
+                                            ) : (
+                                                <span className="text-lg font-bold text-slate-800">{game.time}</span>
+                                            )}
                                         </div>
 
                                         <div>
@@ -616,11 +625,67 @@ const Calendar: React.FC<CalendarProps> = ({
                                                 </div>
                                             )}
 
+                                            {/* Score by innings for live/final games */}
+                                            {(game.status === 'live' || game.status === 'final') && game.scores && (
+                                                <div className="mt-3">
+                                                    {game.scores.innings && game.scores.innings.length > 0 ? (
+                                                        <div className="overflow-x-auto">
+                                                            <table className="w-full text-xs border-collapse">
+                                                                <thead>
+                                                                    <tr className="bg-slate-50">
+                                                                        <th className="text-left py-1 px-1.5 text-slate-500 w-8"></th>
+                                                                        {game.scores.innings.map((_, i) => (
+                                                                            <th key={i} className="py-1 px-1 text-center text-slate-500">{i + 1}</th>
+                                                                        ))}
+                                                                        <th className="py-1 px-1.5 text-center font-bold text-slate-700">R</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {([{team: away, side: 'away'}, {team: home, side: 'home'}] as const).map(({team, side}) => (
+                                                                        <tr key={side} className="border-t border-slate-100">
+                                                                            <td className="py-1 px-1.5 font-bold" style={{color: team.primaryColor}}>{team.abbreviation}</td>
+                                                                            {game.scores!.innings!.map((inning, i) => (
+                                                                                <td key={i} className="py-1 px-1 text-center text-slate-600">{inning[side] ?? '-'}</td>
+                                                                            ))}
+                                                                            <td className="py-1 px-1.5 text-center font-bold text-slate-800">{game.scores![side]}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex justify-center items-baseline space-x-2">
+                                                            <span className="font-bold text-sm" style={{color: away.primaryColor}}>{away.abbreviation}</span>
+                                                            <span className="text-xl font-bold text-slate-800">{game.scores.away}</span>
+                                                            <span className="text-slate-300 text-base">–</span>
+                                                            <span className="text-xl font-bold text-slate-800">{game.scores.home}</span>
+                                                            <span className="font-bold text-sm" style={{color: home.primaryColor}}>{home.abbreviation}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
                                             {/* Location below teams */}
                                             <div className="text-xs text-slate-500 flex items-center justify-center mt-2">
                                                 <MapPin size={10} className="mr-1" />
                                                 {game.location}
                                             </div>
+
+                                            {/* Live stream link */}
+                                            {game.streamUrl && (
+                                                <a
+                                                    href={game.streamUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={e => e.stopPropagation()}
+                                                    className="flex items-center justify-center space-x-1 text-xs font-semibold mt-1"
+                                                    style={{color: game.status === 'live' ? '#22c55e' : '#4f46e5'}}
+                                                    title="Watch Live Stream"
+                                                >
+                                                    <Radio size={10} />
+                                                    <span>Watch Live</span>
+                                                </a>
+                                            )}
                                         </div>
                                         </div>
                                     </div>

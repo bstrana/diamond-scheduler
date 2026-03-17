@@ -44,6 +44,7 @@ export interface Game {
   leagueIds?: string[]; // New: array of league IDs
   gameNumber?: string;
   seriesName?: string; // Name of the series (e.g., "Semifinal", "Final")
+  streamUrl?: string; // Optional live stream URL
 }
 
 export type ViewMode = 'calendar' | 'list' | 'teams' | 'leagues' | 'league_builder' | 'scheduler' | 'embed' | 'gamebar';

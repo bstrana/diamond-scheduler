@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect } from 'react';
 import { Game, Team, League } from '../types';
 import { formatDate } from '../utils';
-import { ChevronLeft, ChevronRight, MapPin, Calendar as CalIcon, Clock, ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Calendar as CalIcon, Clock, ChevronDown, SlidersHorizontal, Radio } from 'lucide-react';
 
 interface GameBarProps {
   games: Game[];
@@ -517,6 +517,20 @@ const GameBar: React.FC<GameBarProps> = ({
                               {game.location}
                             </span>
                           </div>
+                          {game.streamUrl && (
+                            <a
+                              href={game.streamUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={e => e.stopPropagation()}
+                              className="flex items-center space-x-1 text-xs font-semibold mt-0.5"
+                              style={{ color: isLive ? '#22c55e' : 'var(--embed-primary, #4f46e5)' }}
+                              title="Watch Live Stream"
+                            >
+                              <Radio size={10} />
+                              <span>Watch</span>
+                            </a>
+                          )}
                         </div>
                       </div>
                     </div>

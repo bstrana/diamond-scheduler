@@ -453,6 +453,7 @@ const App: React.FC = () => {
       status: (newGameForm.status || editingGame.status) as Game['status'],
       scores: newGameForm.scores !== undefined ? newGameForm.scores : editingGame.scores,
       recap: newGameForm.recap !== undefined ? newGameForm.recap : editingGame.recap,
+      streamUrl: newGameForm.streamUrl !== undefined ? newGameForm.streamUrl : editingGame.streamUrl,
     };
 
     if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
@@ -494,6 +495,7 @@ const App: React.FC = () => {
       status: (newGameForm.status || editingGame.status) as Game['status'],
       scores: newGameForm.scores !== undefined ? newGameForm.scores : editingGame.scores,
       recap: newGameForm.recap !== undefined ? newGameForm.recap : editingGame.recap,
+      streamUrl: newGameForm.streamUrl !== undefined ? newGameForm.streamUrl : editingGame.streamUrl,
     };
 
     if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
@@ -1313,6 +1315,18 @@ const App: React.FC = () => {
                                 placeholder="Game recap..."
                                 value={newGameForm.recap !== undefined ? newGameForm.recap : (editingGame.recap || '')}
                                 onChange={e => setNewGameForm({...newGameForm, recap: e.target.value})}
+                            />
+                        </div>
+
+                        {/* Live Stream URL */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Live Stream URL (optional)</label>
+                            <input
+                                type="url"
+                                className="w-full border rounded-md p-2 text-sm"
+                                placeholder="https://..."
+                                value={newGameForm.streamUrl !== undefined ? newGameForm.streamUrl : (editingGame.streamUrl || '')}
+                                onChange={e => setNewGameForm({...newGameForm, streamUrl: e.target.value})}
                             />
                         </div>
 
