@@ -135,7 +135,7 @@ const ImportExport: React.FC<ImportExportProps> = ({
     const ics = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//Diamond Manager//Scheduler//EN',
+      'PRODID:-//Diamond Manager Scheduler//EN',
       'CALSCALE:GREGORIAN',
       ...events,
       'END:VCALENDAR'

@@ -749,12 +749,12 @@ const App: React.FC = () => {
                     >
                       <img
                         src="/logo.png"
-                        alt="Diamond Manager logo"
+                        alt="Diamond Manager Scheduler logo"
                         className="h-8 w-8 rounded-lg object-contain bg-slate-100 p-1"
                       />
                       <div className="text-left">
                         <div className="text-lg font-bold tracking-tight text-slate-900 flex items-center">
-                          <span>Diamond Manager</span>
+                          <span>Diamond Manager Scheduler</span>
                           <ChevronDown size={16} className="ml-2 text-slate-500" />
                         </div>
                         <div className="text-xs text-indigo-500 uppercase tracking-wider">Scheduler</div>

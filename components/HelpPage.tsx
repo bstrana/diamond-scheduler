@@ -36,14 +36,14 @@ const HelpPage: React.FC = () => {
     {
       id: 'what',
       icon: <Star size={18} />,
-      title: 'What is Diamond Manager?',
+      title: 'What is Diamond Manager Scheduler?',
       color: 'text-amber-600',
       content: (
         <div className="space-y-3 text-sm text-slate-600">
           <p>
-            <strong className="text-slate-800">Diamond Manager</strong> is a sports schedule management platform designed for league administrators, tournament directors, and club managers. It lets you build leagues, roster teams, generate full schedules, record live scores, and publish everything to embeddable widgets on your own website — all from one place.
+            <strong className="text-slate-800">Diamond Manager Scheduler</strong> is a sports schedule management platform designed for league administrators, tournament directors, and club managers. It lets you build leagues, roster teams, generate full schedules, record live scores, and publish everything to embeddable widgets on your own website — all from one place.
           </p>
-          <p>Whether you run a baseball weekend tournament, a multi-division soccer season, or any bracketed competition, Diamond Manager handles the full lifecycle:</p>
+          <p>Whether you run a baseball weekend tournament, a multi-division soccer season, or any bracketed competition, Diamond Manager Scheduler handles the full lifecycle:</p>
           <ul className="space-y-1.5 mt-2">
             {[
               'Build leagues with custom categories and playing fields',
@@ -261,7 +261,7 @@ const HelpPage: React.FC = () => {
           <h1 className="text-3xl font-bold">Help & Guide</h1>
         </div>
         <p className="text-indigo-100 text-base max-w-xl">
-          Everything you need to know about Diamond Manager — from setting up your first league to embedding live standings on your website.
+          Everything you need to know about Diamond Manager Scheduler — from setting up your first league to embedding live standings on your website.
         </p>
       </div>
 
