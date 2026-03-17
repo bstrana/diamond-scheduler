@@ -473,6 +473,58 @@ const App: React.FC = () => {
     });
   };
 
+  const handleGameUpdateAndPublish = async () => {
+    if (!editingGame) return;
+
+    if (!newGameForm.leagueIds || newGameForm.leagueIds.length === 0) {
+      alert("Please select at least one league.");
+      return;
+    }
+
+    const updatedGame: Game = {
+      ...editingGame,
+      date: newGameForm.date || editingGame.date,
+      time: newGameForm.time || editingGame.time,
+      location: newGameForm.location || editingGame.location,
+      homeTeamId: newGameForm.homeTeamId || editingGame.homeTeamId,
+      awayTeamId: newGameForm.awayTeamId || editingGame.awayTeamId,
+      leagueIds: newGameForm.leagueIds || getGameLeagueIds(editingGame),
+      gameNumber: newGameForm.gameNumber || editingGame.gameNumber,
+      seriesName: newGameForm.seriesName !== undefined ? newGameForm.seriesName : editingGame.seriesName,
+      status: (newGameForm.status || editingGame.status) as Game['status'],
+      scores: newGameForm.scores !== undefined ? newGameForm.scores : editingGame.scores,
+      recap: newGameForm.recap !== undefined ? newGameForm.recap : editingGame.recap,
+    };
+
+    if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
+      alert("Home and Away teams must be different.");
+      return;
+    }
+
+    if (!scheduleKey) {
+      alert("No published schedule found. Please publish the schedule first using the Publish button.");
+      return;
+    }
+
+    const updatedGames = games.map(g => g.id === editingGame.id ? updatedGame : g);
+    setGames(updatedGames);
+    setShowEditModal(false);
+    setEditingGame(null);
+    setNewGameForm({ date: formatDate(new Date()), time: '15:00', location: 'Main Stadium', gameNumber: '', leagueIds: [] });
+
+    setIsPublishing(true);
+    const result = await storageApi.publishScheduleNow(
+      { leagues, teams, games: updatedGames, gamesInHoldingArea },
+      { userId, orgId },
+      scheduleKey,
+      scheduleName
+    );
+    setIsPublishing(false);
+    if (!result.ok) {
+      alert(`Publish failed. ${result.reason || 'Check PocketBase URL and rules.'}`);
+    }
+  };
+
   const handleDateClick = (date: Date) => {
     if (leagues.length === 0) {
       alert("Please create a league first before scheduling games.");
@@ -1250,12 +1302,23 @@ const App: React.FC = () => {
                             />
                         </div>
 
-                        <div className="pt-2 flex space-x-2">
-                            <button type="button" onClick={closeEditModal} className="flex-1 bg-slate-200 text-slate-700 py-2 rounded-lg font-medium hover:bg-slate-300 transition-colors">
-                                Cancel
-                            </button>
-                            <button type="submit" className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
-                                Save Changes
+                        <div className="pt-2 space-y-2">
+                            <div className="flex space-x-2">
+                                <button type="button" onClick={closeEditModal} className="flex-1 bg-slate-200 text-slate-700 py-2 rounded-lg font-medium hover:bg-slate-300 transition-colors">
+                                    Cancel
+                                </button>
+                                <button type="submit" className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
+                                    Save Changes
+                                </button>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleGameUpdateAndPublish}
+                                disabled={isPublishing || !scheduleKey}
+                                title={!scheduleKey ? 'Publish the schedule first to enable this button' : ''}
+                                className={`w-full py-2 rounded-lg font-medium transition-colors text-white ${scheduleKey && !isPublishing ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-emerald-300 cursor-not-allowed'}`}
+                            >
+                                {isPublishing ? 'Publishing...' : 'Save & Publish'}
                             </button>
                         </div>
                     </form>
