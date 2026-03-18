@@ -716,58 +716,61 @@ const GameBar: React.FC<GameBarProps> = ({
                     )}
 
                     {/* Teams — with inline score for live/final */}
-                    {isSingleTeamFilter && opponent ? (
-                      <div className="flex items-center space-x-2 w-full justify-center">
-                        <span
-                          className="font-bold text-lg"
-                          style={{ color: 'var(--embed-text, #94a3b8)' }}
-                        >
-                          {isSelectedTeamAway ? '@' : 'vs'}
-                        </span>
-                        {opponent.logoUrl ? (
-                          <img src={opponent.logoUrl} alt={`${opponent.name} logo`} className="w-10 h-10 object-contain" onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                            const parent = e.currentTarget.parentElement;
-                            if (parent) {
-                              const span = document.createElement('span');
-                              span.className = 'text-2xl';
-                              span.textContent = '⚾';
-                              parent.insertBefore(span, e.currentTarget.nextSibling);
-                            }
-                          }} />
-                        ) : (
-                          <span className="text-2xl">⚾</span>
-                        )}
-                        <div className="flex flex-col">
-                          <span
-                            className="font-bold text-sm"
-                            style={{ color: opponent.primaryColor }}
-                          >
-                            {opponent.abbreviation}
-                          </span>
-                          <span
-                            className="text-xs"
-                            style={{ color: 'var(--embed-text, #64748b)' }}
-                          >
-                            {opponent.city}
-                          </span>
-                          {teamRecords[opponent.id] && (
-                            <span className="text-xs font-medium" style={{ color: 'var(--embed-text, #94a3b8)' }}>
-                              {teamRecords[opponent.id].w}-{teamRecords[opponent.id].l}
+                    {/* Teams — left=away, right=home; in single-team mode show both */}
+                    {isSingleTeamFilter && opponent ? (() => {
+                      const selectedTeam = getTeam(selectedTeamId);
+                      // Left = away team, Right = home team (standard convention)
+                      const leftTeam  = isSelectedTeamAway ? selectedTeam : opponent;
+                      const rightTeam = isSelectedTeamAway ? opponent     : selectedTeam;
+                      const awayScore = hasScore ? game.scores!.away : null;
+                      const homeScore = hasScore ? game.scores!.home : null;
+                      const awayWon   = hasScore && awayScore !== null && homeScore !== null && awayScore > homeScore;
+                      const homeWon   = hasScore && awayScore !== null && homeScore !== null && homeScore > awayScore;
+
+                      const renderTeamCol = (team: Team | null | undefined, score: number | null, isWinner: boolean) => (
+                        <div className="flex flex-col items-center space-y-1">
+                          <div className="flex items-center space-x-2">
+                            {team?.logoUrl ? (
+                              <img src={team.logoUrl} alt={`${team.name} logo`} className="w-10 h-10 object-contain" onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }} />
+                            ) : (
+                              <span className="text-2xl">⚾</span>
+                            )}
+                            <div className="flex flex-col">
+                              <span className="font-bold text-sm" style={{ color: team?.primaryColor || 'var(--embed-text, #334155)' }}>
+                                {team?.abbreviation ?? '?'}
+                              </span>
+                              <span className="text-xs" style={{ color: 'var(--embed-text, #64748b)' }}>
+                                {team?.city ?? ''}
+                              </span>
+                              {team && teamRecords[team.id] && (
+                                <span className="text-xs font-medium" style={{ color: 'var(--embed-text, #94a3b8)' }}>
+                                  {teamRecords[team.id].w}-{teamRecords[team.id].l}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          {hasScore && score !== null && (
+                            <span className="text-2xl font-bold tabular-nums" style={{
+                              color: isWinner ? 'var(--embed-primary, #4f46e5)' : 'var(--embed-text, #1e293b)'
+                            }}>
+                              {score}
                             </span>
                           )}
                         </div>
-                        {hasScore && (
-                          <div className="ml-2 flex flex-col items-center">
-                            <span className="text-xl font-bold" style={{ color: 'var(--embed-text, #1e293b)' }}>
-                              {isSelectedTeamAway
-                                ? `${game.scores!.away} – ${game.scores!.home}`
-                                : `${game.scores!.home} – ${game.scores!.away}`}
-                            </span>
+                      );
+
+                      return (
+                        <div className="flex items-center justify-center space-x-3">
+                          {renderTeamCol(leftTeam, awayScore, awayWon)}
+                          <div className="font-bold text-base" style={{ color: 'var(--embed-text, #94a3b8)' }}>
+                            {hasScore ? '–' : (isSelectedTeamAway ? '@' : 'vs')}
                           </div>
-                        )}
-                      </div>
-                    ) : (
+                          {renderTeamCol(rightTeam, homeScore, homeWon)}
+                        </div>
+                      );
+                    })() : (
                       <div className="flex items-center justify-center space-x-3">
                         {/* Away Team */}
                         <div className="flex flex-col items-center space-y-1">

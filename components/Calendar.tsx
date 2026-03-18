@@ -424,14 +424,18 @@ const Calendar: React.FC<CalendarProps> = ({
                             {/* Main Content: Teams on left, Time/Location on right */}
                             <div className="flex items-start justify-between gap-2">
                                 {/* Teams - Show only opponent if single team filter, otherwise show both */}
-                                {isSingleTeamFilter && opponent ? (
-                                    <div className="flex items-center space-x-1.5 w-full justify-center flex-1 min-w-0" title={`${opponent.city} ${opponent.name}`}>
-                                        <span className="text-base text-slate-400 font-bold">
-                                            {isSelectedTeamAway ? '@' : 'vs'}
-                                        </span>
-                                        <span className="font-bold text-xs" style={{color: opponent.primaryColor}}>{opponent.abbreviation}</span>
-                                    </div>
-                                ) : (
+                                {isSingleTeamFilter && opponent ? (() => {
+                                    const selectedTeam = getTeam(selectedTeamId);
+                                    const leftTeam  = isSelectedTeamAway ? selectedTeam : opponent;
+                                    const rightTeam = isSelectedTeamAway ? opponent     : selectedTeam;
+                                    return (
+                                        <div className="flex items-center space-x-1.5 w-full justify-center flex-1 min-w-0">
+                                            <span className="font-bold text-xs" style={{color: leftTeam?.primaryColor}}>{leftTeam?.abbreviation ?? '?'}</span>
+                                            <span className="text-base text-slate-400 font-bold">{isSelectedTeamAway ? '@' : 'vs'}</span>
+                                            <span className="font-bold text-xs" style={{color: rightTeam?.primaryColor}}>{rightTeam?.abbreviation ?? '?'}</span>
+                                        </div>
+                                    );
+                                })() : (
                                     <div className="flex items-center space-x-1.5 flex-1 min-w-0 justify-center">
                                         {/* Away Team */}
                                         <div className="flex items-center space-x-1" title={`${away.city} ${away.name}`}>
@@ -580,33 +584,36 @@ const Calendar: React.FC<CalendarProps> = ({
                                                 </div>
                                             )}
                                             
-                                            {/* Show only opponent if single team filter, otherwise show both teams */}
-                                            {isSingleTeamFilter && opponent ? (
-                                                <div className="flex items-center space-x-3">
-                                                    <span className="text-slate-400 font-bold text-lg">
-                                                        {isSelectedTeamAway ? '@' : 'vs'}
-                                                    </span>
-                                                    {opponent.logoUrl ? (
-                                                        <img src={opponent.logoUrl} alt={`${opponent.name} logo`} className="w-12 h-12 object-contain" onError={(e) => {
-                                                            e.currentTarget.style.display = 'none';
-                                                            const parent = e.currentTarget.parentElement;
-                                                            if (parent) {
-                                                                const span = document.createElement('span');
-                                                                span.className = 'text-3xl';
-                                                                span.textContent = '⚾';
-                                                                parent.insertBefore(span, e.currentTarget.nextSibling);
-                                                            }
-                                                        }} />
-                                                    ) : (
-                                                        <span className="text-3xl">⚾</span>
-                                                    )}
-                                                    <div className="flex flex-col">
-                                                        <span className="font-bold text-base" style={{color: opponent.primaryColor}}>{opponent.abbreviation}</span>
-                                                        <span className="text-xs text-slate-500">{opponent.city}</span>
-                                                        {teamRecords[opponent.id] && <span className="text-xs text-slate-400">({teamRecords[opponent.id].w}-{teamRecords[opponent.id].l})</span>}
+                                            {/* Show both teams in single team filter; show both teams otherwise */}
+                                            {isSingleTeamFilter && opponent ? (() => {
+                                                const selectedTeam = getTeam(selectedTeamId);
+                                                // Left = away team, Right = home team
+                                                const leftTeam  = isSelectedTeamAway ? selectedTeam : opponent;
+                                                const rightTeam = isSelectedTeamAway ? opponent     : selectedTeam;
+                                                const renderTeam = (t: Team | null | undefined) => (
+                                                    <div className="flex items-center space-x-2">
+                                                        {t?.logoUrl ? (
+                                                            <img src={t.logoUrl} alt={`${t.name} logo`} className="w-10 h-10 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                                        ) : (
+                                                            <span className="text-2xl">⚾</span>
+                                                        )}
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-sm" style={{color: t?.primaryColor}}>{t?.abbreviation ?? '?'}</span>
+                                                            <span className="text-xs text-slate-500">{t?.city ?? ''}</span>
+                                                            {t && teamRecords[t.id] && <span className="text-xs text-slate-400">({teamRecords[t.id].w}-{teamRecords[t.id].l})</span>}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ) : (
+                                                );
+                                                return (
+                                                    <div className="flex items-center space-x-3">
+                                                        {renderTeam(leftTeam)}
+                                                        <span className="text-slate-400 font-bold text-lg">
+                                                            {isSelectedTeamAway ? '@' : 'vs'}
+                                                        </span>
+                                                        {renderTeam(rightTeam)}
+                                                    </div>
+                                                );
+                                            })() : (
                                                 <div className="flex flex-col items-start space-y-2">
                                                     {/* Away Team */}
                                                     <div className="flex items-center space-x-3">

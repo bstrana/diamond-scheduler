@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import {
   Trophy, Users, Calendar, Clock, Send, Code, Star,
   CheckCircle, ChevronDown, ChevronUp, Radio, MapPin,
-  BarChart2, Layers, Palette, RefreshCw, Globe, Zap
+  BarChart2, Layers, Palette, RefreshCw, Globe, Zap,
+  Moon, Printer, GitBranch, QrCode
 } from 'lucide-react';
 
 interface Section {
@@ -46,11 +47,13 @@ const HelpPage: React.FC = () => {
           <p>Whether you run a baseball weekend tournament, a multi-division soccer season, or any bracketed competition, Diamond Manager Scheduler handles the full lifecycle:</p>
           <ul className="space-y-1.5 mt-2">
             {[
-              'Build leagues with custom categories and playing fields',
-              'Roster teams with colors, logos, and player lists',
-              'Generate round-robin or custom schedules in seconds',
-              'Update scores inning-by-inning in real time',
-              'Publish and embed live standings, calendars, and a game bar on any website',
+              'Build leagues with custom categories, playing fields, and announcements',
+              'Roster teams with primary + secondary colors, logos, and player lists',
+              'Generate round-robin schedules in seconds with automatic conflict detection',
+              'Update scores inning-by-inning in real time; mark games Live, Final, or Postponed',
+              'View a visual playoff bracket auto-built from series-named games',
+              'Print or export any calendar view to PDF with one click',
+              'Publish and embed live standings (with GP column), calendars, and a game bar on any website',
             ].map((item, i) => (
               <li key={i} className="flex items-start space-x-2">
                 <CheckCircle size={14} className="mt-0.5 text-emerald-500 flex-shrink-0" />
@@ -87,6 +90,7 @@ const HelpPage: React.FC = () => {
           </Step>
           <Step n={5} title="Publish">
             <p>When you're ready to go live, open the user menu and click <strong>Publish Current Schedule</strong>. Enter a short schedule key (e.g. <code className="bg-slate-100 px-1 rounded text-xs">summer-2025</code>) and a display name, then hit Publish.</p>
+            <p className="mt-1">A <strong>QR code</strong> for the embed URL is shown live in the publish dialog as soon as you type a key — scan it to preview on mobile or share it instantly.</p>
             <p className="mt-1">The schedule is pushed to the server and your embedded widgets will update automatically. You can re-publish at any time — for example, after recording a final score. The <strong>Save &amp; Publish</strong> button in the game edit modal does both in one click.</p>
           </Step>
         </div>
@@ -132,9 +136,9 @@ const HelpPage: React.FC = () => {
           <p>Go to the <strong>Embed Code</strong> tab. Configure the embed, then copy the <code className="bg-slate-100 px-1 rounded text-xs">&lt;iframe&gt;</code> snippet and paste it into any webpage — WordPress, Squarespace, plain HTML, etc.</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {[
-              { icon: <Calendar size={16} />, label: 'Calendar', color: 'bg-indigo-50 border-indigo-200', text: 'Full month grid or upcoming-games list. Supports team, league, and category filters.' },
-              { icon: <Layers size={16} />, label: 'Game Bar', color: 'bg-sky-50 border-sky-200', text: 'Compact horizontal ticker showing upcoming and live games. Great for a site header.' },
-              { icon: <BarChart2 size={16} />, label: 'Standings', color: 'bg-violet-50 border-violet-200', text: 'Live W-L table with PCT, GB, RS, RA, and DIFF, auto-calculated from final game scores.' },
+              { icon: <Calendar size={16} />, label: 'Calendar', color: 'bg-indigo-50 border-indigo-200', text: 'Full month grid or upcoming-games list. When a single team is selected, both teams are displayed on each card (not just the opponent).' },
+              { icon: <Layers size={16} />, label: 'Game Bar', color: 'bg-sky-50 border-sky-200', text: 'Compact horizontal ticker showing upcoming and live games. Shows W-L records on each card. Single-team filter shows both teams\' logos and names.' },
+              { icon: <BarChart2 size={16} />, label: 'Standings', color: 'bg-violet-50 border-violet-200', text: 'Live GP/W/L table with PCT, GB, RS, RA, and DIFF. Category filter lets visitors narrow by division. Watch Live button appears during live games.' },
             ].map(({ icon, label, color, text }) => (
               <div key={label} className={`border rounded-lg p-3 ${color}`}>
                 <p className="font-semibold text-slate-700 flex items-center gap-1.5 mb-1">{icon}{label}</p>
@@ -149,8 +153,9 @@ const HelpPage: React.FC = () => {
                 { icon: <Globe size={13} />, text: 'Filter by specific league, category, or team to show a focused view' },
                 { icon: <Palette size={13} />, text: 'Style Customization — pick colors, font family, font size, border radius, and card shadow to match your site\'s look' },
                 { icon: <Users size={13} />, text: 'Show/hide individual filter controls (league, category, team, status) inside the embedded widget' },
-                { icon: <Star size={13} />, text: 'When a single league is pre-selected for a Standings embed, the league dropdown is automatically hidden' },
+                { icon: <Star size={13} />, text: 'When a single team is selected, a Team Deep-link URL is shown — share it so fans can embed or bookmark just their team\'s schedule' },
                 { icon: <Calendar size={13} />, text: 'Calendar embeds in List view hide the grid/list toggle so visitors stay in list mode' },
+                { icon: <Radio size={13} />, text: 'Announcement banners (set per-league in League Creator) appear automatically at the top of every embedded Calendar, Game Bar, and Standings widget. Visitors can dismiss them.' },
               ].map(({ icon, text }, i) => (
                 <li key={i} className="flex items-start gap-2">
                   <span className="mt-0.5 text-slate-400 flex-shrink-0">{icon}</span>
@@ -174,6 +179,7 @@ const HelpPage: React.FC = () => {
               { label: 'Scheduled', color: 'bg-indigo-100 text-indigo-700', desc: 'Default state. Game is on the calendar but hasn\'t started.' },
               { label: '● Live', color: 'bg-green-500 text-white', desc: 'Game is in progress. A pulsing green badge appears on all views and embeds.' },
               { label: 'Final', color: 'bg-slate-700 text-white', desc: 'Game is complete. Score is locked and counted toward standings.' },
+              { label: 'PPD', color: 'bg-orange-500 text-white', desc: 'Postponed. Shows an orange PPD badge. Change the date/time and set status back to Scheduled to reschedule.' },
             ].map(({ label, color, desc }) => (
               <div key={label} className="flex-1 min-w-[180px] border border-slate-200 rounded-lg p-3">
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${color}`}>{label}</span>
@@ -193,6 +199,37 @@ const HelpPage: React.FC = () => {
       ),
     },
     {
+      id: 'bracket',
+      icon: <GitBranch size={18} />,
+      title: 'Playoff Bracket',
+      color: 'text-violet-600',
+      content: (
+        <div className="space-y-3 text-sm text-slate-600">
+          <p>
+            The <strong>Playoff Bracket</strong> view (GitBranch icon in the nav) automatically builds a visual bracket from any games that have a <strong>Series Name</strong> set.
+          </p>
+          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 space-y-2">
+            <p className="font-semibold text-indigo-800">How to set it up</p>
+            <ol className="list-decimal list-inside space-y-1 text-indigo-700">
+              <li>Open the Edit Game modal for a playoff game.</li>
+              <li>Enter a <strong>Series Name</strong> (e.g. <code className="bg-white px-1 rounded text-xs">Quarterfinal</code>, <code className="bg-white px-1 rounded text-xs">Semifinal</code>, <code className="bg-white px-1 rounded text-xs">Championship</code>).</li>
+              <li>Repeat for all bracket games. Games with the same series name and same pair of teams are grouped into a single matchup card.</li>
+            </ol>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <p className="font-semibold text-slate-700 mb-1">Rounds</p>
+              <p>Rounds are ordered by the date of the first game in each series. Each round is a column in the bracket.</p>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <p className="font-semibold text-slate-700 mb-1">Scores &amp; results</p>
+              <p>Completed games show per-game scores. The team leading the series has their row highlighted in green. Individual game details (date, score, status) appear in each matchup card.</p>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
       id: 'leagues',
       icon: <Trophy size={18} />,
       title: 'Leagues, Teams & Fields',
@@ -203,10 +240,11 @@ const HelpPage: React.FC = () => {
             <div className="space-y-2">
               <p className="font-semibold text-slate-700 flex items-center gap-1.5"><Trophy size={14} /> Leagues</p>
               <p>Each league has a name, short name (shown in compact views), category, logo, and cover image. A game can belong to multiple leagues simultaneously, which is useful for cross-divisional play.</p>
+              <p>Leagues also support an optional <strong>Announcement</strong> — a short banner message (up to 500 characters) shown at the top of every embedded Calendar, Game Bar, and Standings widget for that league.</p>
             </div>
             <div className="space-y-2">
               <p className="font-semibold text-slate-700 flex items-center gap-1.5"><Users size={14} /> Teams</p>
-              <p>Teams have a city, name, abbreviation, primary color, logo URL, country, and an optional player roster. They live inside leagues. The same team can be added to multiple leagues.</p>
+              <p>Teams have a city, name, abbreviation, <strong>primary and secondary colors</strong>, logo URL, country, and an optional player roster. They live inside leagues. The same team can be added to multiple leagues.</p>
             </div>
             <div className="space-y-2">
               <p className="font-semibold text-slate-700 flex items-center gap-1.5"><MapPin size={14} /> Playing Fields</p>
@@ -214,7 +252,8 @@ const HelpPage: React.FC = () => {
             </div>
             <div className="space-y-2">
               <p className="font-semibold text-slate-700 flex items-center gap-1.5"><BarChart2 size={14} /> Standings</p>
-              <p>Standings are calculated automatically from all <em>Final</em> games with recorded scores. They include W, L, PCT, GB (games behind), RS (runs scored), RA (runs allowed), and DIFF.</p>
+              <p>Standings are calculated automatically from all <em>Final</em> games with recorded scores. They include <strong>GP</strong> (games played), W, L, PCT, GB (games behind), RS (runs scored), RA (runs allowed), and DIFF.</p>
+              <p>The embedded Standings widget also shows a <strong>Watch Live</strong> button when a game in that league is live with a stream URL.</p>
             </div>
           </div>
         </div>
@@ -229,12 +268,16 @@ const HelpPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-600">
           {[
             { title: 'Drag & drop games', text: 'On the Calendar grid view, drag any game card to a new date to reschedule it instantly.' },
+            { title: 'Playoff Bracket view', text: 'Tag games with a Series Name (e.g. "Quarterfinal", "Semifinal", "Final") in the Edit Game modal. The Playoff Bracket tab auto-builds a visual bracket with W-L tallies and game scores.' },
+            { title: 'Print / PDF export', text: 'Click the printer icon in the Calendar toolbar to open the print dialog. Buttons and navigation are hidden automatically so only the schedule prints.' },
+            { title: 'Dark mode', text: 'Toggle dark mode with the Moon/Sun button in the top-right header. Your preference is saved across sessions.' },
+            { title: 'Conflict detection', text: 'After generating a schedule, the Scheduler shows a warning if any team has two games on the same date.' },
+            { title: 'W-L record on cards', text: 'Game Bar and Calendar list cards show each team\'s season W-L record (e.g. 3-2) calculated from all final games.' },
+            { title: 'Both teams in single-team view', text: 'When a team filter is active, embeds and calendar cards show both the selected team AND the opponent — not just the opponent.' },
             { title: 'Multi-league games', text: 'A single game can be tagged to multiple leagues at once — useful for playoff rounds spanning divisions.' },
             { title: 'Game Bar quick-update', text: 'Open a game from any embedded Game Bar widget and use Save & Publish to push score updates live without leaving the page.' },
-            { title: 'W-L record on cards', text: 'Calendar list view shows each team\'s win-loss record (e.g. 3-2) calculated from all final games in the current filtered view.' },
             { title: 'Mobile list view', text: 'On small screens the Calendar automatically switches to list view — the month grid is desktop-only.' },
             { title: 'Edit Mode holding area', text: 'Drag games into the "Games in Edit Mode" tray to temporarily remove them from the calendar while reorganizing the schedule.' },
-            { title: 'Series names', text: 'Tag games with a series name (e.g. "Semifinal", "Final") to highlight them on calendar cards and in embeds.' },
             { title: 'Schedule key per season', text: 'Use a different schedule key for each season or tournament so you can load historical schedules later without overwriting the current one.' },
           ].map(({ title, text }) => (
             <div key={title} className="flex items-start space-x-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
