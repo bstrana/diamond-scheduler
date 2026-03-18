@@ -275,7 +275,9 @@ const App: React.FC = () => {
           games,
           gamesInHoldingArea
         },
-        { userId, orgId }
+        { userId, orgId },
+        scheduleKey || undefined,
+        scheduleName || undefined
       );
     }, 300);
     return () => window.clearTimeout(timeoutId);
