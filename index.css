@@ -30,3 +30,46 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* ── Dark mode CSS variable overrides ──────────────────────────────────────── */
+.dark {
+  color-scheme: dark;
+}
+.dark body {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* ── Print styles ───────────────────────────────────────────────────────────── */
+@media print {
+  /* Hide nav, buttons, filters, holding area */
+  nav, header, aside,
+  .no-print,
+  button:not(.print-show),
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+  }
+
+  /* Expand the calendar/list to show all content */
+  .print-expand {
+    height: auto !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Remove shadows and round corners for clean print */
+  * {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Page break helpers */
+  .print-break-before { page-break-before: always; }
+  .print-break-avoid  { page-break-inside: avoid; }
+}

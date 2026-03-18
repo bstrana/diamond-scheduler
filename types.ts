@@ -24,6 +24,7 @@ export interface League {
   category: string;
   teams: Team[];
   fields?: string[];
+  announcement?: string;
 }
 
 export interface Game {
@@ -33,7 +34,7 @@ export interface Game {
   date: string; // ISO String YYYY-MM-DD
   time: string; // HH:MM 24h format
   location: string;
-  status: 'scheduled' | 'live' | 'final' | 'in-progress' | 'completed' | 'postponed';
+  status: 'scheduled' | 'live' | 'final' | 'postponed';
   scores?: {
     home: number;
     away: number;
@@ -47,7 +48,7 @@ export interface Game {
   streamUrl?: string; // Optional live stream URL
 }
 
-export type ViewMode = 'calendar' | 'list' | 'teams' | 'leagues' | 'league_builder' | 'scheduler' | 'embed' | 'gamebar' | 'help';
+export type ViewMode = 'calendar' | 'list' | 'teams' | 'leagues' | 'league_builder' | 'scheduler' | 'embed' | 'gamebar' | 'help' | 'bracket';
 
 export interface CalendarDay {
   date: Date;

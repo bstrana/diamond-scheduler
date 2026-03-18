@@ -6,6 +6,7 @@ import * as storageApi from '../services/storage';
 
 interface StandingsRow {
   team: Team;
+  gp: number;
   w: number;
   l: number;
   pct: number;
@@ -48,7 +49,7 @@ function calculateStandings(league: League, games: Game[]): StandingsRow[] {
     .map(team => {
       const s = stats.get(team.id)!;
       const gp = s.w + s.l;
-      return { team, w: s.w, l: s.l, pct: gp > 0 ? s.w / gp : 0, gb: 0, rs: s.rs, ra: s.ra, diff: s.rs - s.ra };
+      return { team, gp, w: s.w, l: s.l, pct: gp > 0 ? s.w / gp : 0, gb: 0, rs: s.rs, ra: s.ra, diff: s.rs - s.ra };
     })
     .sort((a, b) => b.w - a.w || a.l - b.l || b.diff - a.diff);
 
@@ -89,6 +90,8 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
   );
   const [isLoading, setIsLoading] = useState(!dataOverride && !!scheduleKey);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>(leagueId || '');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [announcementDismissed, setAnnouncementDismissed] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
   const shareMenuRef = useRef<HTMLDivElement>(null);
@@ -122,9 +125,19 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showShareMenu]);
 
+  const categories = useMemo(
+    () => Array.from(new Set((data?.leagues ?? []).map(l => l.category).filter(Boolean))),
+    [data]
+  );
+
+  const visibleLeagues = useMemo(
+    () => (data?.leagues ?? []).filter(l => selectedCategory === 'all' || l.category === selectedCategory),
+    [data, selectedCategory]
+  );
+
   const league = useMemo(
-    () => data?.leagues?.find(l => l.id === selectedLeagueId) ?? data?.leagues?.[0] ?? null,
-    [data, selectedLeagueId]
+    () => visibleLeagues.find(l => l.id === selectedLeagueId) ?? visibleLeagues[0] ?? null,
+    [visibleLeagues, selectedLeagueId]
   );
 
   const standings = useMemo(
@@ -133,6 +146,15 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
   );
 
   const totalGames = standings.reduce((s, r) => s + r.w + r.l, 0) / 2;
+
+  const liveGamesWithStream = useMemo(() => {
+    if (!data || !league) return [];
+    return data.games.filter(g =>
+      g.status === 'live' &&
+      (g as any).streamUrl &&
+      getGameLeagueIds(g).includes(league.id)
+    );
+  }, [data, league]);
 
   const root: React.CSSProperties = {
     fontFamily: 'var(--embed-font, Inter, sans-serif)',
@@ -163,27 +185,110 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
 
   return (
     <div style={root}>
-      {/* League selector — only when multiple leagues exist and none was pre-selected */}
-      {data.leagues.length > 1 && !leagueId && (
-        <div style={{ marginBottom: '12px' }}>
-          <select
-            value={selectedLeagueId}
-            onChange={e => setSelectedLeagueId(e.target.value)}
-            style={{
-              border: '1px solid var(--embed-border, #e2e8f0)',
-              borderRadius: 'var(--embed-radius, 6px)',
-              padding: '6px 10px',
-              background: 'var(--embed-card-bg, #fff)',
-              fontSize: 'inherit',
-              color: 'inherit',
-            }}
-          >
-            {data.leagues.map(l => (
-              <option key={l.id} value={l.id}>
-                {l.shortName || l.name}{l.category ? ` – ${l.category}` : ''}
-              </option>
-            ))}
-          </select>
+      {/* Category + League selectors */}
+      {(categories.length > 1 || (data.leagues.length > 1 && !leagueId)) && (
+        <div style={{ marginBottom: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {categories.length > 1 && (
+            <select
+              value={selectedCategory}
+              onChange={e => setSelectedCategory(e.target.value)}
+              style={{
+                border: '1px solid var(--embed-border, #e2e8f0)',
+                borderRadius: 'var(--embed-radius, 6px)',
+                padding: '6px 10px',
+                background: 'var(--embed-card-bg, #fff)',
+                fontSize: 'inherit',
+                color: 'inherit',
+              }}
+            >
+              <option value="all">All Categories</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          )}
+          {visibleLeagues.length > 1 && !leagueId && (
+            <select
+              value={selectedLeagueId}
+              onChange={e => setSelectedLeagueId(e.target.value)}
+              style={{
+                border: '1px solid var(--embed-border, #e2e8f0)',
+                borderRadius: 'var(--embed-radius, 6px)',
+                padding: '6px 10px',
+                background: 'var(--embed-card-bg, #fff)',
+                fontSize: 'inherit',
+                color: 'inherit',
+              }}
+            >
+              {visibleLeagues.map(l => (
+                <option key={l.id} value={l.id}>
+                  {l.shortName || l.name}{l.category && categories.length <= 1 ? ` – ${l.category}` : ''}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {/* Announcement banner */}
+      {league?.announcement && !announcementDismissed && (
+        <div style={{
+          background: '#fef3c7',
+          border: '1px solid #fcd34d',
+          borderRadius: 'var(--embed-radius, 6px)',
+          padding: '8px 12px',
+          marginBottom: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px',
+          fontSize: '0.85em',
+          color: '#92400e',
+        }}>
+          <span>📢 {league.announcement}</span>
+          <button
+            onClick={() => setAnnouncementDismissed(true)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b45309', fontWeight: 700, fontSize: '1em', lineHeight: 1, padding: '2px 4px' }}
+            title="Dismiss"
+          >×</button>
+        </div>
+      )}
+
+      {/* Watch Live banner */}
+      {liveGamesWithStream.length > 0 && (
+        <div style={{
+          marginBottom: '12px',
+          padding: '8px 12px',
+          background: '#fef2f2',
+          border: '1px solid #fecaca',
+          borderRadius: 'var(--embed-radius, 6px)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          flexWrap: 'wrap',
+        }}>
+          <span style={{ fontSize: '0.85em', color: '#dc2626', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+            ● LIVE NOW
+          </span>
+          {liveGamesWithStream.map(g => (
+            <a
+              key={g.id}
+              href={(g as any).streamUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontSize: '0.8em',
+                padding: '3px 10px',
+                background: '#dc2626',
+                color: '#fff',
+                borderRadius: '999px',
+                textDecoration: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Watch Live
+            </a>
+          ))}
         </div>
       )}
 
@@ -286,6 +391,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
             <tr style={{ background: 'var(--embed-primary, #4f46e5)', color: '#fff' }}>
               <th style={{ ...thStyle, textAlign: 'left', paddingLeft: '14px', width: '28px' }}>#</th>
               <th style={{ ...thStyle, textAlign: 'left' }}>Team</th>
+              <th style={thStyle}>GP</th>
               <th style={thStyle}>W</th>
               <th style={thStyle}>L</th>
               <th style={thStyle}>PCT</th>
@@ -299,7 +405,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
             {standings.length === 0 ? (
               <tr>
                 <td
-                  colSpan={9}
+                  colSpan={10}
                   style={{ padding: '32px', textAlign: 'center', color: '#94a3b8', fontSize: '0.9em' }}
                 >
                   No completed games yet. Standings will appear here once games are finalized.
@@ -340,6 +446,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
                       </span>
                     </div>
                   </td>
+                  <td style={{ ...tdStyle, color: '#64748b' }}>{row.gp}</td>
                   <td style={{ ...tdStyle, fontWeight: 700, color: 'var(--embed-primary, #4f46e5)' }}>{row.w}</td>
                   <td style={tdStyle}>{row.l}</td>
                   <td style={{ ...tdStyle, color: '#64748b' }}>

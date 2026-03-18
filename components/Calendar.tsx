@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Game, Team, CalendarDay, League } from '../types';
 import { WEEKDAYS, MONTH_NAMES } from '../constants';
-import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio, Printer } from 'lucide-react';
 import { formatDate } from '../utils';
 
 interface CalendarProps {
@@ -264,6 +264,15 @@ const Calendar: React.FC<CalendarProps> = ({
                 </button>
             </div>}
 
+            {/* Print Schedule */}
+            <button
+              onClick={() => window.print()}
+              className="no-print p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+              title="Print / Save as PDF"
+            >
+              <Printer size={20} />
+            </button>
+
             {/* Full Screen Toggle */}
             <button
               onClick={toggleFullscreen}
@@ -442,11 +451,11 @@ const Calendar: React.FC<CalendarProps> = ({
                                         <span className="text-[10px] text-slate-500 font-medium">{game.time}</span>
                                 {game.status !== 'scheduled' && (
                                     <span className={`text-[8px] px-1 py-0.5 rounded uppercase font-bold tracking-wider leading-none
-                                    ${game.status === 'completed' ? 'bg-slate-200 text-slate-600' : ''}
-                                    ${game.status === 'in-progress' ? 'bg-emerald-100 text-emerald-700 animate-pulse' : ''}
+                                    ${game.status === 'final' ? 'bg-slate-200 text-slate-600' : ''}
+                                    ${game.status === 'live' ? 'bg-emerald-100 text-emerald-700 animate-pulse' : ''}
                                     ${game.status === 'postponed' ? 'bg-orange-100 text-orange-700' : ''}
                                     `}>
-                                    {game.status === 'in-progress' ? 'LIVE' : game.status === 'postponed' ? 'PPD' : 'FIN'}
+                                    {game.status === 'live' ? 'LIVE' : game.status === 'postponed' ? 'PPD' : 'FIN'}
                                     </span>
                                 )}
                             </div>

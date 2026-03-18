@@ -440,6 +440,35 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
               Select a published schedule above to generate embed code.
             </p>
           )}
+
+          {/* Per-team deep-link */}
+          {selectedTeamId !== 'all' && scheduleKey && embedUrl && (() => {
+            const selectedTeam = teams.find(t => t.id === selectedTeamId);
+            return selectedTeam ? (
+              <div className="mt-3 p-3 bg-indigo-50 border border-indigo-200 rounded-md">
+                <p className="text-xs font-semibold text-indigo-800 mb-1">
+                  Team Deep-link — {selectedTeam.city} {selectedTeam.name}
+                </p>
+                <p className="text-xs text-indigo-600 mb-2">
+                  Share this URL so fans can embed or bookmark just this team's schedule:
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-xs bg-white border border-indigo-200 rounded px-2 py-1.5 break-all font-mono text-slate-700">
+                    {embedUrl}
+                  </code>
+                  <button
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(embedUrl);
+                    }}
+                    className="flex-shrink-0 p-1.5 text-indigo-600 hover:bg-indigo-100 rounded"
+                    title="Copy team deep-link"
+                  >
+                    <Copy size={14} />
+                  </button>
+                </div>
+              </div>
+            ) : null;
+          })()}
         </div>
 
         {/* Preview */}

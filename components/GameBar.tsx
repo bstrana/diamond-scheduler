@@ -151,6 +151,18 @@ const GameBar: React.FC<GameBarProps> = ({
     return Array.from(new Set(leagues.map(l => l.category).filter(Boolean)));
   }, [leagues]);
 
+  const teamRecords = useMemo(() => {
+    const records: Record<string, { w: number; l: number }> = {};
+    games.forEach(g => {
+      if (g.status !== 'final' || !g.scores) return;
+      if (!records[g.homeTeamId]) records[g.homeTeamId] = { w: 0, l: 0 };
+      if (!records[g.awayTeamId]) records[g.awayTeamId] = { w: 0, l: 0 };
+      if (g.scores.home > g.scores.away) { records[g.homeTeamId].w++; records[g.awayTeamId].l++; }
+      else if (g.scores.away > g.scores.home) { records[g.awayTeamId].w++; records[g.homeTeamId].l++; }
+    });
+    return records;
+  }, [games]);
+
   useEffect(() => {
     if (!showFiltersMenu) return;
     const handleClickOutside = (event: MouseEvent) => {
@@ -189,6 +201,13 @@ const GameBar: React.FC<GameBarProps> = ({
       return (
         <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-700 text-white">
           FINAL
+        </span>
+      );
+    }
+    if (status === 'postponed') {
+      return (
+        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-500 text-white">
+          PPD
         </span>
       );
     }
@@ -415,6 +434,7 @@ const GameBar: React.FC<GameBarProps> = ({
                 const isToday = formatDate(new Date()) === game.date;
                 const isLive = game.status === 'live';
                 const isFinal = game.status === 'final';
+                const isPostponed = game.status === 'postponed';
                 const hasScore = (isLive || isFinal) && game.scores != null;
 
                 if (!home || !away) return null;
@@ -575,15 +595,15 @@ const GameBar: React.FC<GameBarProps> = ({
                           </div>
                         </div>
                         <div className="flex flex-col items-end space-y-1">
-                          {/* Status badge — always shown when live/final; TODAY shown for scheduled */}
-                          {(isLive || isFinal) ? (
+                          {/* Status badge — always shown when live/final/postponed; TODAY shown for scheduled */}
+                          {(isLive || isFinal || isPostponed) ? (
                             <div className="mb-1">{renderStatusBadge(game.status)}</div>
                           ) : isToday ? (
                             <div className="text-xs bg-white/20 px-2 py-1 rounded-full font-semibold mb-1">
                               TODAY
                             </div>
                           ) : null}
-                          {!isLive && !isFinal && (
+                          {!isLive && !isFinal && !isPostponed && (
                             <div className="flex items-center space-x-1.5">
                               <Clock
                                 size={12}
@@ -731,6 +751,11 @@ const GameBar: React.FC<GameBarProps> = ({
                           >
                             {opponent.city}
                           </span>
+                          {teamRecords[opponent.id] && (
+                            <span className="text-xs font-medium" style={{ color: 'var(--embed-text, #94a3b8)' }}>
+                              {teamRecords[opponent.id].w}-{teamRecords[opponent.id].l}
+                            </span>
+                          )}
                         </div>
                         {hasScore && (
                           <div className="ml-2 flex flex-col items-center">
@@ -774,6 +799,11 @@ const GameBar: React.FC<GameBarProps> = ({
                               >
                                 {away.city}
                               </span>
+                              {teamRecords[away.id] && (
+                                <span className="text-xs font-medium" style={{ color: 'var(--embed-text, #94a3b8)' }}>
+                                  {teamRecords[away.id].w}-{teamRecords[away.id].l}
+                                </span>
+                              )}
                             </div>
                           </div>
                           {hasScore && (
@@ -828,6 +858,11 @@ const GameBar: React.FC<GameBarProps> = ({
                               >
                                 {home.city}
                               </span>
+                              {teamRecords[home.id] && (
+                                <span className="text-xs font-medium" style={{ color: 'var(--embed-text, #94a3b8)' }}>
+                                  {teamRecords[home.id].w}-{teamRecords[home.id].l}
+                                </span>
+                              )}
                             </div>
                           </div>
                           {hasScore && (

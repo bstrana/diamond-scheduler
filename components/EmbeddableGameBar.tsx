@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Team, Game, League } from '../types';
 import { MOCK_TEAMS, INITIAL_GAMES } from '../constants';
 import { formatDate } from '../utils';
@@ -90,14 +90,46 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
   // Hide filters if a single team is selected (for single team website embeds)
   const hideFilters = !!initialTeamId;
 
+  const [announcementDismissed, setAnnouncementDismissed] = useState(false);
+  const announcement = useMemo(() => {
+    const league = selectedLeagueId !== 'all'
+      ? leagues.find(l => l.id === selectedLeagueId)
+      : leagues[0];
+    return league?.announcement || null;
+  }, [leagues, selectedLeagueId]);
+
   return (
     <div
       style={{
         height,
         width: '100%',
-        backgroundColor: 'var(--embed-bg, #f8fafc)'
+        backgroundColor: 'var(--embed-bg, #f8fafc)',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
+      {announcement && !announcementDismissed && (
+        <div style={{
+          background: '#fef3c7',
+          borderBottom: '1px solid #fcd34d',
+          padding: '6px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px',
+          fontSize: '0.82em',
+          color: '#92400e',
+          flexShrink: 0,
+        }}>
+          <span>📢 {announcement}</span>
+          <button
+            onClick={() => setAnnouncementDismissed(true)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b45309', fontWeight: 700, fontSize: '1em', lineHeight: 1, padding: '2px 4px' }}
+            title="Dismiss"
+          >×</button>
+        </div>
+      )}
+      <div style={{ flex: 1, minHeight: 0 }}>
       <GameBar
         games={games}
         teams={teams}
@@ -118,6 +150,7 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
         hideStatusFilter={hideStatusFilter}
         includePastDays={30}
       />
+      </div>
     </div>
   );
 };

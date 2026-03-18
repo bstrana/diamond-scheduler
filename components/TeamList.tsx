@@ -19,6 +19,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
 
   const [formTeam, setFormTeam] = useState<Partial<Team>>({
     primaryColor: '#000000',
+    secondaryColor: '#ffffff',
     logoUrl: '',
     country: 'USA'
   });
@@ -161,6 +162,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
         country: formTeam.country,
         roster,
         primaryColor: formTeam.primaryColor || '#000000',
+        secondaryColor: formTeam.secondaryColor,
         logoUrl: sanitizedLogoUrl
       });
       setEditingId(null);
@@ -178,12 +180,13 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
         country: formTeam.country,
         roster,
         primaryColor: formTeam.primaryColor || '#000000',
+        secondaryColor: formTeam.secondaryColor,
         logoUrl: sanitizedLogoUrl
       });
     }
-    
+
     setIsFormVisible(false);
-    setFormTeam({ primaryColor: '#000000', logoUrl: '', country: 'USA' });
+    setFormTeam({ primaryColor: '#000000', secondaryColor: '#ffffff', logoUrl: '', country: 'USA' });
     setRosterText('');
   };
 
@@ -201,7 +204,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
   const handleCancel = () => {
     setIsFormVisible(false);
     setEditingId(null);
-    setFormTeam({ primaryColor: '#000000', logoUrl: '', country: 'USA' });
+    setFormTeam({ primaryColor: '#000000', secondaryColor: '#ffffff', logoUrl: '', country: 'USA' });
     setRosterText('');
   };
 
@@ -211,7 +214,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
         <h2 className="text-2xl font-bold text-slate-800">League Teams</h2>
         {!isFormVisible && (
           <button 
-            onClick={() => { setIsFormVisible(true); setEditingId(null); setFormTeam({ primaryColor: '#000000', logoUrl: '', country: 'USA' }); }}
+            onClick={() => { setIsFormVisible(true); setEditingId(null); setFormTeam({ primaryColor: '#000000', secondaryColor: '#ffffff', logoUrl: '', country: 'USA' }); }}
             className={`px-4 py-2 rounded-lg flex items-center transition-colors ${
               maxTeams && teams.length >= maxTeams
                 ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
@@ -261,8 +264,12 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
               <input required maxLength={3} placeholder="NYY" className="w-full border p-2 rounded uppercase" value={formTeam.abbreviation || ''} onChange={e => setFormTeam({...formTeam, abbreviation: e.target.value.toUpperCase()})} />
             </div>
             <div className="lg:col-span-1">
-              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Color</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Primary Color</label>
               <input type="color" className="w-full h-10 border p-1 rounded cursor-pointer" value={formTeam.primaryColor} onChange={e => setFormTeam({...formTeam, primaryColor: e.target.value})} />
+            </div>
+            <div className="lg:col-span-1">
+              <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Secondary Color</label>
+              <input type="color" className="w-full h-10 border p-1 rounded cursor-pointer" value={formTeam.secondaryColor || '#ffffff'} onChange={e => setFormTeam({...formTeam, secondaryColor: e.target.value})} />
             </div>
             <div className="lg:col-span-1">
               <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Logo URL</label>
@@ -330,7 +337,8 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onAddTeam, onUpdateTeam, onD
                   <h3 className="font-bold text-slate-900">{team.city} {team.name}</h3>
                   <div className="flex items-center space-x-2 text-sm text-slate-500">
                     <span className="font-mono bg-slate-100 px-1.5 rounded">{team.abbreviation}</span>
-                    <span className="w-3 h-3 rounded-full border border-slate-300" style={{backgroundColor: team.primaryColor}}></span>
+                    <span className="w-3 h-3 rounded-full border border-slate-300" style={{backgroundColor: team.primaryColor}} title="Primary color"></span>
+                    {team.secondaryColor && <span className="w-3 h-3 rounded-full border border-slate-300" style={{backgroundColor: team.secondaryColor}} title="Secondary color"></span>}
                   </div>
                 </div>
               </div>

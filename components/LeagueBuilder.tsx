@@ -31,6 +31,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
   const [logoUrl, setLogoUrl] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [category, setCategory] = useState('');
+  const [announcement, setAnnouncement] = useState('');
   
   // Fields State
   const [fields, setFields] = useState<string[]>([]);
@@ -168,6 +169,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
             setLogoUrl(league.logoUrl || '');
             setCoverImageUrl(league.coverImageUrl || '');
             setCategory(league.category);
+            setAnnouncement(league.announcement || '');
             setTeams([...league.teams]);
             setFields([...(league.fields || [])]);
         }
@@ -215,6 +217,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
       country: newTeam.country,
       roster: parseRosterText(rosterText),
       primaryColor: newTeam.primaryColor || '#000000',
+      secondaryColor: newTeam.secondaryColor,
       logoUrl: sanitizedLogoUrl
     };
     if (editingTeamId) {
@@ -302,6 +305,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
     const sanitizedCategory = category ? sanitizeString(category) : 'General';
     const sanitizedLogoUrl = logoUrl ? sanitizeString(logoUrl, 500) : undefined;
     const sanitizedCoverImageUrl = coverImageUrl ? sanitizeString(coverImageUrl, 500) : undefined;
+    const sanitizedAnnouncement = announcement ? sanitizeString(announcement, 500) : undefined;
 
     if (editingLeagueId) {
         // Update
@@ -313,7 +317,8 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
             coverImageUrl: sanitizedCoverImageUrl,
             category: sanitizedCategory,
             teams: teams,
-            fields: fields
+            fields: fields,
+            announcement: sanitizedAnnouncement,
         };
         onLeagueUpdated(updatedLeague);
     } else {
@@ -326,7 +331,8 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
             coverImageUrl: sanitizedCoverImageUrl,
             category: sanitizedCategory,
             teams: teams,
-            fields: fields
+            fields: fields,
+            announcement: sanitizedAnnouncement,
         };
         onLeagueCreated(newLeague);
         // Reset form after create
@@ -335,6 +341,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
         setLogoUrl('');
         setCoverImageUrl('');
         setCategory('');
+        setAnnouncement('');
         setTeams([]);
         setFields([]);
     }
@@ -472,6 +479,20 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                 )}
               </div>
             </div>
+            {/* Announcement */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Announcement (optional)</label>
+              <textarea
+                rows={2}
+                className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm resize-none"
+                placeholder="e.g. Playoffs start June 20 — check the schedule for bracket updates."
+                value={announcement}
+                onChange={(e) => setAnnouncement(e.target.value)}
+                maxLength={500}
+              />
+              <p className="text-xs text-slate-500 mt-1">Shown as a banner in all embedded views for this league. Max 500 characters.</p>
+            </div>
+
             {/* Playing Fields */}
             <div className="pt-4 mt-4 border-t border-slate-200">
               <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center">
@@ -582,10 +603,14 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                         <input required maxLength={3} placeholder="ABC" className="w-full border p-2 rounded uppercase text-sm" value={newTeam.abbreviation || ''} onChange={e => setNewTeam({...newTeam, abbreviation: e.target.value.toUpperCase()})} />
                     </div>
                     <div className="md:col-span-1">
-                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Color</label>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Primary Color</label>
                         <input type="color" className="w-full h-9 border p-0.5 rounded cursor-pointer" value={newTeam.primaryColor} onChange={e => setNewTeam({...newTeam, primaryColor: e.target.value})} />
                     </div>
-                    <div className="md:col-span-3">
+                    <div className="md:col-span-1">
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Secondary Color</label>
+                        <input type="color" className="w-full h-9 border p-0.5 rounded cursor-pointer" value={newTeam.secondaryColor || '#ffffff'} onChange={e => setNewTeam({...newTeam, secondaryColor: e.target.value})} />
+                    </div>
+                    <div className="md:col-span-2">
                         <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Logo URL</label>
                         <input
                             type="url"

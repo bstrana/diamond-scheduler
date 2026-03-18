@@ -6,11 +6,11 @@ import * as storageApi from './services/storage';
 import Calendar from './components/Calendar';
 import GameHoldingArea from './components/GameHoldingArea';
 import TeamList from './components/TeamList';
-import { 
-  Calendar as CalendarIcon, 
-  Users, 
-  Trophy, 
-  PlusCircle, 
+import {
+  Calendar as CalendarIcon,
+  Users,
+  Trophy,
+  PlusCircle,
   Code,
   Trash2,
   UserCircle,
@@ -21,12 +21,16 @@ import {
   Copy,
   Check,
   Clock,
-  HelpCircle
+  HelpCircle,
+  Moon,
+  Sun,
+  GitBranch
 } from 'lucide-react';
 import LeagueBuilder from './components/LeagueBuilder';
 import ScheduleGenerator from './components/ScheduleGenerator';
 import EmbedCodeGenerator from './components/EmbedCodeGenerator';
 import HelpPage from './components/HelpPage';
+import PlayoffBracket from './components/PlayoffBracket';
 
 const App: React.FC = () => {
   const { keycloak, initialized } = useKeycloak();
@@ -137,6 +141,7 @@ const App: React.FC = () => {
     { mode: 'league_builder', label: 'League Creator', icon: Trophy },
     { mode: 'scheduler', label: 'Scheduler', icon: Clock },
     { mode: 'calendar', label: 'Calendar', icon: CalendarIcon },
+    { mode: 'bracket', label: 'Playoff Bracket', icon: GitBranch },
     { mode: 'embed', label: 'Embed Code', icon: Code }
   ];
 
@@ -161,6 +166,7 @@ const App: React.FC = () => {
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [calendarView, setCalendarView] = useState<'grid' | 'list'>('grid');
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('dsa_dark_mode') === '1');
   
   // Game Holding Area State (for games in edit mode)
   const [gamesInHoldingArea, setGamesInHoldingArea] = useState<Game[]>([]);
@@ -734,8 +740,16 @@ const App: React.FC = () => {
     );
   }
 
+  const toggleDarkMode = () => {
+    setDarkMode(prev => {
+      const next = !prev;
+      localStorage.setItem('dsa_dark_mode', next ? '1' : '0');
+      return next;
+    });
+  };
+
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className={`flex h-screen overflow-hidden ${darkMode ? 'dark bg-slate-900' : 'bg-slate-50'}`}>
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
         {/* Header */}
@@ -800,11 +814,18 @@ const App: React.FC = () => {
                     ))}
                   </div>
                   <h2 className="text-lg font-semibold text-slate-800 capitalize hidden md:block">
-                      {viewMode === 'league_builder' ? 'League Management' : viewMode === 'scheduler' ? 'Scheduler' : viewMode === 'teams' ? 'Teams' : viewMode === 'embed' ? 'Embed Code' : viewMode === 'help' ? 'Help & Guide' : 'Calendar'}
+                      {viewMode === 'league_builder' ? 'League Management' : viewMode === 'scheduler' ? 'Scheduler' : viewMode === 'teams' ? 'Teams' : viewMode === 'embed' ? 'Embed Code' : viewMode === 'help' ? 'Help & Guide' : viewMode === 'bracket' ? 'Playoff Bracket' : 'Calendar'}
                   </h2>
                 </div>
 
                 <div className="flex items-center space-x-3 relative" ref={userMenuRef}>
+                  <button
+                    onClick={toggleDarkMode}
+                    className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                    title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+                  >
+                    {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+                  </button>
                   <button
                     onClick={() => setShowUserMenu((prev) => !prev)}
                     className="flex items-center space-x-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-md text-sm font-medium text-slate-700"
@@ -982,6 +1003,10 @@ const App: React.FC = () => {
                 userId={userId}
                 orgId={orgId}
             />
+          )}
+
+          {viewMode === 'bracket' && (
+            <PlayoffBracket games={games} teams={teams} />
           )}
 
           {viewMode === 'help' && <HelpPage />}
@@ -1213,27 +1238,33 @@ const App: React.FC = () => {
                         {/* Status */}
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
-                            <div className="flex rounded-md border overflow-hidden divide-x">
-                                {(['scheduled', 'live', 'final'] as const).map(s => {
+                            <div className="flex rounded-md border overflow-hidden divide-x flex-wrap">
+                                {(['scheduled', 'live', 'final', 'postponed'] as const).map(s => {
                                     const current = newGameForm.status !== undefined ? newGameForm.status : editingGame.status;
                                     const isActive = current === s;
                                     const activeClass = s === 'live'
                                         ? 'bg-green-500 text-white'
                                         : s === 'final'
                                             ? 'bg-slate-700 text-white'
-                                            : 'bg-indigo-600 text-white';
+                                            : s === 'postponed'
+                                                ? 'bg-orange-500 text-white'
+                                                : 'bg-indigo-600 text-white';
+                                    const labels: Record<string, string> = { scheduled: 'Scheduled', live: '● Live', final: 'Final', postponed: 'Postponed' };
                                     return (
                                         <button
                                             key={s}
                                             type="button"
                                             onClick={() => setNewGameForm({...newGameForm, status: s})}
-                                            className={`flex-1 py-2 text-sm font-medium capitalize transition-colors ${isActive ? activeClass : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                                            className={`flex-1 py-2 text-sm font-medium transition-colors ${isActive ? activeClass : 'bg-white text-slate-500 hover:bg-slate-50'}`}
                                         >
-                                            {s === 'live' ? '● Live' : s === 'final' ? 'Final' : 'Scheduled'}
+                                            {labels[s]}
                                         </button>
                                     );
                                 })}
                             </div>
+                            {(newGameForm.status === 'postponed' || (!newGameForm.status && editingGame.status === 'postponed')) && (
+                                <p className="text-xs text-orange-600 mt-1">Change the date/time above to reschedule, then set status back to Scheduled.</p>
+                            )}
                         </div>
 
                         {/* Score by Inning */}
@@ -1402,6 +1433,21 @@ const App: React.FC = () => {
                   className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
+              {publishKeyDraft.trim() && (
+                <div className="flex flex-col items-center gap-1 py-2">
+                  <p className="text-xs text-slate-500">Embed QR code preview</p>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`${window.location.origin}/embed.html?schedule_key=${publishKeyDraft.trim()}`)}`}
+                    alt="QR code for embed URL"
+                    className="rounded border border-slate-200 p-1"
+                    width={120}
+                    height={120}
+                  />
+                  <p className="text-[10px] text-slate-400 break-all text-center max-w-full">
+                    {`${window.location.origin}/embed.html?schedule_key=${publishKeyDraft.trim()}`}
+                  </p>
+                </div>
+              )}
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={() => setShowPublishModal(false)}

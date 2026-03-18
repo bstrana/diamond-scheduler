@@ -162,34 +162,65 @@ const EmbeddableCalendar: React.FC<EmbeddableCalendarProps> = ({
     // Disable deleting games in embed mode
   };
 
+  const [announcementDismissed, setAnnouncementDismissed] = useState(false);
+  const announcement = useMemo(() => {
+    const league = selectedLeagueId !== 'all'
+      ? leagues.find(l => l.id === selectedLeagueId)
+      : leagues[0];
+    return league?.announcement || null;
+  }, [leagues, selectedLeagueId]);
+
   return (
-    <div style={{ height, width: '100%' }} className="bg-slate-50">
-      <Calendar 
-        currentDate={currentDate}
-        days={days}
-        filteredGames={filteredGames}
-        teams={teams}
-        leagues={leagues}
-        onPrevMonth={handlePrevMonth}
-        onNextMonth={handleNextMonth}
-        onGameClick={handleGameClick}
-        onDateClick={handleDateClick}
-        onGameMove={handleGameMove}
-        onGameCopy={handleGameCopy}
-        onDeleteGame={handleDeleteGame}
-        viewType={calendarView}
-        onViewTypeChange={setCalendarView}
-        selectedTeamId={selectedTeamId}
-        onTeamFilterChange={setSelectedTeamId}
-        selectedLeagueId={selectedLeagueId}
-        onLeagueFilterChange={setSelectedLeagueId}
-        selectedCategory={selectedCategory}
-        onCategoryFilterChange={setSelectedCategory}
-        hideLeagueFilter={hideLeagueFilter}
-        hideCategoryFilter={hideCategoryFilter}
-        hideTeamFilter={hideTeamFilter}
-        hideViewToggle={initialView === 'list'}
-      />
+    <div style={{ height, width: '100%', display: 'flex', flexDirection: 'column' }} className="bg-slate-50">
+      {announcement && !announcementDismissed && (
+        <div style={{
+          background: '#fef3c7',
+          borderBottom: '1px solid #fcd34d',
+          padding: '8px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px',
+          fontSize: '0.85em',
+          color: '#92400e',
+          flexShrink: 0,
+        }}>
+          <span>📢 {announcement}</span>
+          <button
+            onClick={() => setAnnouncementDismissed(true)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b45309', fontWeight: 700, fontSize: '1em', lineHeight: 1, padding: '2px 4px' }}
+            title="Dismiss"
+          >×</button>
+        </div>
+      )}
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <Calendar
+          currentDate={currentDate}
+          days={days}
+          filteredGames={filteredGames}
+          teams={teams}
+          leagues={leagues}
+          onPrevMonth={handlePrevMonth}
+          onNextMonth={handleNextMonth}
+          onGameClick={handleGameClick}
+          onDateClick={handleDateClick}
+          onGameMove={handleGameMove}
+          onGameCopy={handleGameCopy}
+          onDeleteGame={handleDeleteGame}
+          viewType={calendarView}
+          onViewTypeChange={setCalendarView}
+          selectedTeamId={selectedTeamId}
+          onTeamFilterChange={setSelectedTeamId}
+          selectedLeagueId={selectedLeagueId}
+          onLeagueFilterChange={setSelectedLeagueId}
+          selectedCategory={selectedCategory}
+          onCategoryFilterChange={setSelectedCategory}
+          hideLeagueFilter={hideLeagueFilter}
+          hideCategoryFilter={hideCategoryFilter}
+          hideTeamFilter={hideTeamFilter}
+          hideViewToggle={initialView === 'list'}
+        />
+      </div>
     </div>
   );
 };

@@ -14,6 +14,7 @@ interface ScheduleGeneratorProps {
 const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeagueSelected, onScheduleGenerated }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conflicts, setConflicts] = useState<string[]>([]);
   
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
   
@@ -95,6 +96,22 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
             if (gamesWithMeta.length === 0) {
                 setError("No games generated. Check constraints.");
             } else {
+                // Conflict detection: flag any team scheduled twice on the same date
+                const teamDateMap = new Map<string, Set<string>>();
+                const detectedConflicts: string[] = [];
+                gamesWithMeta.forEach(g => {
+                    [g.homeTeamId, g.awayTeamId].forEach(tid => {
+                        if (!teamDateMap.has(tid)) teamDateMap.set(tid, new Set());
+                        const dates = teamDateMap.get(tid)!;
+                        if (dates.has(g.date)) {
+                            const team = selectedLeague.teams.find(t => t.id === tid);
+                            const label = `${team?.abbreviation || tid} on ${g.date}`;
+                            if (!detectedConflicts.includes(label)) detectedConflicts.push(label);
+                        }
+                        dates.add(g.date);
+                    });
+                });
+                setConflicts(detectedConflicts);
                 onScheduleGenerated(gamesWithMeta);
             }
         } catch (e) {
@@ -159,6 +176,17 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg">
           {error}
+        </div>
+      )}
+
+      {conflicts.length > 0 && (
+        <div className="bg-orange-50 border border-orange-200 text-orange-800 p-4 rounded-lg">
+          <p className="font-semibold mb-1">⚠ Schedule conflicts detected ({conflicts.length})</p>
+          <p className="text-sm mb-2">The following teams are scheduled to play more than once on the same day. This can happen with small team counts and double-header modes. Review the calendar and adjust as needed.</p>
+          <ul className="text-sm space-y-0.5">
+            {conflicts.map((c, i) => <li key={i} className="font-mono">• {c}</li>)}
+          </ul>
+          <button onClick={() => setConflicts([])} className="mt-2 text-xs text-orange-600 underline">Dismiss</button>
         </div>
       )}
 
