@@ -521,9 +521,11 @@ const Calendar: React.FC<CalendarProps> = ({
                                       }
                                   }
                                   
-                                  // Get cover image from first league if available, fall back to logo
                                   const leagueCoverImage = gameLeagues.length > 0
-                                    ? (gameLeagues[0].coverImageUrl || gameLeagues[0].logoUrl || null)
+                                    ? (gameLeagues[0].coverImageUrl || null)
+                                    : null;
+                                  const leagueLogoCorner = gameLeagues.length > 0 && !leagueCoverImage
+                                    ? (gameLeagues[0].logoUrl || null)
                                     : null;
 
                                   return (
@@ -542,6 +544,16 @@ const Calendar: React.FC<CalendarProps> = ({
                                               backgroundPosition: 'center',
                                               opacity: 0.07,
                                             }}
+                                          />
+                                        )}
+                                        {/* League logo in bottom-right corner when no cover image */}
+                                        {leagueLogoCorner && (
+                                          <img
+                                            src={leagueLogoCorner}
+                                            alt=""
+                                            className="absolute bottom-2 right-2 z-0 w-10 h-10 object-contain pointer-events-none"
+                                            style={{ opacity: 0.18 }}
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                           />
                                         )}
                                         

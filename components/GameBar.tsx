@@ -498,6 +498,25 @@ const GameBar: React.FC<GameBarProps> = ({
                         }}
                       />
                     )}
+                    {/* League logo in bottom-right corner when no cover image */}
+                    {gameLeagues[0]?.logoUrl && !gameLeagues[0]?.coverImageUrl && (
+                      <img
+                        src={gameLeagues[0].logoUrl}
+                        alt=""
+                        style={{
+                          position: 'absolute',
+                          bottom: 6,
+                          right: 6,
+                          width: 36,
+                          height: 36,
+                          objectFit: 'contain',
+                          opacity: 0.18,
+                          pointerEvents: 'none',
+                          zIndex: 0,
+                        }}
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    )}
 
                     {/* Share button — top-right corner of card */}
                     <button
