@@ -4,6 +4,7 @@ import EmbeddableCalendar from './components/EmbeddableCalendar';
 import EmbeddableGameBar from './components/EmbeddableGameBar';
 import EmbeddableStandings from './components/EmbeddableStandings';
 import './index.css';
+import './i18n';
 import { loadPublishedScheduleByKey, StorageData } from './services/storage';
 
 // Get URL parameters
