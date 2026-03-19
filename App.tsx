@@ -985,6 +985,7 @@ const App: React.FC = () => {
           {viewMode === 'scheduler' && (
             <ScheduleGenerator
                 leagues={leagues}
+                games={games}
                 onLeagueSelected={handleLeagueSelectedForSchedule}
                 onScheduleGenerated={(g) => {
                     if(confirm(t('schedule.replaceScheduleConfirm'))) {

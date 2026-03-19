@@ -1,67 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { League, Team, Game } from '../types';
-import { buildStandingsShareText, copyToClipboard } from '../utils';
+import { buildStandingsShareText, copyToClipboard, calculateStandings, StandingsRow } from '../utils';
 import { Share2, Copy, Check } from 'lucide-react';
 import * as storageApi from '../services/storage';
 import { useTranslation } from 'react-i18next';
-
-interface StandingsRow {
-  team: Team;
-  gp: number;
-  w: number;
-  l: number;
-  pct: number;
-  gb: number | null; // null for leader
-  rs: number;
-  ra: number;
-  diff: number;
-}
 
 function getGameLeagueIds(game: Game): string[] {
   if (game.leagueIds && game.leagueIds.length > 0) return game.leagueIds;
   if (game.leagueId) return [game.leagueId];
   return [];
-}
-
-function calculateStandings(league: League, games: Game[]): StandingsRow[] {
-  const completedGames = games.filter(game => {
-    const isCompleted = game.status === 'final' || game.status === 'completed';
-    return isCompleted && game.scores != null && getGameLeagueIds(game).includes(league.id);
-  });
-
-  const stats = new Map<string, { w: number; l: number; rs: number; ra: number }>();
-  league.teams.forEach(team => stats.set(team.id, { w: 0, l: 0, rs: 0, ra: 0 }));
-
-  completedGames.forEach(game => {
-    const home = stats.get(game.homeTeamId);
-    const away = stats.get(game.awayTeamId);
-    if (!home || !away || !game.scores) return;
-
-    const hr = game.scores.home;
-    const ar = game.scores.away;
-    home.rs += hr; home.ra += ar;
-    away.rs += ar; away.ra += hr;
-    if (hr > ar) { home.w++; away.l++; }
-    else if (ar > hr) { away.w++; home.l++; }
-  });
-
-  const rows: StandingsRow[] = league.teams
-    .filter(team => stats.has(team.id))
-    .map(team => {
-      const s = stats.get(team.id)!;
-      const gp = s.w + s.l;
-      return { team, gp, w: s.w, l: s.l, pct: gp > 0 ? s.w / gp : 0, gb: 0, rs: s.rs, ra: s.ra, diff: s.rs - s.ra };
-    })
-    .sort((a, b) => b.w - a.w || a.l - b.l || b.diff - a.diff);
-
-  if (rows.length > 0) {
-    const leader = rows[0];
-    rows.forEach((row, idx) => {
-      row.gb = idx === 0 ? null : ((leader.w - row.w) + (row.l - leader.l)) / 2;
-    });
-  }
-
-  return rows;
 }
 
 const thStyle: React.CSSProperties = {

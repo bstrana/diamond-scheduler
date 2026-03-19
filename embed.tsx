@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import EmbeddableCalendar from './components/EmbeddableCalendar';
 import EmbeddableGameBar from './components/EmbeddableGameBar';
 import EmbeddableStandings from './components/EmbeddableStandings';
+import EmbeddableSeries from './components/EmbeddableSeries';
 import './index.css';
 import './i18n';
 import { loadPublishedScheduleByKey, StorageData } from './services/storage';
@@ -201,6 +202,20 @@ if (!rootElement) {
     if (embedType === 'standings') {
       return (
         <EmbeddableStandings
+          leagueId={leagueId}
+          scheduleKey={scheduleKey}
+          dataOverride={scheduleData ? {
+            leagues: scheduleData.leagues,
+            teams: scheduleData.teams,
+            games: scheduleData.games
+          } : null}
+        />
+      );
+    }
+
+    if (embedType === 'series') {
+      return (
+        <EmbeddableSeries
           leagueId={leagueId}
           scheduleKey={scheduleKey}
           dataOverride={scheduleData ? {

@@ -5,6 +5,7 @@ import EmbedStyler, { EmbedStyles } from './EmbedStyler';
 import EmbeddableCalendar from './EmbeddableCalendar';
 import EmbeddableGameBar from './EmbeddableGameBar';
 import EmbeddableStandings from './EmbeddableStandings';
+import EmbeddableSeries from './EmbeddableSeries';
 import * as storageApi from '../services/storage';
 import { useTranslation } from 'react-i18next';
 
@@ -33,7 +34,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTeamId, setSelectedTeamId] = useState<string>('all');
-  const [embedView, setEmbedView] = useState<'calendar' | 'gamebar' | 'standings'>('calendar');
+  const [embedView, setEmbedView] = useState<'calendar' | 'gamebar' | 'standings' | 'series'>('calendar');
   const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
   const [height, setHeight] = useState<string>('800');
   const [scheduleKey, setScheduleKey] = useState<string>(loadedScheduleKey || '');
@@ -52,6 +53,8 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     if (embedView === 'gamebar') {
       setHeight('260');
     } else if (embedView === 'standings') {
+      setHeight('500');
+    } else if (embedView === 'series') {
       setHeight('500');
     } else {
       setHeight('800');
@@ -98,7 +101,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     params.set('type', embedView);
     if (selectedLeagueId !== 'all') params.set('league', selectedLeagueId);
     params.set('schedule_key', scheduleKey);
-    if (embedView !== 'standings') {
+    if (embedView !== 'standings' && embedView !== 'series') {
       if (selectedCategory !== 'all') params.set('category', selectedCategory);
       if (selectedTeamId !== 'all') params.set('team', selectedTeamId);
       if (hideLeagueFilter) params.set('hide_league_filter', '1');
@@ -139,7 +142,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
 
   // Generate embed code
   const embedCode = useMemo(() => {
-    const defaultHeight = embedView === 'gamebar' ? '260' : embedView === 'standings' ? '500' : '800';
+    const defaultHeight = embedView === 'gamebar' ? '260' : (embedView === 'standings' || embedView === 'series') ? '500' : '800';
     const finalHeight = height || defaultHeight;
     const borderColor = embedStyles?.borderColor || '#e2e8f0';
     const borderRadius = embedStyles?.borderRadius || '8px';
@@ -233,8 +236,8 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
             </p>
           </div>
 
-          {/* Filter Visibility (not applicable for standings) */}
-          {embedView !== 'standings' && (
+          {/* Filter Visibility (not applicable for standings/series) */}
+          {embedView !== 'standings' && embedView !== 'series' && (
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.showFilters')}</label>
               <div className="space-y-2 rounded-md border border-slate-200 p-3 text-sm">
@@ -333,12 +336,13 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
             <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.embedType')}</label>
             <select
               value={embedView}
-              onChange={(e) => setEmbedView(e.target.value as 'calendar' | 'gamebar' | 'standings')}
+              onChange={(e) => setEmbedView(e.target.value as 'calendar' | 'gamebar' | 'standings' | 'series')}
               className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             >
               <option value="calendar">{t('embed.calendarView')}</option>
               <option value="gamebar">{t('embed.gameBar')}</option>
               <option value="standings">{t('embed.leagueStandings')}</option>
+              <option value="series">{t('embed.seriesBracket')}</option>
             </select>
           </div>
 
@@ -364,20 +368,27 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
             </div>
           )}
 
+          {/* Series note */}
+          {embedView === 'series' && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-md p-3 text-sm text-indigo-800">
+              {t('embed.seriesNote')}
+            </div>
+          )}
+
           {/* Height */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.heightPx')}</label>
             <input
               type="number"
-              min={embedView === 'gamebar' ? '260' : embedView === 'standings' ? '300' : '400'}
+              min={embedView === 'gamebar' ? '260' : (embedView === 'standings' || embedView === 'series') ? '300' : '400'}
               max="2000"
               value={height}
               onChange={(e) => setHeight(e.target.value)}
               className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              placeholder={embedView === 'gamebar' ? '260' : embedView === 'standings' ? '500' : '800'}
+              placeholder={embedView === 'gamebar' ? '260' : (embedView === 'standings' || embedView === 'series') ? '500' : '800'}
             />
             <p className="text-xs text-slate-500 mt-1">
-              {t('embed.recommended')} {embedView === 'gamebar' ? '260–400px' : embedView === 'standings' ? '400–700px' : '600–1000px'}
+              {t('embed.recommended')} {embedView === 'gamebar' ? '260–400px' : (embedView === 'standings' || embedView === 'series') ? '400–700px' : '600–1000px'}
             </p>
           </div>
         </div>
@@ -514,6 +525,11 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
               />
             ) : embedView === 'standings' ? (
               <EmbeddableStandings
+                leagueId={selectedLeagueId !== 'all' ? selectedLeagueId : undefined}
+                dataOverride={{ leagues, teams, games }}
+              />
+            ) : embedView === 'series' ? (
+              <EmbeddableSeries
                 leagueId={selectedLeagueId !== 'all' ? selectedLeagueId : undefined}
                 dataOverride={{ leagues, teams, games }}
               />
