@@ -987,10 +987,17 @@ const App: React.FC = () => {
                 leagues={leagues}
                 games={games}
                 onLeagueSelected={handleLeagueSelectedForSchedule}
-                onScheduleGenerated={(g) => {
-                    if(confirm(t('schedule.replaceScheduleConfirm'))) {
-                        setGames(g);
-                        setViewMode('calendar');
+                onScheduleGenerated={(g, mode) => {
+                    if (mode === 'append') {
+                        if (confirm(t('schedule.appendScheduleConfirm'))) {
+                            setGames(prev => [...prev, ...g]);
+                            setViewMode('calendar');
+                        }
+                    } else {
+                        if (confirm(t('schedule.replaceScheduleConfirm'))) {
+                            setGames(g);
+                            setViewMode('calendar');
+                        }
                     }
                 }}
             />

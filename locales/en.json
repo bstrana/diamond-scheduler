@@ -101,7 +101,8 @@
     "removeAllConfirm": "Are you sure you want to delete ALL {{count}} game(s)?\n\nThis action cannot be undone.",
     "noGamesToRemove": "There are no games to remove.",
     "allGamesRemoved": "All games have been removed.",
-    "replaceScheduleConfirm": "This will replace the current schedule for this view. Continue?"
+    "replaceScheduleConfirm": "This will replace the current schedule for this view. Continue?",
+    "appendScheduleConfirm": "This will add the new games to your existing calendar. Continue?"
   },
   "gameForm": {
     "noLeagues": "No leagues available. Create a league first.",
@@ -299,6 +300,9 @@
     "startTimes": "Start Times",
     "allSeriesDays": "(All Series Days)",
     "generateSchedule": "Generate Schedule",
+    "generateAndAppend": "Generate & Append to Calendar",
+    "replaceExisting": "Replace Existing",
+    "appendToExisting": "Append to Existing",
     "matchupManual": "Manual",
     "matchupByStandings": "By Standings",
     "matchupByStandingsNote": "Teams are picked automatically based on current standings at schedule generation time. Select the standings position for each matchup.",

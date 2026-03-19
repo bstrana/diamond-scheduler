@@ -10,7 +10,7 @@ interface ScheduleGeneratorProps {
   leagues: League[];
   games: Game[];
   onLeagueSelected: (leagueId: string) => void;
-  onScheduleGenerated: (games: Game[]) => void;
+  onScheduleGenerated: (games: Game[], mode: 'replace' | 'append') => void;
 }
 
 // Special prefix used to mark standings-position references in team IDs
@@ -33,6 +33,7 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
   const [seriesMatchups, setSeriesMatchups] = useState<Array<{team1Id: string, team2Id: string, seriesName?: string}>>([]); // For series format
   const [seriesGameMode, setSeriesGameMode] = useState<'alternate' | 'back_to_back'>('alternate'); // For series format
   const [matchupMode, setMatchupMode] = useState<'manual' | 'standings'>('manual'); // For series format
+  const [appendMode, setAppendMode] = useState<'replace' | 'append'>('replace');
 
   // Time config per day
   const [dayTimes, setDayTimes] = useState<Record<string, string>>({
@@ -138,7 +139,7 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
                     });
                 });
                 setConflicts(detectedConflicts);
-                onScheduleGenerated(gamesWithMeta);
+                onScheduleGenerated(gamesWithMeta, appendMode);
             }
         } catch (e) {
             console.error(e);
@@ -548,17 +549,33 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
             )}
           </div>
 
+          {/* Replace vs Append toggle */}
+          <div className="flex rounded-lg border border-slate-200 overflow-hidden mt-4 text-sm font-medium">
+            <button
+              onClick={() => setAppendMode('replace')}
+              className={`flex-1 py-2 transition-colors ${appendMode === 'replace' ? 'bg-slate-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+            >
+              {t('scheduler.replaceExisting')}
+            </button>
+            <button
+              onClick={() => setAppendMode('append')}
+              className={`flex-1 py-2 transition-colors ${appendMode === 'append' ? 'bg-slate-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+            >
+              {t('scheduler.appendToExisting')}
+            </button>
+          </div>
+
           <button
             onClick={handleGenerateSchedule}
             disabled={loading || !selectedLeagueId}
-            className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-all mt-4
+            className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-all mt-2
               ${loading || !selectedLeagueId
-                ? 'bg-slate-400 cursor-not-allowed' 
+                ? 'bg-slate-400 cursor-not-allowed'
                 : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg hover:shadow-emerald-500/30'
               } flex justify-center items-center`}
           >
             {loading ? <Loader2 className="animate-spin mr-2" /> : <Wand2 className="mr-2" size={18} />}
-            Generate Schedule
+            {appendMode === 'append' ? t('scheduler.generateAndAppend') : t('scheduler.generateSchedule')}
           </button>
         </div>
       </div>
