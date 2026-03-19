@@ -4,6 +4,7 @@ import { WEEKDAYS, MONTH_NAMES } from '../constants';
 import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio, Printer } from 'lucide-react';
 import { formatDate } from '../utils';
 import { useTranslation } from 'react-i18next';
+import PrintSchedule from './PrintSchedule';
 
 interface CalendarProps {
   currentDate: Date;
@@ -68,6 +69,7 @@ const Calendar: React.FC<CalendarProps> = ({
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showPrint, setShowPrint] = useState(false);
 
   const getTeam = (id: string) => teams.find(t => t.id === id);
   const getLeague = (id?: string) => leagues.find(l => l.id === id);
@@ -268,7 +270,7 @@ const Calendar: React.FC<CalendarProps> = ({
 
             {/* Print Schedule */}
             <button
-              onClick={() => window.print()}
+              onClick={() => setShowPrint(true)}
               className="no-print p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
               title={t('app.printPDF')}
             >
@@ -747,6 +749,15 @@ const Calendar: React.FC<CalendarProps> = ({
                   ))
               )}
           </div>
+      )}
+
+      {showPrint && (
+        <PrintSchedule
+          games={filteredGames}
+          teams={teams}
+          leagues={leagues}
+          onClose={() => setShowPrint(false)}
+        />
       )}
     </div>
   );

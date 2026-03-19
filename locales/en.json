@@ -1,6 +1,7 @@
 {
   "common": {
     "cancel": "Cancel",
+    "close": "Close",
     "save": "Save",
     "update": "Update",
     "delete": "Delete",
@@ -439,5 +440,18 @@
   "help": {
     "title": "Help & Guide",
     "subtitle": "Everything you need to know about Diamond Manager Scheduler — from setting up your first league to embedding live standings on your website."
+  },
+  "print": {
+    "title": "Print Schedule",
+    "printBtn": "Print / Save PDF",
+    "gamesTotal": "games",
+    "noGames": "No games to print.",
+    "generatedOn": "Generated on",
+    "colDate": "Time",
+    "colAway": "Away",
+    "colHome": "Home",
+    "colLocation": "Location",
+    "colLeague": "League",
+    "colStatus": "Result / Status"
   }
 }

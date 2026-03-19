@@ -72,4 +72,20 @@ body {
   /* Page break helpers */
   .print-break-before { page-break-before: always; }
   .print-break-avoid  { page-break-inside: avoid; }
+
+  /* When the print-schedule modal is open, show only its content */
+  body:has(.print-schedule-section) * {
+    visibility: hidden !important;
+  }
+  body:has(.print-schedule-section) .print-schedule-section,
+  body:has(.print-schedule-section) .print-schedule-section * {
+    visibility: visible !important;
+  }
+  .print-schedule-section {
+    position: fixed !important;
+    inset: 0 !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
 }
