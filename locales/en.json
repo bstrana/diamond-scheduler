@@ -447,6 +447,7 @@
     "gamesTotal": "games",
     "noGames": "No games to print.",
     "generatedOn": "Generated on",
+    "colGameNo": "Game #",
     "colDate": "Time",
     "colAway": "Away",
     "colHome": "Home",

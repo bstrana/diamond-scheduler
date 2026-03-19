@@ -127,6 +127,7 @@ const PrintSchedule: React.FC<PrintScheduleProps> = ({ games, onClose, teams, le
               <thead>
                 <tr className="bg-slate-100 text-slate-600 uppercase text-xs tracking-wide">
                   <th className="px-3 py-2 text-left font-semibold w-8">#</th>
+                  <th className="px-3 py-2 text-left font-semibold">{t('print.colGameNo')}</th>
                   <th className="px-3 py-2 text-left font-semibold">{t('print.colDate')}</th>
                   <th className="px-3 py-2 text-left font-semibold">{t('print.colAway')}</th>
                   <th className="px-3 py-2 text-left font-semibold">{t('print.colHome')}</th>
@@ -141,7 +142,7 @@ const PrintSchedule: React.FC<PrintScheduleProps> = ({ games, onClose, teams, le
                     {/* Date group header */}
                     <tr className="print-break-avoid">
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="px-3 py-2 bg-indigo-600 text-white font-semibold text-xs tracking-wide"
                       >
                         {formatDateLong(date)}
@@ -159,6 +160,9 @@ const PrintSchedule: React.FC<PrintScheduleProps> = ({ games, onClose, teams, le
                           className={`print-break-avoid border-b border-slate-100 ${isEven ? 'bg-slate-50' : 'bg-white'}`}
                         >
                           <td className="px-3 py-2 text-slate-400 text-xs">{rowNum}</td>
+                          <td className="px-3 py-2 text-slate-500 text-xs font-mono whitespace-nowrap">
+                            {game.gameNumber ? `#${game.gameNumber}` : '—'}
+                          </td>
                           <td className="px-3 py-2 text-slate-500 text-xs whitespace-nowrap">
                             {game.time || '—'}
                             {game.seriesName && (

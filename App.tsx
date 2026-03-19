@@ -914,14 +914,16 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-auto p-6 relative">
           {viewMode === 'calendar' && (
             <>
-              <GameHoldingArea
-                games={gamesInHoldingArea}
-                teams={teams}
-                leagues={leagues}
-                onGameMove={handleGameMove}
-                onGameRemove={handleRemoveFromHoldingArea}
-                onGameClick={handleGameClick}
-              />
+              <div className="sticky top-0 z-20 -mx-6 px-6 pb-1 bg-slate-50 dark:bg-slate-900">
+                <GameHoldingArea
+                  games={gamesInHoldingArea}
+                  teams={teams}
+                  leagues={leagues}
+                  onGameMove={handleGameMove}
+                  onGameRemove={handleRemoveFromHoldingArea}
+                  onGameClick={handleGameClick}
+                />
+              </div>
               <Calendar
                 currentDate={currentDate}
                 days={days} // Contains filtered games for Grid
