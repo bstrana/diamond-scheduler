@@ -103,21 +103,21 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
     >
       {announcement && !announcementDismissed && (
         <div style={{
-          background: '#fef3c7',
-          borderBottom: '1px solid #fcd34d',
+          background: 'var(--embed-announcement-bg, #fef3c7)',
+          borderBottom: '1px solid var(--embed-announcement-border, #fcd34d)',
           padding: '6px 14px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           gap: '8px',
           fontSize: '0.82em',
-          color: '#92400e',
+          color: 'var(--embed-announcement-text, #92400e)',
           flexShrink: 0,
         }}>
           <span>📢 {announcement}</span>
           <button
             onClick={() => setAnnouncementDismissed(true)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b45309', fontWeight: 700, fontSize: '1em', lineHeight: 1, padding: '2px 4px' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--embed-announcement-text, #92400e)', fontWeight: 700, fontSize: '1em', lineHeight: 1, padding: '2px 4px' }}
             title="Dismiss"
           >×</button>
         </div>

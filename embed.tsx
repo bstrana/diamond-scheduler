@@ -94,6 +94,9 @@ if (stylesParam) {
         --embed-card-border: ${sanitizeCssColor(customStyles.cardBorderColor, '#e2e8f0')};
         --embed-card-radius: ${sanitizeCssSize(customStyles.cardBorderRadius, '8px')};
         --embed-card-shadow: ${sanitizeCssShadow(customStyles.cardShadow, '0 1px 3px 0 rgba(0, 0, 0, 0.1)')};
+        --embed-announcement-bg: ${sanitizeCssColor(customStyles.announcementBackgroundColor, '#fef3c7')};
+        --embed-announcement-text: ${sanitizeCssColor(customStyles.announcementTextColor, '#92400e')};
+        --embed-announcement-border: ${sanitizeCssColor(customStyles.announcementBorderColor, '#fcd34d')};
       }
       body {
         font-family: var(--embed-font);

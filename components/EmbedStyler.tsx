@@ -28,6 +28,11 @@ export interface EmbedStyles {
   cardBorderColor: string;
   cardBorderRadius: string;
   cardShadow: string;
+
+  // Announcement Banner
+  announcementBackgroundColor: string;
+  announcementTextColor: string;
+  announcementBorderColor: string;
 }
 
 const defaultStyles: EmbedStyles = {
@@ -44,7 +49,10 @@ const defaultStyles: EmbedStyles = {
   cardBackgroundColor: '#ffffff',
   cardBorderColor: '#e2e8f0',
   cardBorderRadius: '8px',
-  cardShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
+  cardShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+  announcementBackgroundColor: '#fef3c7',
+  announcementTextColor: '#92400e',
+  announcementBorderColor: '#fcd34d',
 };
 
 const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles = defaultStyles }) => {
@@ -80,6 +88,9 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
   --embed-card-border: ${styles.cardBorderColor};
   --embed-card-radius: ${styles.cardBorderRadius};
   --embed-card-shadow: ${styles.cardShadow};
+  --embed-announcement-bg: ${styles.announcementBackgroundColor};
+  --embed-announcement-text: ${styles.announcementTextColor};
+  --embed-announcement-border: ${styles.announcementBorderColor};
 }
     `.trim();
   }, [styles]);
@@ -251,6 +262,65 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
                   className="flex-1 border border-slate-300 rounded-md px-2 py-1.5 text-sm"
                   placeholder="#e2e8f0"
                 />
+              </div>
+            </div>
+            <div className="col-span-1 md:col-span-2 border-t border-slate-100 pt-3">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Announcement Banner</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Banner Background</label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="color"
+                      value={styles.announcementBackgroundColor}
+                      onChange={(e) => handleStyleChange('announcementBackgroundColor', e.target.value)}
+                      className="w-12 h-10 border border-slate-300 rounded cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={styles.announcementBackgroundColor}
+                      onChange={(e) => handleStyleChange('announcementBackgroundColor', e.target.value)}
+                      className="flex-1 border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                      placeholder="#fef3c7"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Banner Text Color</label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="color"
+                      value={styles.announcementTextColor}
+                      onChange={(e) => handleStyleChange('announcementTextColor', e.target.value)}
+                      className="w-12 h-10 border border-slate-300 rounded cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={styles.announcementTextColor}
+                      onChange={(e) => handleStyleChange('announcementTextColor', e.target.value)}
+                      className="flex-1 border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                      placeholder="#92400e"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Banner Border Color</label>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="color"
+                      value={styles.announcementBorderColor}
+                      onChange={(e) => handleStyleChange('announcementBorderColor', e.target.value)}
+                      className="w-12 h-10 border border-slate-300 rounded cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={styles.announcementBorderColor}
+                      onChange={(e) => handleStyleChange('announcementBorderColor', e.target.value)}
+                      className="flex-1 border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                      placeholder="#fcd34d"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </>
