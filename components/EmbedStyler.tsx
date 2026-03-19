@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Palette, Type, Square, Layers } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface EmbedStylerProps {
   onStyleChange: (styles: EmbedStyles) => void;
@@ -56,6 +57,7 @@ const defaultStyles: EmbedStyles = {
 };
 
 const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles = defaultStyles }) => {
+  const { t } = useTranslation();
   const [styles, setStyles] = useState<EmbedStyles>(initialStyles);
   const [activeTab, setActiveTab] = useState<'colors' | 'typography' | 'borders' | 'cards'>('colors');
 
@@ -98,12 +100,12 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-slate-800">Customize Embed Styles</h3>
+        <h3 className="text-lg font-semibold text-slate-800">{t('embedStyler.title')}</h3>
         <button
           onClick={resetStyles}
           className="text-sm text-slate-600 hover:text-slate-800 underline"
         >
-          Reset to Default
+          {t('embedStyler.resetToDefault')}
         </button>
       </div>
 
@@ -118,7 +120,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
           }`}
         >
           <Palette size={16} className="inline mr-2" />
-          Colors
+          {t('embedStyler.colors')}
         </button>
         <button
           onClick={() => setActiveTab('typography')}
@@ -129,7 +131,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
           }`}
         >
           <Type size={16} className="inline mr-2" />
-          Typography
+          {t('embedStyler.typography')}
         </button>
         <button
           onClick={() => setActiveTab('borders')}
@@ -140,7 +142,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
           }`}
         >
           <Square size={16} className="inline mr-2" />
-          Borders & Spacing
+          {t('embedStyler.bordersSpacing')}
         </button>
         <button
           onClick={() => setActiveTab('cards')}
@@ -151,7 +153,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
           }`}
         >
           <Layers size={16} className="inline mr-2" />
-          Cards
+          {t('embedStyler.cards')}
         </button>
       </div>
 
@@ -160,7 +162,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
         {activeTab === 'colors' && (
           <>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Primary Color</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.primaryColor')}</label>
               <div className="flex items-center space-x-2">
                 <input
                   type="color"
@@ -178,7 +180,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Secondary Color</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.secondaryColor')}</label>
               <div className="flex items-center space-x-2">
                 <input
                   type="color"
@@ -196,7 +198,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Background Color</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.backgroundColor')}</label>
               <div className="flex flex-col space-y-2">
                 <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
                   <input
@@ -207,7 +209,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
                     }
                     className="rounded"
                   />
-                  Transparent (blend with page)
+                  {t('embedStyler.transparentBlend')}
                 </label>
                 {styles.backgroundColor !== 'transparent' && (
                   <div className="flex items-center space-x-2">
@@ -229,7 +231,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Text Color</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.textColor')}</label>
               <div className="flex items-center space-x-2">
                 <input
                   type="color"
@@ -247,7 +249,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Border Color</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.borderColor')}</label>
               <div className="flex items-center space-x-2">
                 <input
                   type="color"
@@ -265,10 +267,10 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
               </div>
             </div>
             <div className="col-span-1 md:col-span-2 border-t border-slate-100 pt-3">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Announcement Banner</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">{t('embedStyler.announcementBanner')}</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Banner Background</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.bannerBackground')}</label>
                   <div className="flex items-center space-x-2">
                     <input
                       type="color"
@@ -286,7 +288,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Banner Text Color</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.bannerTextColor')}</label>
                   <div className="flex items-center space-x-2">
                     <input
                       type="color"
@@ -304,7 +306,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Banner Border Color</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.bannerBorderColor')}</label>
                   <div className="flex items-center space-x-2">
                     <input
                       type="color"
@@ -329,7 +331,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
         {activeTab === 'typography' && (
           <>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Font Family</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.fontFamily')}</label>
               <select
                 value={styles.fontFamily}
                 onChange={(e) => handleStyleChange('fontFamily', e.target.value)}
@@ -348,7 +350,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Font Size — <span className="font-bold text-indigo-600">{styles.fontSize}</span>
+                {t('embedStyler.fontSize')} — <span className="font-bold text-indigo-600">{styles.fontSize}</span>
               </label>
               <div className="flex items-center space-x-3">
                 <input
@@ -377,7 +379,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
         {activeTab === 'borders' && (
           <>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Border Radius</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.borderRadius')}</label>
               <input
                 type="text"
                 value={styles.borderRadius}
@@ -387,7 +389,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Border Width</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.borderWidth')}</label>
               <input
                 type="text"
                 value={styles.borderWidth}
@@ -397,7 +399,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Padding</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.padding')}</label>
               <input
                 type="text"
                 value={styles.padding}
@@ -412,7 +414,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
         {activeTab === 'cards' && (
           <>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Card Background</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.cardBackground')}</label>
               <div className="flex items-center space-x-2">
                 <input
                   type="color"
@@ -430,7 +432,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Card Border Color</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.cardBorderColor')}</label>
               <div className="flex items-center space-x-2">
                 <input
                   type="color"
@@ -448,7 +450,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Card Border Radius</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.cardBorderRadius')}</label>
               <input
                 type="text"
                 value={styles.cardBorderRadius}
@@ -458,7 +460,7 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Card Shadow</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embedStyler.cardShadow')}</label>
               <input
                 type="text"
                 value={styles.cardShadow}
@@ -473,16 +475,14 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
 
       {/* CSS Output */}
       <div className="pt-4 border-t border-slate-200">
-        <label className="block text-sm font-medium text-slate-700 mb-2">Custom CSS (add to your website)</label>
+        <label className="block text-sm font-medium text-slate-700 mb-2">{t('embedStyler.customCss')}</label>
         <textarea
           readOnly
           value={cssString}
           className="w-full h-32 p-3 border border-slate-300 rounded-md bg-slate-50 font-mono text-xs"
           onClick={(e) => (e.target as HTMLTextAreaElement).select()}
         />
-        <p className="text-xs text-slate-500 mt-2">
-          Add this CSS to your website's stylesheet or in a &lt;style&gt; tag to apply these styles to the embed.
-        </p>
+        <p className="text-xs text-slate-500 mt-2">{t('embedStyler.customCssHelp')}</p>
       </div>
     </div>
   );

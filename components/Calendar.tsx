@@ -3,6 +3,7 @@ import { Game, Team, CalendarDay, League } from '../types';
 import { WEEKDAYS, MONTH_NAMES } from '../constants';
 import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio, Printer } from 'lucide-react';
 import { formatDate } from '../utils';
+import { useTranslation } from 'react-i18next';
 
 interface CalendarProps {
   currentDate: Date;
@@ -64,6 +65,7 @@ const Calendar: React.FC<CalendarProps> = ({
   hideTeamFilter = false,
   hideViewToggle = false
 }) => {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -180,10 +182,10 @@ const Calendar: React.FC<CalendarProps> = ({
                         {MONTH_NAMES[currentDate.getMonth()]} {currentDate.getFullYear()}
                     </h2>
                 </div>
-                <h2 className="text-xl font-bold text-slate-800 md:hidden">Upcoming Schedule</h2>
+                <h2 className="text-xl font-bold text-slate-800 md:hidden">{t('app.upcomingSchedule')}</h2>
             </>
         ) : (
-            <h2 className="text-xl font-bold text-slate-800">Upcoming Schedule</h2>
+            <h2 className="text-xl font-bold text-slate-800">{t('app.upcomingSchedule')}</h2>
         )}
 
         {/* Controls */}
@@ -198,7 +200,7 @@ const Calendar: React.FC<CalendarProps> = ({
                         onChange={(e) => onLeagueFilterChange(e.target.value)}
                         className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
                     >
-                        <option value="all">All Leagues</option>
+                        <option value="all">{t('app.allLeagues')}</option>
                         <option disabled>──────────</option>
                         {leagues.map(l => (
                             <option key={l.id} value={l.id}>{l.name}</option>
@@ -218,7 +220,7 @@ const Calendar: React.FC<CalendarProps> = ({
                             onChange={(e) => onCategoryFilterChange(e.target.value)}
                             className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
                         >
-                            <option value="all">All Categories</option>
+                            <option value="all">{t('app.allCategories')}</option>
                             <option disabled>──────────</option>
                             {categories.map(cat => (
                                 <option key={cat} value={cat}>{cat}</option>
@@ -237,7 +239,7 @@ const Calendar: React.FC<CalendarProps> = ({
                     onChange={(e) => onTeamFilterChange(e.target.value)}
                     className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
                 >
-                    <option value="all">All Teams</option>
+                    <option value="all">{t('app.allTeams')}</option>
                     <option disabled>──────────</option>
                     {teams.map(t => (
                         <option key={t.id} value={t.id}>{t.city} {t.name}</option>
@@ -251,14 +253,14 @@ const Calendar: React.FC<CalendarProps> = ({
                 <button 
                     onClick={() => onViewTypeChange('grid')}
                     className={`p-1.5 rounded-md transition-all ${viewType === 'grid' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                    title="Calendar View"
+                    title={t('app.calendarView')}
                 >
                     <Grid size={18} />
                 </button>
                 <button
                     onClick={() => onViewTypeChange('list')}
                     className={`p-1.5 rounded-md transition-all ${viewType === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                    title="List View"
+                    title={t('app.listView')}
                 >
                     <List size={18} />
                 </button>
@@ -268,7 +270,7 @@ const Calendar: React.FC<CalendarProps> = ({
             <button
               onClick={() => window.print()}
               className="no-print p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-              title="Print / Save as PDF"
+              title={t('app.printPDF')}
             >
               <Printer size={20} />
             </button>
@@ -277,7 +279,7 @@ const Calendar: React.FC<CalendarProps> = ({
             <button
               onClick={toggleFullscreen}
               className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-              title={isFullscreen ? "Exit Full Screen" : "Enter Full Screen"}
+              title={isFullscreen ? t('app.exitFullscreen') : t('app.enterFullscreen')}
             >
               {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
             </button>
@@ -287,10 +289,10 @@ const Calendar: React.FC<CalendarProps> = ({
               <button
                 onClick={onAddGame}
                 className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-                title="Add Game"
+                title={t('app.addGameBtn')}
               >
                 <PlusCircle size={16} />
-                <span>Add Game</span>
+                <span>{t('app.addGameBtn')}</span>
               </button>
             )}
 
@@ -299,7 +301,7 @@ const Calendar: React.FC<CalendarProps> = ({
               <button
                 onClick={onRemoveAllGames}
                 className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="Remove All Games from Schedule"
+                title={t('app.removeAllGames')}
               >
                 <Trash2 size={20} />
               </button>
@@ -336,7 +338,7 @@ const Calendar: React.FC<CalendarProps> = ({
                         {day.date.getDate()}
                     </span>
                     <button className="opacity-0 group-hover:opacity-100 text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-slate-600">
-                        + Add
+                        {t('app.addGame')}
                     </button>
                     </div>
 
@@ -376,7 +378,7 @@ const Calendar: React.FC<CalendarProps> = ({
                                 <button
                                     onClick={(e) => { e.stopPropagation(); onGameClick(game); }}
                                     className="p-1 bg-white/90 border border-slate-200 shadow-sm rounded text-slate-400 hover:text-blue-600"
-                                    title="Edit Game"
+                                    title={t('calendar.editGame')}
                                 >
                                     <Edit size={10} />
                                 </button>
@@ -384,7 +386,7 @@ const Calendar: React.FC<CalendarProps> = ({
                                     <button
                                         onClick={(e) => { e.stopPropagation(); onAddToHoldingArea(game.id); }}
                                         className="p-1 bg-white/90 border border-slate-200 shadow-sm rounded text-slate-400 hover:text-amber-600"
-                                        title="Move to Holding Area"
+                                        title={t('calendar.moveToHolding')}
                                     >
                                         <Minimize size={10} />
                                     </button>
@@ -392,14 +394,14 @@ const Calendar: React.FC<CalendarProps> = ({
                                 <button
                                     onClick={(e) => { e.stopPropagation(); onGameCopy(game); }}
                                     className="p-1 bg-white/90 border border-slate-200 shadow-sm rounded text-slate-400 hover:text-indigo-600"
-                                    title="Copy Game"
+                                    title={t('calendar.copyGame')}
                                 >
                                     <Copy size={10} />
                                 </button>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); onDeleteGame(game.id); }}
                                     className="p-1 bg-white/90 border border-slate-200 shadow-sm rounded text-slate-400 hover:text-red-600"
-                                    title="Delete Game"
+                                    title={t('calendar.deleteGame')}
                                 >
                                     <Trash2 size={10} />
                                 </button>
@@ -483,8 +485,8 @@ const Calendar: React.FC<CalendarProps> = ({
           <div className={`flex-1 overflow-y-auto bg-slate-50 p-6 space-y-6${viewType === 'grid' ? ' md:hidden' : ''}`}>
               {Object.keys(gamesByDate).length === 0 ? (
                   <div className="text-center py-20 opacity-50">
-                      <p className="text-xl font-medium">No upcoming games scheduled.</p>
-                      <p className="text-sm">Try changing the filter or generating a new schedule.</p>
+                      <p className="text-xl font-medium">{t('calendar.noUpcomingGames')}</p>
+                      <p className="text-sm">{t('calendar.tryChangingFilter')}</p>
                   </div>
               ) : (
                   Object.keys(gamesByDate).sort().map(dateStr => (
@@ -729,10 +731,10 @@ const Calendar: React.FC<CalendarProps> = ({
                                                     onClick={e => e.stopPropagation()}
                                                     className="flex items-center justify-center space-x-1 text-xs font-semibold mt-1"
                                                     style={{color: game.status === 'live' ? '#22c55e' : '#4f46e5'}}
-                                                    title="Watch Live Stream"
+                                                    title={t('gameBar.watchLiveStream')}
                                                 >
                                                     <Radio size={10} />
-                                                    <span>Watch Live</span>
+                                                    <span>{t('calendar.watchLive')}</span>
                                                 </a>
                                             )}
                                         </div>

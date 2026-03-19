@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Game, Team } from '../types';
+import { useTranslation } from 'react-i18next';
 
 interface PlayoffBracketProps {
   games: Game[];
@@ -7,7 +8,8 @@ interface PlayoffBracketProps {
 }
 
 const PlayoffBracket: React.FC<PlayoffBracketProps> = ({ games, teams }) => {
-  const getTeam = (id: string) => teams.find(t => t.id === id);
+  const { t } = useTranslation();
+  const getTeam = (id: string) => teams.find(team => team.id === id);
 
   const bracketGames = useMemo(() => games.filter(g => g.seriesName), [games]);
 
@@ -47,15 +49,15 @@ const PlayoffBracket: React.FC<PlayoffBracketProps> = ({ games, teams }) => {
   if (bracketGames.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-slate-400 text-sm gap-2 p-8 text-center">
-        <p className="text-lg font-semibold text-slate-500">No bracket games yet</p>
-        <p>Assign a <span className="font-mono bg-slate-100 px-1 rounded text-slate-600">Series Name</span> to games (e.g. "Semifinal", "Final") when scheduling to build the bracket automatically.</p>
+        <p className="text-lg font-semibold text-slate-500">{t('playoff.noBracketYet')}</p>
+        <p>{t('playoff.noBracketHint')}</p>
       </div>
     );
   }
 
   return (
     <div className="p-6 overflow-auto h-full">
-      <h2 className="text-2xl font-bold text-slate-800 mb-6">Playoff Bracket</h2>
+      <h2 className="text-2xl font-bold text-slate-800 mb-6">{t('playoff.title')}</h2>
       <div className="flex gap-6 items-start overflow-x-auto pb-4">
         {seriesOrder.map((sName) => (
           <div key={sName} className="flex-shrink-0 w-64">

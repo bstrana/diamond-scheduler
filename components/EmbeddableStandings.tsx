@@ -3,6 +3,7 @@ import { League, Team, Game } from '../types';
 import { buildStandingsShareText } from '../utils';
 import { Share2, Copy, Check } from 'lucide-react';
 import * as storageApi from '../services/storage';
+import { useTranslation } from 'react-i18next';
 
 interface StandingsRow {
   team: Team;
@@ -85,6 +86,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
   dataOverride,
   scheduleKey,
 }) => {
+  const { t } = useTranslation();
   const [data, setData] = useState<{ leagues: League[]; teams: Team[]; games: Game[] } | null>(
     dataOverride || null
   );
@@ -170,7 +172,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
   if (isLoading) {
     return (
       <div style={{ ...root, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        Loading standings…
+        {t('standings.loading')}
       </div>
     );
   }
@@ -178,7 +180,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
   if (!data || !league) {
     return (
       <div style={{ ...root, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
-        No standings data available.
+        {t('standings.noData')}
       </div>
     );
   }
@@ -201,7 +203,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
                 color: 'inherit',
               }}
             >
-              <option value="all">All Categories</option>
+              <option value="all">{t('standings.allCategories')}</option>
               {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
@@ -249,7 +251,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
           <button
             onClick={() => setAnnouncementDismissed(true)}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b45309', fontWeight: 700, fontSize: '1em', lineHeight: 1, padding: '2px 4px' }}
-            title="Dismiss"
+            title={t('standings.dismiss')}
           >×</button>
         </div>
       )}
@@ -268,7 +270,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
           flexWrap: 'wrap',
         }}>
           <span style={{ fontSize: '0.85em', color: '#dc2626', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-            ● LIVE NOW
+            ● {t('standings.liveNow')}
           </span>
           {liveGamesWithStream.map(g => (
             <a
@@ -286,7 +288,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
                 fontWeight: 600,
               }}
             >
-              Watch Live
+              {t('standings.watchLive')}
             </a>
           ))}
         </div>
@@ -302,7 +304,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
             <h2 style={{ margin: 0, fontSize: '1.1em', fontWeight: 700 }}>
               {league.name}{league.category ? ` – ${league.category}` : ''}
             </h2>
-            <p style={{ margin: 0, fontSize: '0.78em', opacity: 0.6 }}>League Standings</p>
+            <p style={{ margin: 0, fontSize: '0.78em', opacity: 0.6 }}>{t('standings.title')}</p>
           </div>
         </div>
 
@@ -310,7 +312,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
         <div ref={shareMenuRef} style={{ position: 'relative', flexShrink: 0 }}>
           <button
             onClick={() => setShowShareMenu(p => !p)}
-            title="Share standings"
+            title={t('standings.shareStandings')}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -371,7 +373,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
                   ? <Check size={14} style={{ color: '#16a34a', flexShrink: 0 }} />
                   : <Copy size={14} style={{ flexShrink: 0 }} />
                 }
-                {copied ? 'Copied!' : 'Copy text'}
+                {copied ? t('common.copied') : t('standings.copyText')}
               </button>
             </div>
           )}
@@ -408,7 +410,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
                   colSpan={10}
                   style={{ padding: '32px', textAlign: 'center', color: '#94a3b8', fontSize: '0.9em' }}
                 >
-                  No completed games yet. Standings will appear here once games are finalized.
+                  {t('standings.noGamesYet')}
                 </td>
               </tr>
             ) : (
@@ -475,7 +477,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
       {/* Footer */}
       {totalGames > 0 && (
         <p style={{ margin: '8px 0 0', fontSize: '0.73em', color: '#94a3b8', textAlign: 'right' }}>
-          Based on {totalGames} completed game{totalGames !== 1 ? 's' : ''}
+          {t('standings.basedOn', { count: totalGames })}
         </p>
       )}
     </div>

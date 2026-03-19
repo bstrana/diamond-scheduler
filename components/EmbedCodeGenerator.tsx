@@ -6,6 +6,7 @@ import EmbeddableCalendar from './EmbeddableCalendar';
 import EmbeddableGameBar from './EmbeddableGameBar';
 import EmbeddableStandings from './EmbeddableStandings';
 import * as storageApi from '../services/storage';
+import { useTranslation } from 'react-i18next';
 
 interface EmbedCodeGeneratorProps {
   leagues: League[];
@@ -28,6 +29,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   userId,
   orgId
 }) => {
+  const { t } = useTranslation();
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTeamId, setSelectedTeamId] = useState<string>('all');
@@ -173,10 +175,10 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-xl text-white shadow-xl">
         <div className="flex items-center space-x-3 mb-2">
           <Code className="w-6 h-6" />
-          <h2 className="text-2xl font-bold">Embed Calendar</h2>
+          <h2 className="text-2xl font-bold">{t('embed.title')}</h2>
         </div>
         <p className="opacity-90 text-sm">
-          Generate embed code to display your published schedule on WordPress, Squarespace, or any website.
+          {t('embed.subtitle')}
         </p>
       </div>
 
@@ -189,10 +191,9 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-semibold text-amber-800 mb-1">Published Schedule Required</h3>
+              <h3 className="text-sm font-semibold text-amber-800 mb-1">{t('embed.publishedScheduleRequired')}</h3>
               <p className="text-sm text-amber-700">
-                You must load a published schedule before generating embed code. Only active, published schedules can be embedded.
-                Go to the user menu and select "Load Published Schedule" to load an official schedule.
+                {t('embed.publishedScheduleInfo')}
               </p>
             </div>
           </div>
@@ -200,12 +201,12 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
       )}
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
-        <h3 className="text-lg font-semibold text-slate-800">Configure Embed Settings</h3>
+        <h3 className="text-lg font-semibold text-slate-800">{t('embed.configureSettings')}</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Schedule Source */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Schedule Source</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.scheduleSource')}</label>
             <select
               value={scheduleKey}
               onChange={(e) => setScheduleKey(e.target.value)}
@@ -215,27 +216,27 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
               }`}
             >
               <option value="">
-                {isLoadingSchedules ? 'Loading schedules...' : 'Select a published schedule'}
+                {isLoadingSchedules ? t('embed.loadingSchedules') : t('embed.selectPublishedSchedule')}
               </option>
               {publishedSchedules
                 .filter((schedule) => schedule.active)
                 .map((schedule) => (
                   <option key={schedule.id} value={schedule.scheduleKey}>
-                    {schedule.scheduleName || schedule.scheduleKey} {schedule.active ? '(Active)' : ''}
+                    {schedule.scheduleName || schedule.scheduleKey} {schedule.active ? `(${t('common.active')})` : ''}
                   </option>
                 ))}
             </select>
             <p className="text-xs text-slate-500 mt-1">
-              {isPublishedScheduleLoaded 
-                ? 'Select an active published schedule to embed. Only active schedules are available.'
-                : 'Load a published schedule first to enable embed code generation.'}
+              {isPublishedScheduleLoaded
+                ? t('embed.selectActiveSchedule')
+                : t('embed.loadScheduleFirst')}
             </p>
           </div>
 
           {/* Filter Visibility (not applicable for standings) */}
           {embedView !== 'standings' && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Show Filters</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.showFilters')}</label>
               <div className="space-y-2 rounded-md border border-slate-200 p-3 text-sm">
                 <label className="flex items-center space-x-2 text-slate-600">
                   <input
@@ -244,7 +245,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                     onChange={(e) => setHideLeagueFilter(!e.target.checked)}
                     className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
-                  <span>League filter</span>
+                  <span>{t('embed.leagueFilter')}</span>
                 </label>
                 <label className="flex items-center space-x-2 text-slate-600">
                   <input
@@ -253,7 +254,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                     onChange={(e) => setHideCategoryFilter(!e.target.checked)}
                     className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
-                  <span>Category filter</span>
+                  <span>{t('embed.categoryFilter')}</span>
                 </label>
                 <label className="flex items-center space-x-2 text-slate-600">
                   <input
@@ -262,7 +263,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                     onChange={(e) => setHideTeamFilter(!e.target.checked)}
                     className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
-                  <span>Team filter</span>
+                  <span>{t('embed.teamFilter')}</span>
                 </label>
                 {embedView === 'gamebar' && (
                   <label className="flex items-center space-x-2 text-slate-600">
@@ -272,7 +273,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                       onChange={(e) => setHideStatusFilter(!e.target.checked)}
                       className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     />
-                    <span>Game status filter</span>
+                    <span>{t('embed.statusFilter')}</span>
                   </label>
                 )}
               </div>
@@ -281,13 +282,13 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
 
           {/* League Filter */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Filter by League</label>
-            <select 
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.filterByLeague')}</label>
+            <select
               value={selectedLeagueId}
               onChange={(e) => setSelectedLeagueId(e.target.value)}
               className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             >
-              <option value="all">All Leagues</option>
+              <option value="all">{t('embed.allLeagues')}</option>
               {leagues.map(l => (
                 <option key={l.id} value={l.id}>{l.name}</option>
               ))}
@@ -297,13 +298,13 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
           {/* Category Filter */}
           {categories.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Filter by Category</label>
-              <select 
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.filterByCategory')}</label>
+              <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               >
-                <option value="all">All Categories</option>
+                <option value="all">{t('embed.allCategories')}</option>
                 {categories.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
@@ -313,13 +314,13 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
 
           {/* Team Filter */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Filter by Team</label>
-            <select 
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.filterByTeam')}</label>
+            <select
               value={selectedTeamId}
               onChange={(e) => setSelectedTeamId(e.target.value)}
               className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             >
-              <option value="all">All Teams</option>
+              <option value="all">{t('embed.allTeams')}</option>
               <option disabled>──────────</option>
               {teams.map(t => (
                 <option key={t.id} value={t.id}>{t.city} {t.name}</option>
@@ -329,29 +330,29 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
 
           {/* Embed Type */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Embed Type</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.embedType')}</label>
             <select
               value={embedView}
               onChange={(e) => setEmbedView(e.target.value as 'calendar' | 'gamebar' | 'standings')}
               className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             >
-              <option value="calendar">Calendar View</option>
-              <option value="gamebar">Game Bar</option>
-              <option value="standings">League Standings</option>
+              <option value="calendar">{t('embed.calendarView')}</option>
+              <option value="gamebar">{t('embed.gameBar')}</option>
+              <option value="standings">{t('embed.leagueStandings')}</option>
             </select>
           </div>
 
           {/* View Type (only for calendar) */}
           {embedView === 'calendar' && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Calendar View</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.calendarViewLabel')}</label>
               <select
                 value={viewType}
                 onChange={(e) => setViewType(e.target.value as 'grid' | 'list')}
                 className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               >
-                <option value="grid">Grid View</option>
-                <option value="list">List View</option>
+                <option value="grid">{t('embed.gridView')}</option>
+                <option value="list">{t('embed.listView')}</option>
               </select>
             </div>
           )}
@@ -359,13 +360,13 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
           {/* Standings note */}
           {embedView === 'standings' && (
             <div className="bg-indigo-50 border border-indigo-200 rounded-md p-3 text-sm text-indigo-800">
-              Standings are calculated from completed games (status: <em>final</em> or <em>completed</em>) with recorded scores. Select a specific league above for a focused standings table.
+              {t('embed.standingsNote')}
             </div>
           )}
 
           {/* Height */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Height (px)</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.heightPx')}</label>
             <input
               type="number"
               min={embedView === 'gamebar' ? '260' : embedView === 'standings' ? '300' : '400'}
@@ -376,7 +377,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
               placeholder={embedView === 'gamebar' ? '260' : embedView === 'standings' ? '500' : '800'}
             />
             <p className="text-xs text-slate-500 mt-1">
-              Recommended: {embedView === 'gamebar' ? '260–400px' : embedView === 'standings' ? '400–700px' : '600–1000px'}
+              {t('embed.recommended')} {embedView === 'gamebar' ? '260–400px' : embedView === 'standings' ? '400–700px' : '600–1000px'}
             </p>
           </div>
         </div>
@@ -388,7 +389,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
             className="flex items-center space-x-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-md hover:bg-slate-200 transition-colors text-sm font-medium"
           >
             <Code size={16} />
-            <span>{showStyler ? 'Hide' : 'Show'} Style Customization</span>
+            <span>{showStyler ? t('embed.hideStyleCustomization') : t('embed.showStyleCustomization')}</span>
           </button>
           {showStyler && (
             <div className="mt-4">
@@ -403,7 +404,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
         {/* Embed Code Preview */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-slate-700">Embed Code</label>
+            <label className="block text-sm font-medium text-slate-700">{t('embed.embedCode')}</label>
             <button
               onClick={handleCopy}
               disabled={!scheduleKey || !embedUrl}
@@ -416,19 +417,19 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
               {copied ? (
                 <>
                   <Check size={16} />
-                  <span>Copied!</span>
+                  <span>{t('common.copied')}</span>
                 </>
               ) : (
                 <>
                   <Copy size={16} />
-                  <span>Copy Code</span>
+                  <span>{t('embed.copyCode')}</span>
                 </>
               )}
             </button>
           </div>
           <textarea
             readOnly
-            value={scheduleKey && embedUrl ? embedCode : '// Load a published schedule and select it above to generate embed code.\n// Only active, published schedules can be embedded.'}
+            value={scheduleKey && embedUrl ? embedCode : t('embed.noScheduleComment')}
             className={`w-full h-32 p-3 border border-slate-300 rounded-md font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
               scheduleKey && embedUrl ? 'bg-slate-50' : 'bg-slate-100 text-slate-500'
             }`}
@@ -440,7 +441,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
           />
           {!scheduleKey && (
             <p className="text-xs text-amber-600 mt-1">
-              Select a published schedule above to generate embed code.
+              {t('embed.selectScheduleComment')}
             </p>
           )}
 
@@ -450,10 +451,10 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
             return selectedTeam ? (
               <div className="mt-3 p-3 bg-indigo-50 border border-indigo-200 rounded-md">
                 <p className="text-xs font-semibold text-indigo-800 mb-1">
-                  Team Deep-link — {selectedTeam.city} {selectedTeam.name}
+                  {t('embed.teamDeepLink', { team: `${selectedTeam.city} ${selectedTeam.name}` })}
                 </p>
                 <p className="text-xs text-indigo-600 mb-2">
-                  Share this URL so fans can embed or bookmark just this team's schedule:
+                  {t('embed.teamDeepLinkHelp')}
                 </p>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 text-xs bg-white border border-indigo-200 rounded px-2 py-1.5 break-all font-mono text-slate-700">
@@ -478,8 +479,8 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
         <div className="pt-4 border-t border-slate-200">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-sm font-medium text-slate-700 mb-1">Preview Embed</p>
-              <p className="text-xs text-slate-500">Live preview of how the embed will look</p>
+              <p className="text-sm font-medium text-slate-700 mb-1">{t('embed.previewEmbed')}</p>
+              <p className="text-xs text-slate-500">{t('embed.previewDescription')}</p>
             </div>
             <a
               href={scheduleKey && embedUrl ? embedUrl : '#'}
@@ -493,7 +494,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
               rel="noopener noreferrer"
             >
               <ExternalLink size={16} />
-              <span>Open in New Tab</span>
+              <span>{t('embed.openInNewTab')}</span>
             </a>
           </div>
           <div
@@ -534,22 +535,22 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
 
         {/* Instructions */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-semibold text-blue-900 mb-2">How to Use:</h4>
+          <h4 className="font-semibold text-blue-900 mb-2">{t('embed.howToUse')}</h4>
           <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
-            <li>Configure your filters and settings above</li>
-            <li>Copy the embed code</li>
-            <li>Paste it into your WordPress page/post (use HTML block or code editor)</li>
-            <li>Or paste it into any website that supports iframes</li>
+            <li>{t('embed.step1')}</li>
+            <li>{t('embed.step2')}</li>
+            <li>{t('embed.step3')}</li>
+            <li>{t('embed.step4')}</li>
           </ol>
           <div className="mt-3 pt-3 border-t border-blue-200">
-            <p className="text-xs text-blue-700 font-medium mb-1">Embed Features:</p>
+            <p className="text-xs text-blue-700 font-medium mb-1">{t('embed.embedFeatures')}</p>
             <ul className="list-disc list-inside space-y-0.5 text-xs text-blue-600">
-              <li>Shows all game information including series names (Semifinal, Final, etc.)</li>
-              <li>Displays team logos, game times, and locations</li>
-              <li>Supports filtering by league, category, and team</li>
-              <li>Calendar view supports both grid and list layouts</li>
-              <li>Game bar shows upcoming scheduled games in a horizontal timeline</li>
-              <li>League standings shows W, L, PCT, GB, RS, RA, and DIFF for each team</li>
+              <li>{t('embed.feature1')}</li>
+              <li>{t('embed.feature2')}</li>
+              <li>{t('embed.feature3')}</li>
+              <li>{t('embed.feature4')}</li>
+              <li>{t('embed.feature5')}</li>
+              <li>{t('embed.feature6')}</li>
             </ul>
           </div>
         </div>

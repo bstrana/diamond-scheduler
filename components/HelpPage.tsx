@@ -5,6 +5,7 @@ import {
   BarChart2, Layers, Palette, RefreshCw, Globe, Zap,
   Moon, Printer, GitBranch, QrCode
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Section {
   id: string;
@@ -15,6 +16,7 @@ interface Section {
 }
 
 const HelpPage: React.FC = () => {
+  const { t } = useTranslation();
   const [openSection, setOpenSection] = useState<string | null>('workflow');
 
   const toggle = (id: string) => setOpenSection(prev => prev === id ? null : id);
@@ -301,10 +303,10 @@ const HelpPage: React.FC = () => {
           <div className="bg-white/20 rounded-lg p-2">
             <Star size={24} />
           </div>
-          <h1 className="text-3xl font-bold">Help & Guide</h1>
+          <h1 className="text-3xl font-bold">{t('help.title')}</h1>
         </div>
         <p className="text-indigo-100 text-base max-w-xl">
-          Everything you need to know about Diamond Manager Scheduler — from setting up your first league to embedding live standings on your website.
+          {t('help.subtitle')}
         </p>
       </div>
 

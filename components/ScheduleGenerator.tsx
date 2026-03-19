@@ -4,6 +4,7 @@ import { Team, Game, League } from '../types';
 import { Wand2, Loader2, Calendar as CalIcon, Clock, Layers, Info, Plus, X } from 'lucide-react';
 import { formatDate } from '../utils';
 import { WEEKDAYS } from '../constants';
+import { useTranslation } from 'react-i18next';
 
 interface ScheduleGeneratorProps {
   leagues: League[];
@@ -12,6 +13,7 @@ interface ScheduleGeneratorProps {
 }
 
 const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeagueSelected, onScheduleGenerated }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conflicts, setConflicts] = useState<string[]>([]);
@@ -49,23 +51,23 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
     const selectedLeague = leagues.find(l => l.id === selectedLeagueId);
     
     if (!selectedLeague) {
-        setError("Please select a league.");
+        setError(t('scheduler.noLeagueSelected'));
         return;
     }
-    
+
     if (selectedLeague.teams.length < 2) {
-      setError("The selected league needs at least 2 teams to generate a schedule.");
+      setError(t('scheduler.needTwoTeams'));
       return;
     }
 
     if (selectedDays.length === 0) {
-      setError("Please select at least one day of the week for games.");
+      setError(t('scheduler.selectGameDay'));
       return;
     }
 
     // For series format, validate that at least one matchup is selected
     if (doubleHeaderMode === 'series' && seriesMatchups.length === 0) {
-      setError("Please add at least one series matchup.");
+      setError(t('scheduler.addSeriesMatchupFirst'));
       return;
     }
 
@@ -94,7 +96,7 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
             }));
 
             if (gamesWithMeta.length === 0) {
-                setError("No games generated. Check constraints.");
+                setError(t('scheduler.noGamesGenerated'));
             } else {
                 // Conflict detection: flag any team scheduled twice on the same date
                 const teamDateMap = new Map<string, Set<string>>();
@@ -116,7 +118,7 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
             }
         } catch (e) {
             console.error(e);
-            setError("An error occurred while generating the schedule.");
+            setError(t('scheduler.errorGenerating'));
         } finally {
             setLoading(false);
         }
@@ -166,10 +168,10 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
        <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-8 rounded-2xl text-white shadow-xl">
         <div className="flex items-center space-x-4 mb-4">
           <CalIcon className="w-8 h-8" />
-          <h2 className="text-3xl font-bold">Game Scheduler</h2>
+          <h2 className="text-3xl font-bold">{t('scheduler.title')}</h2>
         </div>
         <p className="opacity-90">
-          Create a balanced, mathematically generated season schedule instantly.
+          {t('scheduler.subtitle')}
         </p>
       </div>
 
@@ -181,12 +183,12 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
 
       {conflicts.length > 0 && (
         <div className="bg-orange-50 border border-orange-200 text-orange-800 p-4 rounded-lg">
-          <p className="font-semibold mb-1">⚠ Schedule conflicts detected ({conflicts.length})</p>
-          <p className="text-sm mb-2">The following teams are scheduled to play more than once on the same day. This can happen with small team counts and double-header modes. Review the calendar and adjust as needed.</p>
+          <p className="font-semibold mb-1">{t('scheduler.conflictsDetected', { count: conflicts.length })}</p>
+          <p className="text-sm mb-2">{t('scheduler.conflictsNote')}</p>
           <ul className="text-sm space-y-0.5">
             {conflicts.map((c, i) => <li key={i} className="font-mono">• {c}</li>)}
           </ul>
-          <button onClick={() => setConflicts([])} className="mt-2 text-xs text-orange-600 underline">Dismiss</button>
+          <button onClick={() => setConflicts([])} className="mt-2 text-xs text-orange-600 underline">{t('common.dismiss')}</button>
         </div>
       )}
 
@@ -194,8 +196,8 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
         {leagues.length === 0 && (
           <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center rounded-xl">
             <div className="text-center p-6 bg-white shadow-lg rounded-lg border border-slate-200">
-              <p className="text-slate-600 font-medium mb-2">No leagues available</p>
-              <p className="text-sm text-slate-500">Go to the League Creator to build a league first.</p>
+              <p className="text-slate-600 font-medium mb-2">{t('scheduler.noLeaguesAvailable')}</p>
+              <p className="text-sm text-slate-500">{t('scheduler.goToLeagueCreator')}</p>
             </div>
           </div>
         )}
@@ -204,19 +206,19 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
           <div className="p-2 bg-green-100 rounded-lg text-green-600">
             <CalIcon size={24} />
           </div>
-          <h3 className="text-xl font-semibold text-slate-800">Configuration</h3>
+          <h3 className="text-xl font-semibold text-slate-800">{t('scheduler.configuration')}</h3>
         </div>
 
         <div className="space-y-6">
           {/* League Selector */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Select League</label>
-            <select 
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.selectLeague')}</label>
+            <select
                 value={selectedLeagueId}
                 onChange={(e) => handleLeagueChange(e.target.value)}
                 className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             >
-                <option value="">-- Choose a League --</option>
+                <option value="">{t('scheduler.chooseLeague')}</option>
                 {leagues.map(l => (
                     <option key={l.id} value={l.id}>
                         {l.name}{l.category ? ` - ${l.category}` : ''} ({l.teams.length} teams)
@@ -227,7 +229,7 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Season Start Date</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.seasonStartDate')}</label>
                 <input 
                 type="date"
                 value={startDate}
@@ -236,7 +238,7 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
                 />
             </div>
             <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Games Per Team</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.gamesPerTeam')}</label>
                 <input 
                 type="number"
                 min="1"
@@ -249,7 +251,7 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
           </div>
 
           <div>
-             <label className="block text-sm font-medium text-slate-700 mb-1">Game Format</label>
+             <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.gameFormat')}</label>
              <div className="relative">
                 <select 
                     value={doubleHeaderMode}
@@ -262,20 +264,17 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
                     }}
                     className="w-full border border-slate-300 rounded-md p-2 pl-9 focus:ring-2 focus:ring-emerald-500 focus:outline-none appearance-none bg-white"
                 >
-                    <option value="none">Single Game (Standard)</option>
-                    <option value="same_day">Double Header (2 Games, Same Day)</option>
-                    <option value="consecutive">Back-to-Back Series (Next Day)</option>
-                    <option value="series">Playoff Series (Best of N)</option>
+                    <option value="none">{t('scheduler.singleGame')}</option>
+                    <option value="same_day">{t('scheduler.doubleHeader')}</option>
+                    <option value="consecutive">{t('scheduler.backToBackSeries')}</option>
+                    <option value="series">{t('scheduler.playoffSeries')}</option>
                 </select>
                 <Layers size={18} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none" />
              </div>
              {doubleHeaderMode === 'consecutive' && (
                  <div className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded flex items-start">
                     <Info size={14} className="mr-1.5 mt-0.5 shrink-0" />
-                    <span>
-                        For back-to-back series (e.g. Sat/Sun), select the <strong>Start Day</strong> below (e.g. Saturday). 
-                        Game 2 will automatically be scheduled for the following day.
-                    </span>
+                    <span>{t('scheduler.backToBackNote')}</span>
                  </div>
              )}
              {doubleHeaderMode === 'series' && (() => {
@@ -286,32 +285,32 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
                     <div className="mt-3 space-y-3">
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Best Of</label>
-                                <select 
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.bestOf')}</label>
+                                <select
                                     value={bestOf}
                                     onChange={(e) => setBestOf(Number(e.target.value))}
                                     className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                                 >
-                                    <option value={3}>Best of 3</option>
-                                    <option value={5}>Best of 5</option>
-                                    <option value={7}>Best of 7</option>
+                                    <option value={3}>{t('scheduler.bestOf3')}</option>
+                                    <option value={5}>{t('scheduler.bestOf5')}</option>
+                                    <option value={7}>{t('scheduler.bestOf7')}</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Game Mode</label>
-                                <select 
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.gameMode')}</label>
+                                <select
                                     value={seriesGameMode}
                                     onChange={(e) => setSeriesGameMode(e.target.value as 'alternate' | 'back_to_back')}
                                     className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                                 >
-                                    <option value="alternate">Alternate Games</option>
-                                    <option value="back_to_back">Back-to-Back Games</option>
+                                    <option value="alternate">{t('scheduler.alternateGames')}</option>
+                                    <option value="back_to_back">{t('scheduler.backToBackGames')}</option>
                                 </select>
                             </div>
                         </div>
                         
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Series Matchups</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">{t('scheduler.seriesMatchups')}</label>
                             {selectedLeagueId ? (
                                 <div className="space-y-2">
                                     {seriesMatchups.map((matchup, idx) => {

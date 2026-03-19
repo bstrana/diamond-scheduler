@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useKeycloak } from '@react-keycloak/web';
+import { useTranslation } from 'react-i18next';
 import { Team, Game, ViewMode, League } from './types';
 import { getMonthDays, formatDate, generateUUID } from './utils';
 import * as storageApi from './services/storage';
@@ -33,6 +34,7 @@ import HelpPage from './components/HelpPage';
 import PlayoffBracket from './components/PlayoffBracket';
 
 const App: React.FC = () => {
+  const { t } = useTranslation();
   const { keycloak, initialized } = useKeycloak();
   const [authTimeout, setAuthTimeout] = useState(false);
   const [showNavMenu, setShowNavMenu] = useState(false);
@@ -106,22 +108,22 @@ const App: React.FC = () => {
 
   const handleLoadSchedule = async () => {
     if (!selectedScheduleId) {
-      alert('Select a schedule to load.');
+      alert(t('schedule.selectLeagueToLoad'));
       return;
     }
     const selectedSchedule = publishedSchedules.find((item) => item.id === selectedScheduleId);
     if (!selectedSchedule) {
-      alert('Selected schedule not found.');
+      alert(t('schedule.scheduleNotFound'));
       return;
     }
     if (!selectedSchedule.active) {
-      alert('Only active schedules can be loaded.');
+      alert(t('schedule.onlyActiveSchedules'));
       return;
     }
     if (!storageApi.loadPublishedScheduleById) return;
     const data = await storageApi.loadPublishedScheduleById(selectedScheduleId, { userId, orgId });
     if (!data) {
-      alert('Schedule not found or access denied.');
+      alert(t('schedule.accessDenied'));
       return;
     }
     setLeagues(data.leagues);
@@ -138,11 +140,11 @@ const App: React.FC = () => {
   };
 
   const navItems: { mode: ViewMode; label: string; icon: any }[] = [
-    { mode: 'league_builder', label: 'League Creator', icon: Trophy },
-    { mode: 'scheduler', label: 'Scheduler', icon: Clock },
-    { mode: 'calendar', label: 'Calendar', icon: CalendarIcon },
-    { mode: 'bracket', label: 'Playoff Bracket', icon: GitBranch },
-    { mode: 'embed', label: 'Embed Code', icon: Code }
+    { mode: 'league_builder', label: t('nav.leagueCreator'), icon: Trophy },
+    { mode: 'scheduler', label: t('nav.scheduler'), icon: Clock },
+    { mode: 'calendar', label: t('nav.calendar'), icon: CalendarIcon },
+    { mode: 'bracket', label: t('nav.playoffBracket'), icon: GitBranch },
+    { mode: 'embed', label: t('nav.embedCode'), icon: Code }
   ];
 
   // State
@@ -385,7 +387,7 @@ const App: React.FC = () => {
 
   // Delete game from holding area
   const handleDeleteFromHoldingArea = (gameId: string) => {
-    if (window.confirm("Are you sure you want to delete this game?")) {
+    if (window.confirm(t('gameForm.validationDeleteGame'))) {
       setGamesInHoldingArea(gamesInHoldingArea.filter(g => g.id !== gameId));
     }
   };
@@ -402,7 +404,7 @@ const App: React.FC = () => {
 
   // Game Delete Logic
   const handleDeleteGame = (gameId: string) => {
-    if (window.confirm("Are you sure you want to delete this game?")) {
+    if (window.confirm(t('gameForm.validationDeleteGame'))) {
         setGames(games.filter(g => g.id !== gameId));
     }
   };
@@ -410,17 +412,17 @@ const App: React.FC = () => {
   // Remove All Games Logic
   const handleRemoveAllGames = () => {
     if (games.length === 0) {
-      alert("There are no games to remove.");
+      alert(t('schedule.noGamesToRemove'));
       return;
     }
-    
+
     const confirmed = window.confirm(
-      `Are you sure you want to delete ALL ${games.length} game(s)?\n\nThis action cannot be undone.`
+      t('schedule.removeAllConfirm', { count: games.length })
     );
-    
+
     if (confirmed) {
       setGames([]);
-      alert("All games have been removed.");
+      alert(t('schedule.allGamesRemoved'));
     }
   };
 
@@ -446,10 +448,10 @@ const App: React.FC = () => {
     if (!editingGame) return;
     
     if (!newGameForm.leagueIds || newGameForm.leagueIds.length === 0) {
-      alert("Please select at least one league.");
+      alert(t('gameForm.validationAtLeastOneLeague'));
       return;
     }
-    
+
     const updatedGame: Game = {
       ...editingGame,
       date: newGameForm.date || editingGame.date,
@@ -467,7 +469,7 @@ const App: React.FC = () => {
     };
 
     if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
-      alert("Home and Away teams must be different.");
+      alert(t('gameForm.validationDifferentTeams'));
       return;
     }
 
@@ -488,7 +490,7 @@ const App: React.FC = () => {
     if (!editingGame) return;
 
     if (!newGameForm.leagueIds || newGameForm.leagueIds.length === 0) {
-      alert("Please select at least one league.");
+      alert(t('gameForm.validationAtLeastOneLeague'));
       return;
     }
 
@@ -509,12 +511,12 @@ const App: React.FC = () => {
     };
 
     if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
-      alert("Home and Away teams must be different.");
+      alert(t('gameForm.validationDifferentTeams'));
       return;
     }
 
     if (!scheduleKey) {
-      alert("No published schedule found. Please publish the schedule first using the Publish button.");
+      alert(t('schedule.noPublishedSchedule'));
       return;
     }
 
@@ -533,13 +535,13 @@ const App: React.FC = () => {
     );
     setIsPublishing(false);
     if (!result.ok) {
-      alert(`Publish failed. ${result.reason || 'Check PocketBase URL and rules.'}`);
+      alert(t('schedule.publishFailed', { reason: result.reason || 'Check PocketBase URL and rules.' }));
     }
   };
 
   const handleDateClick = (date: Date) => {
     if (leagues.length === 0) {
-      alert("Please create a league first before scheduling games.");
+      alert(t('schedule.selectLeagueFirst'));
       return;
     }
     const defaultLeague = leagues.find(l => l.teams.some(t => t.id === teams[0]?.id)) || leagues[0];
@@ -555,7 +557,7 @@ const App: React.FC = () => {
 
   const handleAddGameClick = () => {
     if (leagues.length === 0) {
-        alert("Please create a league first before adding games.");
+        alert(t('schedule.createLeagueFirst'));
         return;
     }
     const defaultLeague = leagues.find(l => l.teams.some(t => t.id === teams[0]?.id)) || leagues[0];
@@ -572,19 +574,19 @@ const App: React.FC = () => {
   const handleAddGame = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGameForm.leagueIds || newGameForm.leagueIds.length === 0) {
-        alert("Please select at least one league.");
+        alert(t('gameForm.validationAtLeastOneLeague'));
         return;
     }
     if (!newGameForm.homeTeamId || !newGameForm.awayTeamId) {
-        alert("Please select both a home team and an away team.");
+        alert(t('gameForm.validationSelectBothTeams'));
         return;
     }
     if (!newGameForm.date) {
-        alert("Please select a date.");
+        alert(t('gameForm.validationSelectDate'));
         return;
     }
     if(newGameForm.homeTeamId === newGameForm.awayTeamId) {
-        alert("Home and Away teams must be different.");
+        alert(t('gameForm.validationDifferentTeams'));
         return;
     }
     const game: Game = {
@@ -610,14 +612,14 @@ const App: React.FC = () => {
   // League Handlers
   const handleLeagueCreated = (league: League) => {
       if (leagueLimit && leagues.length >= leagueLimit) {
-        alert(`League limit reached (${leagueLimit}).`);
+        alert(t('league.leagueLimitReached', { limit: leagueLimit }));
         return;
       }
       setLeagues([...leagues, league]);
       // Automatically switch to this league's teams
       setTeams(league.teams);
       setGames([]); // Clear games when switching to a fresh league context
-      alert(`League "${league.name}" created! You can now generate a schedule for it.`);
+      alert(t('league.leagueCreated', { name: league.name }));
       setViewMode('scheduler');
   };
 
@@ -628,7 +630,7 @@ const App: React.FC = () => {
     if (isActiveLeague) {
         setTeams(updatedLeague.teams);
     }
-    alert(`League "${updatedLeague.name}" updated successfully.`);
+    alert(t('league.leagueUpdated', { name: updatedLeague.name }));
   };
 
   const handleLeagueDeleted = (leagueId: string) => {
@@ -661,7 +663,7 @@ const App: React.FC = () => {
     }
 
     if (leagueToDelete) {
-      alert(`League "${leagueToDelete.name}" deleted.`);
+      alert(t('league.leagueDeleted', { name: leagueToDelete.name }));
     }
   };
 
@@ -693,9 +695,9 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-8 text-center max-w-md">
-          <h1 className="text-xl font-semibold text-slate-800">Keycloak config missing</h1>
+          <h1 className="text-xl font-semibold text-slate-800">{t('auth.keycloakConfigMissing')}</h1>
           <p className="text-sm text-slate-600 mt-2">
-            Set the missing environment variables in `.env.local`, then restart the dev server.
+            {t('auth.setMissingEnvVars')}
           </p>
           <div className="mt-4 text-left text-sm text-slate-700 space-y-1">
             {missingKeycloakEnv.map((envKey) => (
@@ -711,11 +713,10 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-700">
         <div className="text-center">
-          <div>Loading authentication...</div>
+          <div>{t('auth.loadingAuthentication')}</div>
           {authTimeout && (
             <div className="mt-3 text-sm text-slate-500">
-              Taking longer than expected. Check that the Keycloak URL is reachable and
-              the realm/client are correct, then refresh the page.
+              {t('auth.takingLonger')}
             </div>
           )}
         </div>
@@ -727,15 +728,15 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-8 text-center max-w-sm">
-          <h1 className="text-xl font-semibold text-slate-800">Sign in required</h1>
+          <h1 className="text-xl font-semibold text-slate-800">{t('auth.signInRequired')}</h1>
           <p className="text-sm text-slate-600 mt-2">
-            Please sign in with your Keycloak account to continue.
+            {t('auth.signInWithKeycloak')}
           </p>
           <button
             className="mt-6 bg-indigo-600 text-white px-4 py-2 rounded-md shadow hover:bg-indigo-700 text-sm font-medium"
             onClick={() => keycloak.login()}
           >
-            Sign in
+            {t('auth.signIn')}
           </button>
         </div>
       </div>
@@ -770,10 +771,10 @@ const App: React.FC = () => {
                       />
                       <div className="text-left">
                         <div className="text-lg font-bold tracking-tight text-slate-900 flex items-center">
-                          <span>Diamond Manager Scheduler</span>
+                          <span>{t('app.title')}</span>
                           <ChevronDown size={16} className="ml-2 text-slate-500" />
                         </div>
-                        <div className="text-xs text-indigo-500 uppercase tracking-wider">Scheduler</div>
+                        <div className="text-xs text-indigo-500 uppercase tracking-wider">{t('app.subtitle')}</div>
                       </div>
                     </button>
                     {showNavMenu && (
@@ -816,7 +817,7 @@ const App: React.FC = () => {
                     ))}
                   </div>
                   <h2 className="text-lg font-semibold text-slate-800 capitalize hidden md:block">
-                      {viewMode === 'league_builder' ? 'League Management' : viewMode === 'scheduler' ? 'Scheduler' : viewMode === 'teams' ? 'Teams' : viewMode === 'embed' ? 'Embed Code' : viewMode === 'help' ? 'Help & Guide' : viewMode === 'bracket' ? 'Playoff Bracket' : 'Calendar'}
+                      {viewMode === 'league_builder' ? t('nav.leagueManagement') : viewMode === 'scheduler' ? t('nav.scheduler') : viewMode === 'teams' ? t('nav.teams') : viewMode === 'embed' ? t('nav.embedCode') : viewMode === 'help' ? t('nav.helpGuide') : viewMode === 'bracket' ? t('nav.playoffBracket') : t('nav.calendar')}
                   </h2>
                 </div>
 
@@ -824,7 +825,7 @@ const App: React.FC = () => {
                   <button
                     onClick={toggleDarkMode}
                     className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
-                    title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+                    title={darkMode ? t('nav.switchToLight') : t('nav.switchToDark')}
                   >
                     {darkMode ? <Sun size={18} /> : <Moon size={18} />}
                   </button>
@@ -841,7 +842,7 @@ const App: React.FC = () => {
                       <div className="px-3 py-2 border-b border-slate-100">
                         <div className="text-sm font-semibold text-slate-800">{userName}</div>
                         <div className="text-[11px] text-slate-400 mt-1">
-                          Org: {orgId || 'none'}
+                          {t('app.orgLabel')}{orgId || 'none'}
                         </div>
                       </div>
                       <div className="py-2">
@@ -852,11 +853,11 @@ const App: React.FC = () => {
                           }}
                           className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
                         >
-                          <span>Teams</span>
+                          <span>{t('nav.teams')}</span>
                           <Users size={16} />
                         </button>
                         <div className="px-3 pb-2 space-y-2">
-                          <div className="text-xs font-semibold text-slate-500 uppercase">Schedule</div>
+                          <div className="text-xs font-semibold text-slate-500 uppercase">{t('app.schedule')}</div>
                           <button
                             onClick={async () => {
                               setShowUserMenu(false);
@@ -865,7 +866,7 @@ const App: React.FC = () => {
                             }}
                             className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
                           >
-                            <span>Load Published Schedule</span>
+                            <span>{t('app.loadPublishedSchedule')}</span>
                             <Send size={16} />
                           </button>
                           <button
@@ -882,7 +883,7 @@ const App: React.FC = () => {
                                 : 'bg-emerald-300 cursor-not-allowed'
                             }`}
                           >
-                            <span>Publish Current Schedule</span>
+                            <span>{t('app.publishCurrentSchedule')}</span>
                             <Send size={16} />
                           </button>
                         </div>
@@ -892,14 +893,14 @@ const App: React.FC = () => {
                           onClick={() => { setShowUserMenu(false); setViewMode('help'); }}
                           className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
                         >
-                          <span>Help & Guide</span>
+                          <span>{t('nav.helpGuide')}</span>
                           <HelpCircle size={16} />
                         </button>
                         <button
                           onClick={() => keycloak.logout()}
                           className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
                         >
-                          <span>Sign out</span>
+                          <span>{t('nav.signOut')}</span>
                           <LogOut size={16} />
                         </button>
                       </div>
@@ -953,12 +954,12 @@ const App: React.FC = () => {
           {viewMode === 'teams' && (
             <TeamList 
               teams={teams}
-              onAddTeam={(t) => {
+              onAddTeam={(newTeam) => {
                 if (teamLimit && teams.length >= teamLimit) {
-                  alert(`Team limit reached (${teamLimit}).`);
+                  alert(t('teams.teamLimitReached', { limit: teamLimit }));
                   return;
                 }
-                setTeams([...teams, t]);
+                setTeams([...teams, newTeam]);
               }}
               onUpdateTeam={handleUpdateTeam}
               onDeleteTeam={(id) => {
@@ -986,7 +987,7 @@ const App: React.FC = () => {
                 leagues={leagues}
                 onLeagueSelected={handleLeagueSelectedForSchedule}
                 onScheduleGenerated={(g) => {
-                    if(confirm("This will replace the current schedule for this view. Continue?")) {
+                    if(confirm(t('schedule.replaceScheduleConfirm'))) {
                         setGames(g);
                         setViewMode('calendar');
                     }
@@ -1020,17 +1021,17 @@ const App: React.FC = () => {
             <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                     <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                        <h3 className="font-bold text-slate-800">Schedule Game</h3>
+                        <h3 className="font-bold text-slate-800">{t('app.scheduleGameTitle')}</h3>
                         <button onClick={() => setShowAddModal(false)}><X size={20} className="text-slate-400 hover:text-slate-600" /></button>
                     </div>
                     <form onSubmit={handleAddGame} className="p-6 space-y-4">
-                        
+
                         {/* League Selection - Multi-select */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Leagues (select one or more)</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">{t('gameForm.leaguesSelect')}</label>
                             <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
                                 {leagues.length === 0 ? (
-                                    <p className="text-sm text-slate-400">No leagues available. Create a league first.</p>
+                                    <p className="text-sm text-slate-400">{t('gameForm.noLeagues')}</p>
                                 ) : (
                                     leagues.map(l => (
                                         <label key={l.id} className="flex items-center space-x-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
@@ -1056,17 +1057,17 @@ const App: React.FC = () => {
 
                         <div className="grid grid-cols-2 gap-4">
                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.date')}</label>
                                 <input required type="date" className="w-full border rounded-md p-2" value={newGameForm.date} onChange={e => setNewGameForm({...newGameForm, date: e.target.value})} />
                              </div>
                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.time')}</label>
                                 <input required type="time" className="w-full border rounded-md p-2" value={newGameForm.time} onChange={e => setNewGameForm({...newGameForm, time: e.target.value})} />
                              </div>
                         </div>
 
                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Game Number</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.gameNumber')}</label>
                             <input
                                 type="text"
                                 className="w-full border rounded-md p-2"
@@ -1077,38 +1078,38 @@ const App: React.FC = () => {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Home Team</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.homeTeam')}</label>
                                 <select required className="w-full border rounded-md p-2" value={newGameForm.homeTeamId || ''} onChange={e => {
                                     setNewGameForm({...newGameForm, homeTeamId: e.target.value});
                                 }}>
-                                    <option value="">Select...</option>
-                                    {formTeams.map((t: Team) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                    <option value="">{t('gameForm.selectDots')}</option>
+                                    {formTeams.map((tm: Team) => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Away Team</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.awayTeam')}</label>
                                 <select required className="w-full border rounded-md p-2" value={newGameForm.awayTeamId || ''} onChange={e => setNewGameForm({...newGameForm, awayTeamId: e.target.value})}>
-                                    <option value="">Select...</option>
-                                    {formTeams.map((t: Team) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                    <option value="">{t('gameForm.selectDots')}</option>
+                                    {formTeams.map((tm: Team) => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
                                 </select>
                             </div>
                         </div>
 
                         <div>
-                             <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+                             <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.location')}</label>
                              {formFields.length > 0 ? (
                                <select className="w-full border rounded-md p-2" value={newGameForm.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})}>
-                                 <option value="">Select field...</option>
+                                 <option value="">{t('gameForm.selectField')}</option>
                                  {formFields.map(f => <option key={f} value={f}>{f}</option>)}
                                </select>
                              ) : (
-                               <input className="w-full border rounded-md p-2" placeholder="Stadium Name" value={newGameForm.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})} />
+                               <input className="w-full border rounded-md p-2" placeholder={t('gameForm.stadiumName')} value={newGameForm.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})} />
                              )}
                         </div>
 
                         <div className="pt-2">
                             <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
-                                Add to Schedule
+                                {t('gameForm.addToSchedule')}
                             </button>
                         </div>
                     </form>
@@ -1141,17 +1142,17 @@ const App: React.FC = () => {
             <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={closeEditModal}>
                 <div className="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
                     <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
-                        <h3 className="font-bold text-slate-800">Edit Game</h3>
+                        <h3 className="font-bold text-slate-800">{t('app.editGameTitle')}</h3>
                         <button onClick={closeEditModal}><X size={20} className="text-slate-400 hover:text-slate-600" /></button>
                     </div>
                     <form onSubmit={handleGameUpdate} className="p-6 space-y-4 overflow-y-auto">
-                        
+
                         {/* League Selection - Multi-select */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Leagues (select one or more)</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">{t('gameForm.leaguesSelect')}</label>
                             <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
                                 {leagues.length === 0 ? (
-                                    <p className="text-sm text-slate-400">No leagues available.</p>
+                                    <p className="text-sm text-slate-400">{t('gameForm.noLeaguesShort')}</p>
                                 ) : (
                                     leagues.map(l => (
                                         <label key={l.id} className="flex items-center space-x-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
@@ -1177,17 +1178,17 @@ const App: React.FC = () => {
 
                         <div className="grid grid-cols-2 gap-4">
                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.date')}</label>
                                 <input required type="date" className="w-full border rounded-md p-2" value={newGameForm.date || editingGame.date} onChange={e => setNewGameForm({...newGameForm, date: e.target.value})} />
                              </div>
                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.time')}</label>
                                 <input required type="time" className="w-full border rounded-md p-2" value={newGameForm.time || editingGame.time} onChange={e => setNewGameForm({...newGameForm, time: e.target.value})} />
                              </div>
                         </div>
 
                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Game Number</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.gameNumber')}</label>
                             <input
                                 type="text"
                                 className="w-full border rounded-md p-2"
@@ -1197,49 +1198,49 @@ const App: React.FC = () => {
                          </div>
 
                         <div>
-                             <label className="block text-sm font-medium text-slate-700 mb-1">Series Name (optional)</label>
-                             <input 
-                                 className="w-full border rounded-md p-2" 
-                                 placeholder="e.g., Semifinal, Final" 
-                                 value={newGameForm.seriesName !== undefined ? newGameForm.seriesName : (editingGame.seriesName || '')} 
-                                 onChange={e => setNewGameForm({...newGameForm, seriesName: e.target.value})} 
+                             <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.seriesName')}</label>
+                             <input
+                                 className="w-full border rounded-md p-2"
+                                 placeholder={t('gameForm.seriesNamePlaceholder')}
+                                 value={newGameForm.seriesName !== undefined ? newGameForm.seriesName : (editingGame.seriesName || '')}
+                                 onChange={e => setNewGameForm({...newGameForm, seriesName: e.target.value})}
                              />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Home Team</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.homeTeam')}</label>
                                 <select required className="w-full border rounded-md p-2" value={newGameForm.homeTeamId || editingGame.homeTeamId || ''} onChange={e => {
                                     setNewGameForm({...newGameForm, homeTeamId: e.target.value});
                                 }}>
-                                    <option value="">Select...</option>
-                                    {editFormTeams.map((t: Team) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                    <option value="">{t('gameForm.selectDots')}</option>
+                                    {editFormTeams.map((tm: Team) => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Away Team</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.awayTeam')}</label>
                                 <select required className="w-full border rounded-md p-2" value={newGameForm.awayTeamId || editingGame.awayTeamId || ''} onChange={e => setNewGameForm({...newGameForm, awayTeamId: e.target.value})}>
-                                    <option value="">Select...</option>
-                                    {editFormTeams.map((t: Team) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                    <option value="">{t('gameForm.selectDots')}</option>
+                                    {editFormTeams.map((tm: Team) => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
                                 </select>
                             </div>
                         </div>
 
                         <div>
-                             <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+                             <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.location')}</label>
                              {editFormFields.length > 0 ? (
                                <select className="w-full border rounded-md p-2" value={newGameForm.location || editingGame.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})}>
-                                 <option value="">Select field...</option>
+                                 <option value="">{t('gameForm.selectField')}</option>
                                  {editFormFields.map(f => <option key={f} value={f}>{f}</option>)}
                                </select>
                              ) : (
-                               <input className="w-full border rounded-md p-2" placeholder="Stadium Name" value={newGameForm.location || editingGame.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})} />
+                               <input className="w-full border rounded-md p-2" placeholder={t('gameForm.stadiumName')} value={newGameForm.location || editingGame.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})} />
                              )}
                         </div>
 
                         {/* Status */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">{t('gameForm.status')}</label>
                             <div className="flex rounded-md border overflow-hidden divide-x flex-wrap">
                                 {(['scheduled', 'live', 'final', 'postponed'] as const).map(s => {
                                     const current = newGameForm.status !== undefined ? newGameForm.status : editingGame.status;
@@ -1251,7 +1252,7 @@ const App: React.FC = () => {
                                             : s === 'postponed'
                                                 ? 'bg-orange-500 text-white'
                                                 : 'bg-indigo-600 text-white';
-                                    const labels: Record<string, string> = { scheduled: 'Scheduled', live: '● Live', final: 'Final', postponed: 'Postponed' };
+                                    const labels: Record<string, string> = { scheduled: t('gameForm.statusScheduled'), live: t('gameForm.statusLive'), final: t('gameForm.statusFinal'), postponed: t('gameForm.statusPostponed') };
                                     return (
                                         <button
                                             key={s}
@@ -1265,7 +1266,7 @@ const App: React.FC = () => {
                                 })}
                             </div>
                             {(newGameForm.status === 'postponed' || (!newGameForm.status && editingGame.status === 'postponed')) && (
-                                <p className="text-xs text-orange-600 mt-1">Change the date/time above to reschedule, then set status back to Scheduled.</p>
+                                <p className="text-xs text-orange-600 mt-1">{t('gameForm.postponedHint')}</p>
                             )}
                         </div>
 

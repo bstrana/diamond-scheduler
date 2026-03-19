@@ -2,6 +2,7 @@ import React, { useMemo, useEffect } from 'react';
 import { Game, Team, League } from '../types';
 import { formatDate, buildGameShareText } from '../utils';
 import { ChevronLeft, ChevronRight, MapPin, Calendar as CalIcon, Clock, ChevronDown, SlidersHorizontal, Radio, Share2, Copy, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface GameBarProps {
   games: Game[];
@@ -45,6 +46,7 @@ const GameBar: React.FC<GameBarProps> = ({
   hideStatusFilter = false,
   includePastDays = 0,
 }) => {
+  const { t } = useTranslation();
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const [scrollPosition, setScrollPosition] = React.useState(0);
   const [showFiltersMenu, setShowFiltersMenu] = React.useState(false);
@@ -233,7 +235,7 @@ const GameBar: React.FC<GameBarProps> = ({
         >
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              Filters
+              {t('gameBar.filters')}
             </div>
             <div className="relative" ref={filtersMenuRef}>
               <button
@@ -241,7 +243,7 @@ const GameBar: React.FC<GameBarProps> = ({
                 className="flex items-center space-x-2 rounded-md px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100"
               >
                 <SlidersHorizontal size={16} />
-                <span>Filter Menu</span>
+                <span>{t('gameBar.filterMenu')}</span>
                 <ChevronDown size={14} className="text-slate-500" />
               </button>
               {showFiltersMenu && (
@@ -254,7 +256,7 @@ const GameBar: React.FC<GameBarProps> = ({
                   {/* Status Filter */}
                   {!hideStatusFilter && (
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-slate-500">Game Status</div>
+                      <div className="text-xs font-semibold text-slate-500">{t('gameBar.gameStatus')}</div>
                       <select
                         value={selectedStatus}
                         onChange={(e) => onStatusFilterChange(e.target.value)}
@@ -269,11 +271,11 @@ const GameBar: React.FC<GameBarProps> = ({
                           '--tw-ring-color': 'var(--embed-primary, #4f46e5)'
                         } as React.CSSProperties}
                       >
-                        <option value="all">All Statuses</option>
+                        <option value="all">{t('gameBar.allStatuses')}</option>
                         <option disabled>──────────</option>
-                        <option value="scheduled">Scheduled</option>
-                        <option value="live">Live</option>
-                        <option value="final">Final</option>
+                        <option value="scheduled">{t('gameBar.statusScheduled')}</option>
+                        <option value="live">{t('gameBar.statusLive')}</option>
+                        <option value="final">{t('gameBar.statusFinal')}</option>
                       </select>
                     </div>
                   )}
@@ -281,7 +283,7 @@ const GameBar: React.FC<GameBarProps> = ({
                   {/* League Filter */}
                   {leagues.length > 0 && !hideLeagueFilter && (
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-slate-500">League</div>
+                      <div className="text-xs font-semibold text-slate-500">{t('gameBar.league')}</div>
                       <select
                         value={selectedLeagueId}
                         onChange={(e) => onLeagueFilterChange(e.target.value)}
@@ -296,7 +298,7 @@ const GameBar: React.FC<GameBarProps> = ({
                           '--tw-ring-color': 'var(--embed-primary, #4f46e5)'
                         } as React.CSSProperties}
                       >
-                        <option value="all">All Leagues</option>
+                        <option value="all">{t('gameBar.allLeagues')}</option>
                         <option disabled>──────────</option>
                         {leagues.map(l => (
                           <option key={l.id} value={l.id}>{l.name}</option>
@@ -308,7 +310,7 @@ const GameBar: React.FC<GameBarProps> = ({
                   {/* Category Filter */}
                   {categories.length > 0 && !hideCategoryFilter && (
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-slate-500">Category</div>
+                      <div className="text-xs font-semibold text-slate-500">{t('gameBar.category')}</div>
                       <select
                         value={selectedCategory}
                         onChange={(e) => onCategoryFilterChange(e.target.value)}
@@ -323,7 +325,7 @@ const GameBar: React.FC<GameBarProps> = ({
                           '--tw-ring-color': 'var(--embed-primary, #4f46e5)'
                         } as React.CSSProperties}
                       >
-                        <option value="all">All Categories</option>
+                        <option value="all">{t('gameBar.allCategories')}</option>
                         <option disabled>──────────</option>
                         {categories.map(cat => (
                           <option key={cat} value={cat}>{cat}</option>
@@ -335,7 +337,7 @@ const GameBar: React.FC<GameBarProps> = ({
                   {/* Team Filter */}
                   {!hideTeamFilter && (
                     <div className="space-y-1">
-                      <div className="text-xs font-semibold text-slate-500">Team</div>
+                      <div className="text-xs font-semibold text-slate-500">{t('gameBar.team')}</div>
                       <select
                         value={selectedTeamId}
                         onChange={(e) => onTeamFilterChange(e.target.value)}
@@ -350,7 +352,7 @@ const GameBar: React.FC<GameBarProps> = ({
                           '--tw-ring-color': 'var(--embed-primary, #4f46e5)'
                         } as React.CSSProperties}
                       >
-                        <option value="all">All Teams</option>
+                        <option value="all">{t('gameBar.allTeams')}</option>
                         <option disabled>──────────</option>
                         {teams.map(t => (
                           <option key={t.id} value={t.id}>{t.city} {t.name}</option>
@@ -379,7 +381,7 @@ const GameBar: React.FC<GameBarProps> = ({
             border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)',
             boxShadow: 'var(--embed-card-shadow, 0 10px 15px -3px rgba(0, 0, 0, 0.1))'
           }}
-          title="Scroll Left"
+          title={t('gameBar.scrollLeft')}
         >
           <ChevronLeft
             size={20}
@@ -395,7 +397,7 @@ const GameBar: React.FC<GameBarProps> = ({
             border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)',
             boxShadow: 'var(--embed-card-shadow, 0 10px 15px -3px rgba(0, 0, 0, 0.1))'
           }}
-          title="Scroll Right"
+          title={t('gameBar.scrollRight')}
         >
           <ChevronRight
             size={20}
@@ -421,8 +423,8 @@ const GameBar: React.FC<GameBarProps> = ({
               >
                 <div className="text-center">
                   <CalIcon size={48} className="mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">No games found</p>
-                  <p className="text-sm">Try adjusting your filters</p>
+                  <p className="text-lg font-medium">{t('gameBar.noGamesFound')}</p>
+                  <p className="text-sm">{t('gameBar.tryAdjustingFilters')}</p>
                 </div>
               </div>
             ) : (
@@ -536,7 +538,7 @@ const GameBar: React.FC<GameBarProps> = ({
                         cursor: 'pointer',
                         lineHeight: 0,
                       }}
-                      title="Share game"
+                      title={t('gameBar.shareGame')}
                     >
                       <Share2 size={13} />
                     </button>
@@ -584,7 +586,7 @@ const GameBar: React.FC<GameBarProps> = ({
                             ? <Check size={14} style={{ color: '#16a34a', flexShrink: 0 }} />
                             : <Copy size={14} style={{ flexShrink: 0 }} />
                           }
-                          {copiedGameId === game.id ? 'Copied!' : 'Copy text'}
+                          {copiedGameId === game.id ? t('common.copied') : t('gameBar.copyText')}
                         </button>
                       </div>
                     )}
@@ -619,7 +621,7 @@ const GameBar: React.FC<GameBarProps> = ({
                             <div className="mb-1">{renderStatusBadge(game.status)}</div>
                           ) : isToday ? (
                             <div className="text-xs bg-white/20 px-2 py-1 rounded-full font-semibold mb-1">
-                              TODAY
+                              {t('gameBar.today')}
                             </div>
                           ) : null}
                           {!isLive && !isFinal && !isPostponed && (
@@ -666,7 +668,7 @@ const GameBar: React.FC<GameBarProps> = ({
                               onClick={e => e.stopPropagation()}
                               className="flex items-center space-x-1 text-xs font-semibold mt-0.5"
                               style={{ color: isLive ? '#22c55e' : 'var(--embed-primary, #4f46e5)' }}
-                              title="Watch Live Stream"
+                              title={t('gameBar.watchLiveStream')}
                             >
                               <Radio size={10} />
                               <span>Watch</span>

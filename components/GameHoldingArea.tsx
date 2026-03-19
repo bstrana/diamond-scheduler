@@ -2,6 +2,7 @@ import React from 'react';
 import { Game, Team, League } from '../types';
 import { ChevronDown, ChevronUp, Clock, MapPin, Hash, X } from 'lucide-react';
 import { formatDate } from '../utils';
+import { useTranslation } from 'react-i18next';
 
 interface GameHoldingAreaProps {
   games: Game[];
@@ -20,6 +21,7 @@ const GameHoldingArea: React.FC<GameHoldingAreaProps> = ({
   onGameRemove,
   onGameClick
 }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = React.useState(false);
 
   const getTeam = (id: string) => teams.find(t => t.id === id);
@@ -69,7 +71,7 @@ const GameHoldingArea: React.FC<GameHoldingAreaProps> = ({
         className="w-full flex items-center justify-between p-3 hover:bg-slate-200 transition-colors rounded-t-lg"
       >
         <div className="flex items-center space-x-2">
-          <span className="font-semibold text-slate-700">Games in Edit Mode</span>
+          <span className="font-semibold text-slate-700">{t('holdingArea.title')}</span>
           {games.length > 0 && (
             <span className="bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full">
               {games.length}
@@ -91,8 +93,8 @@ const GameHoldingArea: React.FC<GameHoldingAreaProps> = ({
         >
           {games.length === 0 ? (
             <div className="text-center py-8 text-slate-400 text-sm">
-              <p>No games in edit mode</p>
-              <p className="text-xs mt-1">Drag games here or use the "Move to Holding Area" button</p>
+              <p>{t('holdingArea.empty')}</p>
+              <p className="text-xs mt-1">{t('holdingArea.emptyHint')}</p>
             </div>
           ) : (
             <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-2" style={{ width: '100%' }}>
@@ -177,7 +179,7 @@ const GameHoldingArea: React.FC<GameHoldingAreaProps> = ({
                       onGameRemove(game.id);
                     }}
                     className="p-0.5 text-red-600 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                    title="Remove from holding area"
+                    title={t('holdingArea.remove')}
                   >
                     <X size={12} />
                   </button>

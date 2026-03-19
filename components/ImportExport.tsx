@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { Game, Team } from '../types';
 import { Upload, Download, Calendar } from 'lucide-react';
 import { generateUUID } from '../utils';
+import { useTranslation } from 'react-i18next';
 
 interface ImportExportProps {
   teams: Team[];
@@ -18,6 +19,7 @@ const ImportExport: React.FC<ImportExportProps> = ({
   variant = 'buttons',
   onAfterAction
 }) => {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,13 +58,13 @@ const ImportExport: React.FC<ImportExportProps> = ({
 
         if (newGames.length > 0) {
           onImportGames(newGames);
-          alert(`Successfully imported ${newGames.length} games.`);
+          alert(t('importExport.importSuccess', { count: newGames.length }));
         } else {
-            alert("No matching teams found. Ensure Team Names match your roster.");
+            alert(t('importExport.noMatchingTeams'));
         }
         onAfterAction?.();
       } catch (err) {
-        alert("Failed to parse CSV.");
+        alert(t('importExport.parseFailed'));
       }
     };
     reader.readAsText(file);
@@ -166,28 +168,28 @@ const ImportExport: React.FC<ImportExportProps> = ({
           onChange={handleFileUpload}
           className="hidden"
         />
-        <button 
+        <button
           onClick={() => {
             fileInputRef.current?.click();
             onAfterAction?.();
           }}
           className={menuButtonClass}
         >
-          <span>Import CSV</span>
+          <span>{t('importExport.importCsv')}</span>
           <Upload size={16} />
         </button>
-        <button 
+        <button
           onClick={downloadCSV}
           className={menuButtonClass}
         >
-          <span>Export CSV</span>
+          <span>{t('importExport.exportCsv')}</span>
           <Download size={16} />
         </button>
-        <button 
+        <button
           onClick={downloadICS}
           className={menuButtonClass}
         >
-          <span>Export ICS</span>
+          <span>{t('importExport.exportIcs')}</span>
           <Calendar size={16} />
         </button>
       </div>
@@ -203,26 +205,26 @@ const ImportExport: React.FC<ImportExportProps> = ({
         onChange={handleFileUpload}
         className="hidden"
       />
-      <button 
+      <button
         onClick={() => fileInputRef.current?.click()}
         className="flex items-center space-x-2 px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md text-sm font-medium transition-colors"
       >
         <Upload size={16} />
-        <span>Import CSV</span>
+        <span>{t('importExport.importCsv')}</span>
       </button>
-      <button 
+      <button
         onClick={downloadCSV}
         className="flex items-center space-x-2 px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md text-sm font-medium transition-colors"
       >
         <Download size={16} />
-        <span>Export CSV</span>
+        <span>{t('importExport.exportCsv')}</span>
       </button>
-      <button 
+      <button
         onClick={downloadICS}
         className="flex items-center space-x-2 px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md text-sm font-medium transition-colors"
       >
         <Calendar size={16} />
-        <span>Export ICS</span>
+        <span>{t('importExport.exportIcs')}</span>
       </button>
     </div>
   );
