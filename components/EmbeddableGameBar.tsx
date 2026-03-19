@@ -80,13 +80,6 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
     };
   }, [dataOverride]);
 
-  const handleGameClick = (game: Game) => {
-    const home = teams.find(t => t.id === game.homeTeamId);
-    const away = teams.find(t => t.id === game.awayTeamId);
-    const seriesInfo = game.seriesName ? `\nSeries: ${game.seriesName}` : '';
-    alert(`${game.date} @ ${game.time}\n${away?.name || 'Unknown'} vs ${home?.name || 'Unknown'}\nLocation: ${game.location}${seriesInfo}`);
-  };
-
   // Hide filters if a single team is selected (for single team website embeds)
   const hideFilters = !!initialTeamId;
 
@@ -137,7 +130,6 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
         selectedTeamId={selectedTeamId}
         selectedLeagueId={selectedLeagueId}
         selectedCategory={selectedCategory}
-        onGameClick={handleGameClick}
         onTeamFilterChange={setSelectedTeamId}
         onLeagueFilterChange={setSelectedLeagueId}
         onCategoryFilterChange={setSelectedCategory}

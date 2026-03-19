@@ -11,7 +11,7 @@ interface GameBarProps {
   selectedLeagueId: string;
   selectedCategory: string;
   selectedStatus: string;
-  onGameClick: (game: Game) => void;
+  onGameClick?: (game: Game) => void;
   onTeamFilterChange: (id: string) => void;
   onLeagueFilterChange: (id: string) => void;
   onCategoryFilterChange: (category: string) => void;
@@ -458,8 +458,8 @@ const GameBar: React.FC<GameBarProps> = ({
                 return (
                   <div
                     key={game.id}
-                    onClick={() => onGameClick(game)}
-                    className="flex-shrink-0 w-72 mx-2 rounded-lg p-4 transition-all cursor-pointer group"
+                    onClick={onGameClick ? () => onGameClick(game) : undefined}
+                    className={`flex-shrink-0 w-72 mx-2 rounded-lg p-4 transition-all group${onGameClick ? ' cursor-pointer' : ''}`}
                     style={{
                       position: 'relative',
                       overflow: 'hidden',
