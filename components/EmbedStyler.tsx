@@ -186,20 +186,35 @@ const EmbedStyler: React.FC<EmbedStylerProps> = ({ onStyleChange, initialStyles 
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Background Color</label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="color"
-                  value={styles.backgroundColor}
-                  onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
-                  className="w-12 h-10 border border-slate-300 rounded cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={styles.backgroundColor}
-                  onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
-                  className="flex-1 border border-slate-300 rounded-md px-2 py-1.5 text-sm"
-                  placeholder="#f8fafc"
-                />
+              <div className="flex flex-col space-y-2">
+                <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={styles.backgroundColor === 'transparent'}
+                    onChange={(e) =>
+                      handleStyleChange('backgroundColor', e.target.checked ? 'transparent' : '#f8fafc')
+                    }
+                    className="rounded"
+                  />
+                  Transparent (blend with page)
+                </label>
+                {styles.backgroundColor !== 'transparent' && (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="color"
+                      value={styles.backgroundColor}
+                      onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
+                      className="w-12 h-10 border border-slate-300 rounded cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={styles.backgroundColor}
+                      onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
+                      className="flex-1 border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                      placeholder="#f8fafc"
+                    />
+                  </div>
+                )}
               </div>
             </div>
             <div>

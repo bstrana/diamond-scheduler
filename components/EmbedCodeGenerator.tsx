@@ -141,13 +141,16 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     const finalHeight = height || defaultHeight;
     const borderColor = embedStyles?.borderColor || '#e2e8f0';
     const borderRadius = embedStyles?.borderRadius || '8px';
-    return `<iframe 
-  src="${embedUrl}" 
-  width="100%" 
-  height="${finalHeight}px" 
-  frameborder="0" 
-  scrolling="auto"
-  style="border: 1px solid ${borderColor}; border-radius: ${borderRadius};">
+    const isTransparentBg = embedStyles?.backgroundColor === 'transparent';
+    const transparencyAttr = isTransparentBg ? '\n  allowtransparency="true"' : '';
+    const bgStyle = isTransparentBg ? 'background: transparent; ' : '';
+    return `<iframe
+  src="${embedUrl}"
+  width="100%"
+  height="${finalHeight}px"
+  frameborder="0"
+  scrolling="auto"${transparencyAttr}
+  style="${bgStyle}border: 1px solid ${borderColor}; border-radius: ${borderRadius};">
 </iframe>`;
   }, [embedUrl, height, embedView, embedStyles]);
 
