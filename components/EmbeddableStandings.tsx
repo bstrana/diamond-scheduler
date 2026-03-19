@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { League, Team, Game } from '../types';
-import { buildStandingsShareText } from '../utils';
+import { buildStandingsShareText, copyToClipboard } from '../utils';
 import { Share2, Copy, Check } from 'lucide-react';
 import * as storageApi from '../services/storage';
 import { useTranslation } from 'react-i18next';
@@ -348,7 +348,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
                 onClick={async () => {
                   const leagueLabel = league.name + (league.category ? ` – ${league.category}` : '');
                   const text = buildStandingsShareText(standings, leagueLabel);
-                  await navigator.clipboard.writeText(text);
+                  await copyToClipboard(text);
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }}
@@ -388,7 +388,8 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
         overflow: 'hidden',
         boxShadow: 'var(--embed-card-shadow, 0 1px 3px 0 rgba(0,0,0,0.08))',
       }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9em' }}>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+        <table style={{ width: '100%', minWidth: '480px', borderCollapse: 'collapse', fontSize: '0.9em' }}>
           <thead>
             <tr style={{ background: 'var(--embed-primary, #4f46e5)', color: '#fff' }}>
               <th style={{ ...thStyle, textAlign: 'left', paddingLeft: '14px', width: '28px' }}>#</th>
@@ -472,6 +473,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Footer */}

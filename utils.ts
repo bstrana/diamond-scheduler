@@ -5,6 +5,26 @@ export const generateUUID = (): string => {
   return crypto.randomUUID();
 };
 
+/**
+ * Copies text to clipboard with a fallback for iframe/non-secure contexts
+ * where navigator.clipboard may be unavailable.
+ */
+export async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.setAttribute('readonly', '');
+    el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    try { document.execCommand('copy'); } catch { /* ignore */ }
+    document.body.removeChild(el);
+  }
+}
+
 // Input validation utilities
 const MAX_NAME_LENGTH = 100;
 const MAX_CATEGORY_LENGTH = 50;

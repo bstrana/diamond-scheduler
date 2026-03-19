@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect } from 'react';
 import { Game, Team, League } from '../types';
-import { formatDate, buildGameShareText } from '../utils';
-import { ChevronLeft, ChevronRight, MapPin, Calendar as CalIcon, Clock, ChevronDown, SlidersHorizontal, Radio, Share2, Copy, Check } from 'lucide-react';
+import { formatDate, buildGameShareText, copyToClipboard } from '../utils';
+import { ChevronLeft, ChevronRight, MapPin, Calendar as CalIcon, Clock, ChevronDown, SlidersHorizontal, Radio, Share2, Copy, Check, Maximize2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface GameBarProps {
@@ -54,6 +54,12 @@ const GameBar: React.FC<GameBarProps> = ({
   const [shareGameId, setShareGameId] = React.useState<string | null>(null);
   const [copiedGameId, setCopiedGameId] = React.useState<string | null>(null);
   const sharePopoverRef = React.useRef<HTMLDivElement>(null);
+  const [touchedCardId, setTouchedCardId] = React.useState<string | null>(null);
+  const [fullscreenGame, setFullscreenGame] = React.useState<Game | null>(null);
+  const [storyCopied, setStoryCopied] = React.useState(false);
+  const isTouchDevice = React.useMemo(() =>
+    typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0),
+  []);
 
   // Get cutoff date string for filtering
   const cutoffDate = new Date();
@@ -187,6 +193,13 @@ const GameBar: React.FC<GameBarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [shareGameId]);
 
+  useEffect(() => {
+    if (!touchedCardId) return;
+    const clear = () => setTouchedCardId(null);
+    document.addEventListener('touchstart', clear, { passive: true });
+    return () => document.removeEventListener('touchstart', clear);
+  }, [touchedCardId]);
+
   const renderStatusBadge = (status: Game['status']) => {
     if (status === 'live') {
       return (
@@ -216,7 +229,144 @@ const GameBar: React.FC<GameBarProps> = ({
     return null;
   };
 
+  // ── Fullscreen story overlay ──────────────────────────────────────────────
+  const renderStoryOverlay = () => {
+    if (!fullscreenGame) return null;
+    const g = fullscreenGame;
+    const home = getTeam(g.homeTeamId);
+    const away = getTeam(g.awayTeamId);
+    const gameLeagues = getGameLeagues(g);
+    if (!home || !away) return null;
+
+    const isLive = g.status === 'live';
+    const isFinal = g.status === 'final';
+    const hasScore = (isLive || isFinal) && g.scores != null;
+    const awayWon = hasScore && g.scores!.away > g.scores!.home;
+    const homeWon = hasScore && g.scores!.home > g.scores!.away;
+    const gameDate = new Date(g.date + 'T00:00:00');
+    const dateFmt = gameDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    const league = gameLeagues[0];
+
+    // Build gradient from team colors
+    const awayColor = away.primaryColor || '#4f46e5';
+    const homeColor = home.primaryColor || '#7c3aed';
+    const bg = `linear-gradient(135deg, ${awayColor}cc 0%, #0f172a 50%, ${homeColor}cc 100%)`;
+
+    const TeamBlock = ({ team, score, won }: { team: Team; score: number | null; won: boolean }) => (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flex: 1 }}>
+        {team.logoUrl ? (
+          <img src={team.logoUrl} alt={team.name} style={{ width: '72px', height: '72px', objectFit: 'contain', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))' }} />
+        ) : (
+          <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: team.primaryColor || '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.75rem', boxShadow: '0 4px 16px rgba(0,0,0,0.4)' }}>⚾</div>
+        )}
+        <span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem', textShadow: '0 2px 4px rgba(0,0,0,0.6)', textAlign: 'center' }}>{team.abbreviation}</span>
+        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', textAlign: 'center' }}>{team.city}</span>
+        {hasScore && score !== null && (
+          <span style={{ color: won ? '#4ade80' : '#fff', fontSize: '2.5rem', fontWeight: 800, lineHeight: 1, textShadow: won ? '0 0 20px rgba(74,222,128,0.5)' : '0 2px 8px rgba(0,0,0,0.5)' }}>{score}</span>
+        )}
+      </div>
+    );
+
+    return (
+      <div
+        style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)' }}
+        onClick={() => setFullscreenGame(null)}
+      >
+        {/* Story card */}
+        <div
+          style={{ position: 'relative', width: '100%', maxWidth: '360px', margin: '0 16px', borderRadius: '20px', overflow: 'hidden', background: bg, boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Cover image overlay */}
+          {league?.coverImageUrl && (
+            <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${league.coverImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.12, pointerEvents: 'none' }} />
+          )}
+
+          {/* Header */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 16px 0' }}>
+            {league?.logoUrl && (
+              <img src={league.logoUrl} alt={league.name} style={{ width: '32px', height: '32px', objectFit: 'contain', borderRadius: '6px' }} />
+            )}
+            <span style={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600, fontSize: '0.85rem', flex: 1 }}>{league?.shortName || league?.name || ''}</span>
+            {isLive && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#22c55e', color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#fff', display: 'inline-block' }} />LIVE
+              </span>
+            )}
+            {isFinal && <span style={{ background: '#334155', color: '#fff', fontSize: '0.7rem', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>FINAL</span>}
+            <button onClick={() => setFullscreenGame(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', padding: 0 }}>
+              <X size={14} />
+            </button>
+          </div>
+
+          {/* Series / Game info */}
+          {(g.seriesName || g.gameNumber) && (
+            <div style={{ textAlign: 'center', padding: '8px 16px 0', color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem' }}>
+              {g.seriesName}{g.seriesName && g.gameNumber ? ` · ` : ''}{g.gameNumber ? `#${g.gameNumber}` : ''}
+            </div>
+          )}
+
+          {/* Teams & Score */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '24px 20px' }}>
+            <TeamBlock team={away} score={hasScore ? g.scores!.away : null} won={awayWon} />
+            <div style={{ color: 'rgba(255,255,255,0.5)', fontWeight: 700, fontSize: '1.25rem', flexShrink: 0, paddingBottom: hasScore ? '40px' : '0' }}>
+              {hasScore ? '–' : '@'}
+            </div>
+            <TeamBlock team={home} score={hasScore ? g.scores!.home : null} won={homeWon} />
+          </div>
+
+          {/* Details */}
+          <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '6px', padding: '0 20px 16px', color: 'rgba(255,255,255,0.75)', fontSize: '0.8rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <CalIcon size={13} style={{ flexShrink: 0 }} />
+              <span>{dateFmt}{!hasScore && g.time ? ` · ${g.time}` : ''}</span>
+            </div>
+            {g.location && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <MapPin size={13} style={{ flexShrink: 0 }} />
+                <span>{g.location}</span>
+              </div>
+            )}
+            {g.recap && (
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', margin: '4px 0 0', lineHeight: 1.4 }}>{g.recap}</p>
+            )}
+          </div>
+
+          {/* Action row */}
+          <div style={{ position: 'relative', display: 'flex', gap: '8px', padding: '0 16px 16px' }}>
+            <button
+              onClick={async () => {
+                const text = buildGameShareText(g, home, away, gameLeagues.map(l => l.shortName || l.name));
+                await copyToClipboard(text);
+                setStoryCopied(true);
+                setTimeout(() => setStoryCopied(false), 2000);
+              }}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px', borderRadius: '10px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
+            >
+              {storyCopied ? <Check size={14} /> : <Copy size={14} />}
+              {storyCopied ? t('common.copied') : t('gameBar.copyText')}
+            </button>
+            {g.streamUrl && (
+              <a href={g.streamUrl} target="_blank" rel="noopener noreferrer"
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px', borderRadius: '10px', background: '#22c55e', color: '#fff', fontSize: '0.8rem', fontWeight: 600, textDecoration: 'none' }}
+                onClick={e => e.stopPropagation()}
+              >
+                <Radio size={14} />Watch Live
+              </a>
+            )}
+          </div>
+
+          {/* Branding */}
+          <div style={{ position: 'relative', textAlign: 'center', padding: '0 16px 14px', color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', letterSpacing: '0.05em' }}>
+            DIAMOND MANAGER SCHEDULER
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
+    <>
     <div
       className="h-full flex flex-col rounded-xl shadow-sm"
       style={{
@@ -461,6 +611,10 @@ const GameBar: React.FC<GameBarProps> = ({
                   <div
                     key={game.id}
                     onClick={onGameClick ? () => onGameClick(game) : undefined}
+                    onTouchStart={(e) => {
+                      e.stopPropagation();
+                      setTouchedCardId(game.id);
+                    }}
                     className={`flex-shrink-0 w-72 mx-2 rounded-lg p-4 transition-all group${onGameClick ? ' cursor-pointer' : ''}`}
                     style={{
                       position: 'relative',
@@ -520,7 +674,7 @@ const GameBar: React.FC<GameBarProps> = ({
                       />
                     )}
 
-                    {/* Share button — top-right corner of card */}
+                    {/* Share button — top-right corner of card (mouse hover) */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -542,6 +696,36 @@ const GameBar: React.FC<GameBarProps> = ({
                     >
                       <Share2 size={13} />
                     </button>
+
+                    {/* Mobile expand/story button — bottom-right, visible on touch */}
+                    {isTouchDevice && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFullscreenGame(game);
+                          setTouchedCardId(null);
+                        }}
+                        style={{
+                          position: 'absolute',
+                          bottom: '6px',
+                          right: '6px',
+                          padding: '5px',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--embed-primary, #4f46e5)',
+                          border: 'none',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          lineHeight: 0,
+                          zIndex: 10,
+                          opacity: touchedCardId === game.id ? 1 : 0,
+                          transition: 'opacity 0.2s',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                        }}
+                        title="View fullscreen"
+                      >
+                        <Maximize2 size={14} />
+                      </button>
+                    )}
 
                     {/* Share popover */}
                     {shareGameId === game.id && (
@@ -566,7 +750,7 @@ const GameBar: React.FC<GameBarProps> = ({
                               away,
                               gameLeagues.map(l => l.shortName || l.name)
                             );
-                            await navigator.clipboard.writeText(text);
+                            await copyToClipboard(text);
                             setCopiedGameId(game.id);
                             setTimeout(() => setCopiedGameId(null), 2000);
                           }}
@@ -912,6 +1096,8 @@ const GameBar: React.FC<GameBarProps> = ({
         </div>
       </div>
     </div>
+    {renderStoryOverlay()}
+    </>
   );
 };
 
