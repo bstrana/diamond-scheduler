@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Game, Team, CalendarDay, League } from '../types';
 import { WEEKDAYS } from '../constants';
-import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio, Printer, SlidersHorizontal, MoreVertical, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio, Printer, SlidersHorizontal, MoreVertical, X, CheckSquare2, Square } from 'lucide-react';
 import { formatDate } from '../utils';
 import { useTranslation } from 'react-i18next';
 import PrintSchedule from './PrintSchedule';
@@ -79,6 +79,21 @@ const Calendar: React.FC<CalendarProps> = ({
   const [showPrint, setShowPrint] = useState(false);
   const [showFiltersDrawer, setShowFiltersDrawer] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedGameIds, setSelectedGameIds] = useState<Set<string>>(new Set());
+
+  const toggleSelectMode = () => {
+    setIsSelectMode(p => !p);
+    setSelectedGameIds(new Set());
+  };
+  const toggleGameSelect = (gameId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedGameIds(prev => {
+      const next = new Set(prev);
+      if (next.has(gameId)) next.delete(gameId); else next.add(gameId);
+      return next;
+    });
+  };
 
   const categories = useMemo(
     () => Array.from(new Set(leagues.map(l => l.category).filter(Boolean))) as string[],
@@ -192,6 +207,16 @@ const Calendar: React.FC<CalendarProps> = ({
             : t('app.upcomingSchedule')}
         </h2>
         <div className="flex items-center gap-1 shrink-0">
+          {/* Select button (list view only) */}
+          {viewType === 'list' && (
+            <button
+              onClick={toggleSelectMode}
+              className={`p-2 rounded-lg transition-colors ${isSelectMode ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
+              title={isSelectMode ? t('calendar.cancelSelect', 'Cancel') : t('calendar.selectGames', 'Select')}
+            >
+              <CheckSquare2 size={18} />
+            </button>
+          )}
           {/* Filter button */}
           <button
             onClick={() => setShowFiltersDrawer(true)}
@@ -273,6 +298,16 @@ const Calendar: React.FC<CalendarProps> = ({
               <button onClick={() => onViewTypeChange('grid')} className={`p-1.5 rounded-md transition-all ${viewType === 'grid' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title={t('app.calendarView')}><Grid size={18} /></button>
               <button onClick={() => onViewTypeChange('list')} className={`p-1.5 rounded-md transition-all ${viewType === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title={t('app.listView')}><List size={18} /></button>
             </div>
+          )}
+          {viewType === 'list' && (
+            <button
+              onClick={toggleSelectMode}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${isSelectMode ? 'bg-indigo-600 text-white border-indigo-600' : 'text-slate-600 border-slate-300 hover:bg-slate-100'}`}
+              title={isSelectMode ? t('calendar.cancelSelect', 'Cancel') : t('calendar.selectGames', 'Select')}
+            >
+              <CheckSquare2 size={16} />
+              {isSelectMode ? t('calendar.cancelSelect', 'Cancel') : t('calendar.selectGames', 'Select')}
+            </button>
           )}
           <button onClick={() => setShowPrint(true)} className="no-print p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title={t('app.printPDF')}><Printer size={20} /></button>
           <button onClick={toggleFullscreen} className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title={isFullscreen ? t('app.exitFullscreen') : t('app.enterFullscreen')}>{isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}</button>
@@ -508,12 +543,23 @@ const Calendar: React.FC<CalendarProps> = ({
                                     ? (gameLeagues[0].logoUrl || null)
                                     : null;
 
+                                  const isSelected = selectedGameIds.has(game.id);
                                   return (
                                     <div
                                         key={game.id}
-                                        onClick={() => onGameClick(game)}
-                                        className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer relative group overflow-hidden"
+                                        onClick={(e) => isSelectMode ? toggleGameSelect(game.id, e) : onGameClick(game)}
+                                        className={`bg-white p-4 rounded-xl border shadow-sm transition-all cursor-pointer relative group overflow-hidden ${isSelected ? 'border-indigo-400 ring-2 ring-indigo-200 shadow-md' : 'border-slate-200 hover:shadow-md'}`}
                                     >
+                                        {/* Bulk-select checkbox */}
+                                        {isSelectMode && (
+                                          <div className="absolute top-3 left-3 z-20" onClick={(e) => toggleGameSelect(game.id, e)}>
+                                            {isSelected
+                                              ? <CheckSquare2 size={20} className="text-indigo-600" />
+                                              : <Square size={20} className="text-slate-400" />
+                                            }
+                                          </div>
+                                        )}
+
                                         {/* League cover image as card background */}
                                         {leagueCoverImage && (
                                           <div
@@ -538,7 +584,7 @@ const Calendar: React.FC<CalendarProps> = ({
                                         )}
                                         
                                         {/* Content wrapper with relative positioning */}
-                                        <div className="relative z-10">
+                                        <div className={`relative z-10${isSelectMode ? ' pl-7' : ''}`}>
                                         {/* Time / Status badge in top right corner */}
                                         <div className="absolute top-4 right-4 flex flex-col items-end space-y-1">
                                             {game.status === 'live' ? (
@@ -736,6 +782,20 @@ const Calendar: React.FC<CalendarProps> = ({
                   ))
               )}
           </div>
+      )}
+
+      {/* Bulk select action bar */}
+      {isSelectMode && (
+        <div className="shrink-0 flex items-center justify-between px-4 py-3 bg-indigo-600 text-white">
+          <span className="text-sm font-semibold">
+            {selectedGameIds.size > 0
+              ? `${selectedGameIds.size} ${t('calendar.selected', 'selected')}`
+              : t('calendar.selectGamesHint', 'Tap games to select')}
+          </span>
+          <button onClick={toggleSelectMode} className="text-sm font-medium px-3 py-1 bg-white/20 rounded-lg hover:bg-white/30 transition-colors">
+            {t('calendar.cancelSelect', 'Cancel')}
+          </button>
+        </div>
       )}
 
       {/* ── Mobile Filters Drawer (bottom sheet) ──────────────────────────── */}

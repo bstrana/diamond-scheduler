@@ -386,6 +386,27 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
         overflow: 'hidden',
         boxShadow: 'var(--embed-card-shadow, 0 1px 3px 0 rgba(0,0,0,0.08))',
       }}>
+        {/* Capture header — league logo + name, shown inside the card so it's included in save-as-image */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '10px',
+          padding: '10px 14px',
+          background: 'var(--embed-primary, #4f46e5)',
+          color: '#fff',
+        }}>
+          {league.logoUrl && (
+            <img
+              src={league.logoUrl}
+              alt={league.name}
+              style={{ width: '28px', height: '28px', objectFit: 'contain', flexShrink: 0 }}
+            />
+          )}
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '0.95em', lineHeight: 1.2 }}>
+              {league.name}{league.category ? ` – ${league.category}` : ''}
+            </div>
+            <div style={{ fontSize: '0.72em', opacity: 0.75 }}>{t('standings.title')}</div>
+          </div>
+        </div>
         <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
         <table style={{ width: '100%', minWidth: '480px', borderCollapse: 'collapse', fontSize: '0.9em' }}>
           <thead>
