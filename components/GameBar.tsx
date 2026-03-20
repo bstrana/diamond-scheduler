@@ -61,6 +61,7 @@ const GameBar: React.FC<GameBarProps> = ({
   const [copiedGameId, setCopiedGameId] = React.useState<string | null>(null);
   const sharePopoverRef = React.useRef<HTMLDivElement>(null);
   const [fullscreenGame, setFullscreenGame] = React.useState<Game | null>(null);
+  const [tappedCardId, setTappedCardId] = React.useState<string | null>(null);
 
   // Get cutoff date string for filtering
   const cutoffDate = new Date();
@@ -194,6 +195,31 @@ const GameBar: React.FC<GameBarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [shareGameId]);
 
+  // Sync overlay state when the user exits fullscreen via ESC
+  useEffect(() => {
+    const onFsChange = () => {
+      if (!document.fullscreenElement) setFullscreenGame(null);
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
+
+  const openFullscreen = async (game: Game) => {
+    setFullscreenGame(game);
+    try {
+      if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch { /* fullscreen not available */ }
+  };
+
+  const closeFullscreen = async () => {
+    setFullscreenGame(null);
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+    } catch { /* ignore */ }
+  };
+
 
   const renderStatusBadge = (status: Game['status']) => {
     if (status === 'live') {
@@ -264,7 +290,7 @@ const GameBar: React.FC<GameBarProps> = ({
     const overlay = (
       <div
         style={{ position: 'fixed', inset: 0, zIndex: 9999, overflowY: 'auto', background: 'rgba(0,0,0,0.9)' }}
-        onClick={() => setFullscreenGame(null)}
+        onClick={() => closeFullscreen()}
       >
         {/* Inner wrapper — flex centering that allows card to scroll out of view on small viewports */}
         <div style={{ minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
@@ -359,8 +385,10 @@ const GameBar: React.FC<GameBarProps> = ({
       </div>
     );
 
-    // Portal to document.body so it escapes any iframe scroll container or overflow clipping
-    return ReactDOM.createPortal(overlay, document.body);
+    // Portal into the fullscreen element when available (makes it work inside embedded iframes),
+    // otherwise fall back to document.body.
+    const portalTarget = (document.fullscreenElement as HTMLElement) || document.body;
+    return ReactDOM.createPortal(overlay, portalTarget);
   };
 
   return (
@@ -600,8 +628,11 @@ const GameBar: React.FC<GameBarProps> = ({
                 return (
                   <div
                     key={game.id}
-                    onClick={onGameClick ? () => onGameClick(game) : undefined}
-                    className={`flex-shrink-0 w-72 mx-2 rounded-lg p-4 transition-all group${onGameClick ? ' cursor-pointer' : ''}`}
+                    onClick={() => {
+                      setTappedCardId(prev => prev === game.id ? null : game.id);
+                      if (onGameClick) onGameClick(game);
+                    }}
+                    className={`flex-shrink-0 w-72 mx-2 rounded-lg p-4 transition-all group cursor-pointer`}
                     style={{
                       position: 'relative',
                       overflow: 'hidden',
@@ -683,31 +714,32 @@ const GameBar: React.FC<GameBarProps> = ({
                       <Share2 size={13} />
                     </button>
 
-                    {/* Expand/story button — small screens only */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFullscreenGame(game);
-                      }}
-                      className="md:hidden"
-                      style={{
-                        position: 'absolute',
-                        bottom: '6px',
-                        right: '6px',
-                        padding: '6px',
-                        borderRadius: '8px',
-                        backgroundColor: 'var(--embed-primary, #4f46e5)',
-                        border: 'none',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        lineHeight: 0,
-                        zIndex: 10,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                      }}
-                      title="View fullscreen"
-                    >
-                      <Maximize2 size={14} />
-                    </button>
+                    {/* Expand/story button — shown only when card is tapped */}
+                    {tappedCardId === game.id && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openFullscreen(game);
+                        }}
+                        style={{
+                          position: 'absolute',
+                          bottom: '6px',
+                          right: '6px',
+                          padding: '6px',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--embed-primary, #4f46e5)',
+                          border: 'none',
+                          color: '#fff',
+                          cursor: 'pointer',
+                          lineHeight: 0,
+                          zIndex: 10,
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                        }}
+                        title="View fullscreen"
+                      >
+                        <Maximize2 size={14} />
+                      </button>
+                    )}
 
                     {/* Share popover */}
                     {shareGameId === game.id && (
