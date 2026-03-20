@@ -1,7 +1,8 @@
 import React, { useMemo, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { Game, Team, League } from '../types';
 import { formatDate, buildGameShareText, copyToClipboard } from '../utils';
-import { ChevronLeft, ChevronRight, MapPin, Calendar as CalIcon, Clock, ChevronDown, SlidersHorizontal, Radio, Share2, Copy, Check, Maximize2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Calendar as CalIcon, Clock, ChevronDown, SlidersHorizontal, Radio, Share2, Copy, Check, Maximize2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface GameBarProps {
@@ -246,7 +247,6 @@ const GameBar: React.FC<GameBarProps> = ({
     const gameDate = new Date(g.date + 'T00:00:00');
     const dateFmt = gameDate.toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric' });
 
-    // Build gradient from team colors
     const awayColor = away.primaryColor || '#4f46e5';
     const homeColor = home.primaryColor || '#7c3aed';
     const bg = `linear-gradient(135deg, ${awayColor}cc 0%, #0f172a 50%, ${homeColor}cc 100%)`;
@@ -266,32 +266,23 @@ const GameBar: React.FC<GameBarProps> = ({
       </div>
     );
 
-    return (
+    const overlay = (
       <div
-        style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.9)', padding: '16px' }}
+        style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.9)', padding: '16px' }}
         onClick={() => setFullscreenGame(null)}
       >
-        {/* Story card */}
         <div
           style={{ position: 'relative', width: '100%', maxWidth: '380px', borderRadius: '24px', overflow: 'hidden', background: bg, boxShadow: '0 32px 80px rgba(0,0,0,0.7)' }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Cover image overlay */}
+          {/* Cover image */}
           {gameLeagues[0]?.coverImageUrl && (
             <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${gameLeagues[0].coverImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: 0.1, pointerEvents: 'none' }} />
           )}
 
-          {/* Close button — top-right */}
-          <button
-            onClick={() => setFullscreenGame(null)}
-            style={{ position: 'absolute', top: '14px', right: '14px', background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', padding: 0, zIndex: 10, backdropFilter: 'blur(4px)' }}
-          >
-            <X size={16} />
-          </button>
-
           {/* League header */}
           {gameLeagues.length > 0 && (
-            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '4px', padding: '18px 56px 12px 18px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '4px', padding: '18px 18px 12px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
               {gameLeagues.map(league => (
                 <div key={league.id} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {league.logoUrl && (
@@ -308,27 +299,23 @@ const GameBar: React.FC<GameBarProps> = ({
             </div>
           )}
 
-          {/* Status badge row */}
+          {/* Status badge */}
           {(isLive || isFinal || isPostponed) && (
             <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', paddingTop: '14px' }}>
               {isLive && (
                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#22c55e', color: '#fff', fontSize: '0.8rem', fontWeight: 700, padding: '5px 14px', borderRadius: '999px', letterSpacing: '0.06em' }}>
-                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#fff', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />LIVE
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#fff', display: 'inline-block' }} />LIVE
                 </span>
               )}
-              {isFinal && (
-                <span style={{ background: '#334155', color: '#fff', fontSize: '0.8rem', fontWeight: 700, padding: '5px 14px', borderRadius: '999px', letterSpacing: '0.06em' }}>FINAL</span>
-              )}
-              {isPostponed && (
-                <span style={{ background: '#f97316', color: '#fff', fontSize: '0.8rem', fontWeight: 700, padding: '5px 14px', borderRadius: '999px', letterSpacing: '0.06em' }}>POSTPONED</span>
-              )}
+              {isFinal && <span style={{ background: '#334155', color: '#fff', fontSize: '0.8rem', fontWeight: 700, padding: '5px 14px', borderRadius: '999px', letterSpacing: '0.06em' }}>FINAL</span>}
+              {isPostponed && <span style={{ background: '#f97316', color: '#fff', fontSize: '0.8rem', fontWeight: 700, padding: '5px 14px', borderRadius: '999px', letterSpacing: '0.06em' }}>POSTPONED</span>}
             </div>
           )}
 
-          {/* Series / Game info */}
-          {(g.seriesName || g.gameNumber) && (
+          {/* Series name only (no game number) */}
+          {g.seriesName && (
             <div style={{ textAlign: 'center', padding: '10px 16px 0', color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem' }}>
-              {g.seriesName}{g.seriesName && g.gameNumber ? ` · ` : ''}{g.gameNumber ? `#${g.gameNumber}` : ''}
+              {g.seriesName}
             </div>
           )}
 
@@ -358,7 +345,7 @@ const GameBar: React.FC<GameBarProps> = ({
             )}
           </div>
 
-          {/* Action row — Watch Live only (copy removed) */}
+          {/* Watch Live */}
           {g.streamUrl && (
             <div style={{ position: 'relative', padding: '0 16px 18px' }}>
               <a href={g.streamUrl} target="_blank" rel="noopener noreferrer"
@@ -377,6 +364,9 @@ const GameBar: React.FC<GameBarProps> = ({
         </div>
       </div>
     );
+
+    // Portal to document.body so it escapes any iframe scroll container or overflow clipping
+    return ReactDOM.createPortal(overlay, document.body);
   };
 
   return (
