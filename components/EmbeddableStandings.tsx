@@ -268,104 +268,6 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
         </div>
       )}
 
-      {/* Header — share button only; league title is inside the card for image capture */}
-      <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'flex-end' }}>
-        {/* Share button */}
-        <div ref={shareMenuRef} style={{ position: 'relative', flexShrink: 0 }}>
-          <button
-            onClick={() => setShowShareMenu(p => !p)}
-            title={t('standings.shareStandings')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '5px',
-              borderRadius: '6px',
-              border: '1px solid var(--embed-border, #e2e8f0)',
-              backgroundColor: 'var(--embed-card-bg, #ffffff)',
-              color: 'var(--embed-text, #64748b)',
-              cursor: 'pointer',
-              lineHeight: 0,
-            }}
-          >
-            <Share2 size={15} />
-          </button>
-
-          {showShareMenu && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '30px',
-                right: 0,
-                zIndex: 30,
-                padding: '6px',
-                width: '168px',
-                borderRadius: '8px',
-                border: '1px solid var(--embed-border, #e2e8f0)',
-                backgroundColor: 'var(--embed-card-bg, #ffffff)',
-                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-              }}
-            >
-              <button
-                onClick={async () => {
-                  const leagueLabel = league.name + (league.category ? ` – ${league.category}` : '');
-                  const text = buildStandingsShareText(standings, leagueLabel);
-                  await copyToClipboard(text);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  padding: '6px 8px',
-                  fontSize: '0.8125rem',
-                  color: copied ? '#16a34a' : 'var(--embed-text, #334155)',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--embed-bg, #f8fafc)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-              >
-                {copied
-                  ? <Check size={14} style={{ color: '#16a34a', flexShrink: 0 }} />
-                  : <Copy size={14} style={{ flexShrink: 0 }} />
-                }
-                {copied ? t('common.copied') : t('standings.copyText')}
-              </button>
-              <button
-                onClick={captureStandings}
-                disabled={isCapturing}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  padding: '6px 8px',
-                  fontSize: '0.8125rem',
-                  color: 'var(--embed-text, #334155)',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: isCapturing ? 'default' : 'pointer',
-                  textAlign: 'left',
-                  opacity: isCapturing ? 0.6 : 1,
-                }}
-                onMouseEnter={(e) => { if (!isCapturing) e.currentTarget.style.backgroundColor = 'var(--embed-bg, #f8fafc)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-              >
-                <ImageDown size={14} style={{ flexShrink: 0 }} />
-                {isCapturing ? t('common.saving', 'Saving…') : t('standings.saveAsImage', 'Save as image')}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Table */}
       <div ref={cardRef} style={{
         background: 'var(--embed-card-bg, #fff)',
@@ -482,12 +384,85 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
         </div>
       </div>
 
-      {/* Footer */}
-      {totalGames > 0 && (
-        <p style={{ margin: '8px 0 0', fontSize: '0.73em', color: '#94a3b8', textAlign: 'right' }}>
-          {t('standings.basedOn', { count: totalGames })}
-        </p>
-      )}
+      {/* Footer + share button */}
+      <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {totalGames > 0 ? (
+          <p style={{ margin: 0, fontSize: '0.73em', color: '#94a3b8' }}>
+            {t('standings.basedOn', { count: totalGames })}
+          </p>
+        ) : <span />}
+
+        <div ref={shareMenuRef} style={{ position: 'relative', flexShrink: 0 }}>
+          <button
+            onClick={() => setShowShareMenu(p => !p)}
+            title={t('standings.shareStandings')}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '5px', borderRadius: '6px',
+              border: '1px solid var(--embed-border, #e2e8f0)',
+              backgroundColor: 'var(--embed-card-bg, #ffffff)',
+              color: 'var(--embed-text, #64748b)',
+              cursor: 'pointer', lineHeight: 0,
+            }}
+          >
+            <Share2 size={15} />
+          </button>
+
+          {showShareMenu && (
+            <div style={{
+              position: 'absolute',
+              bottom: '30px',
+              right: 0,
+              zIndex: 30,
+              padding: '6px',
+              width: '168px',
+              borderRadius: '8px',
+              border: '1px solid var(--embed-border, #e2e8f0)',
+              backgroundColor: 'var(--embed-card-bg, #ffffff)',
+              boxShadow: '0 -4px 15px -3px rgba(0,0,0,0.1)',
+            }}>
+              <button
+                onClick={async () => {
+                  const leagueLabel = league.name + (league.category ? ` – ${league.category}` : '');
+                  const text = buildStandingsShareText(standings, leagueLabel);
+                  await copyToClipboard(text);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+                  padding: '6px 8px', fontSize: '0.8125rem',
+                  color: copied ? '#16a34a' : 'var(--embed-text, #334155)',
+                  backgroundColor: 'transparent', border: 'none', borderRadius: '6px',
+                  cursor: 'pointer', textAlign: 'left',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--embed-bg, #f8fafc)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              >
+                {copied ? <Check size={14} style={{ color: '#16a34a', flexShrink: 0 }} /> : <Copy size={14} style={{ flexShrink: 0 }} />}
+                {copied ? t('common.copied') : t('standings.copyText')}
+              </button>
+              <button
+                onClick={captureStandings}
+                disabled={isCapturing}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+                  padding: '6px 8px', fontSize: '0.8125rem',
+                  color: 'var(--embed-text, #334155)',
+                  backgroundColor: 'transparent', border: 'none', borderRadius: '6px',
+                  cursor: isCapturing ? 'default' : 'pointer', textAlign: 'left',
+                  opacity: isCapturing ? 0.6 : 1,
+                }}
+                onMouseEnter={(e) => { if (!isCapturing) e.currentTarget.style.backgroundColor = 'var(--embed-bg, #f8fafc)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              >
+                <ImageDown size={14} style={{ flexShrink: 0 }} />
+                {isCapturing ? t('common.saving', 'Saving…') : t('standings.saveAsImage', 'Save as image')}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
