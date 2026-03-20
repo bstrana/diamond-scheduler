@@ -46,6 +46,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   const [hideStatusFilter, setHideStatusFilter] = useState(false);
   const [hideLeagueName, setHideLeagueName] = useState(false);
   const [hideGameNumber, setHideGameNumber] = useState(false);
+  const [standingsInfoText, setStandingsInfoText] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [showStyler, setShowStyler] = useState(false);
   const [embedStyles, setEmbedStyles] = useState<EmbedStyles | null>(null);
@@ -103,6 +104,9 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     params.set('type', embedView);
     if (selectedLeagueId !== 'all') params.set('league', selectedLeagueId);
     params.set('schedule_key', scheduleKey);
+    if (embedView === 'standings' && standingsInfoText.trim()) {
+      params.set('info_text', standingsInfoText.trim());
+    }
     if (embedView !== 'standings' && embedView !== 'series') {
       if (selectedCategory !== 'all') params.set('category', selectedCategory);
       if (selectedTeamId !== 'all') params.set('team', selectedTeamId);
@@ -143,7 +147,8 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     hideTeamFilter,
     hideStatusFilter,
     hideLeagueName,
-    hideGameNumber
+    hideGameNumber,
+    standingsInfoText,
   ]);
 
   // Generate embed code
@@ -390,10 +395,23 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
             </div>
           )}
 
-          {/* Standings note */}
+          {/* Standings options */}
           {embedView === 'standings' && (
-            <div className="bg-indigo-50 border border-indigo-200 rounded-md p-3 text-sm text-indigo-800">
-              {t('embed.standingsNote')}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.standingsInfoText', 'Info text')}</label>
+                <input
+                  type="text"
+                  value={standingsInfoText}
+                  onChange={(e) => setStandingsInfoText(e.target.value)}
+                  placeholder={t('embed.standingsInfoTextPlaceholder', 'e.g. Last updated: March 2026')}
+                  className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
+                />
+                <p className="text-xs text-slate-500 mt-1">{t('embed.standingsInfoTextHelp', 'Shown at the bottom left of the standings table.')}</p>
+              </div>
+              <div className="bg-indigo-50 border border-indigo-200 rounded-md p-3 text-sm text-indigo-800">
+                {t('embed.standingsNote')}
+              </div>
             </div>
           )}
 
@@ -559,6 +577,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
               <EmbeddableStandings
                 leagueId={selectedLeagueId !== 'all' ? selectedLeagueId : undefined}
                 dataOverride={{ leagues, teams, games }}
+                infoText={standingsInfoText.trim() || undefined}
               />
             ) : embedView === 'series' ? (
               <EmbeddableSeries

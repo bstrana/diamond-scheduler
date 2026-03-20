@@ -27,12 +27,14 @@ interface EmbeddableStandingsProps {
   leagueId?: string;
   dataOverride?: { leagues: League[]; teams: Team[]; games: Game[] } | null;
   scheduleKey?: string;
+  infoText?: string;
 }
 
 const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
   leagueId,
   dataOverride,
   scheduleKey,
+  infoText,
 }) => {
   const { t } = useTranslation();
   const [data, setData] = useState<{ leagues: League[]; teams: Team[]; games: Game[] } | null>(
@@ -385,12 +387,17 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
       </div>
 
       {/* Footer + share button */}
-      <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {totalGames > 0 ? (
-          <p style={{ margin: 0, fontSize: '0.73em', color: '#94a3b8' }}>
-            {t('standings.basedOn', { count: totalGames })}
-          </p>
-        ) : <span />}
+      <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {infoText && (
+            <p style={{ margin: 0, fontSize: '0.78em', color: 'var(--embed-text, #475569)' }}>{infoText}</p>
+          )}
+          {totalGames > 0 && (
+            <p style={{ margin: 0, fontSize: '0.73em', color: '#94a3b8' }}>
+              {t('standings.basedOn', { count: totalGames })}
+            </p>
+          )}
+        </div>
 
         <div ref={shareMenuRef} style={{ position: 'relative', flexShrink: 0 }}>
           <button

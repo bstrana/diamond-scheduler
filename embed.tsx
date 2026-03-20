@@ -24,6 +24,7 @@ const hideTeamFilter = urlParams.get('hide_team_filter') === '1';
 const hideStatusFilter = urlParams.get('hide_status_filter') === '1';
 const hideLeagueName = urlParams.get('hide_league_name') === '1';
 const hideGameNumber = urlParams.get('hide_game_number') === '1';
+const standingsInfoText = urlParams.get('info_text') || undefined;
 
 // Sanitize CSS property values to prevent CSS injection
 const sanitizeCssColor = (value: unknown, fallback: string): string => {
@@ -213,6 +214,7 @@ if (!rootElement) {
             teams: scheduleData.teams,
             games: scheduleData.games
           } : null}
+          infoText={standingsInfoText}
         />
       );
     }
