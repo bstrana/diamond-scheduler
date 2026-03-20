@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Game, Team, CalendarDay, League } from '../types';
 import { WEEKDAYS } from '../constants';
-import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio, Printer } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio, Printer, SlidersHorizontal, MoreVertical, X } from 'lucide-react';
 import { formatDate } from '../utils';
 import { useTranslation } from 'react-i18next';
 import PrintSchedule from './PrintSchedule';
@@ -77,6 +77,14 @@ const Calendar: React.FC<CalendarProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
+  const [showFiltersDrawer, setShowFiltersDrawer] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+
+  const categories = useMemo(
+    () => Array.from(new Set(leagues.map(l => l.category).filter(Boolean))) as string[],
+    [leagues]
+  );
+  const hasActiveFilters = selectedTeamId !== 'all' || selectedLeagueId !== 'all' || selectedCategory !== 'all';
 
   const getTeam = (id: string) => teams.find(t => t.id === id);
   const getLeague = (id?: string) => leagues.find(l => l.id === id);
@@ -176,145 +184,106 @@ const Calendar: React.FC<CalendarProps> = ({
       ref={containerRef}
       className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 rounded-none' : ''}`}
     >
-      {/* Header */}
-      <div className="flex flex-col md:flex-row items-center justify-between p-4 border-b border-slate-200 bg-slate-50 gap-4 shrink-0">
-        
-        {/* Month Navigation (Only for Grid, desktop only) */}
+      {/* ── Mobile Header ──────────────────────────────────────────────────── */}
+      <div className="flex md:hidden items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
+        <h2 className="text-base font-bold text-slate-800 truncate">
+          {viewType === 'grid'
+            ? `${MONTH_NAMES_T[currentDate.getMonth()]} ${currentDate.getFullYear()}`
+            : t('app.upcomingSchedule')}
+        </h2>
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Filter button */}
+          <button
+            onClick={() => setShowFiltersDrawer(true)}
+            className="relative p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+            title="Filters"
+          >
+            <SlidersHorizontal size={18} />
+            {hasActiveFilters && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full" />
+            )}
+          </button>
+          {/* Actions button */}
+          <button
+            onClick={() => setShowActionsMenu(true)}
+            className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+            title="Actions"
+          >
+            <MoreVertical size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Desktop Header ─────────────────────────────────────────────────── */}
+      <div className="hidden md:flex flex-row items-center justify-between p-4 border-b border-slate-200 bg-slate-50 gap-4 shrink-0">
+
+        {/* Month Navigation (grid) / Title (list) */}
         {viewType === 'grid' ? (
-            <>
-                <div className="hidden md:flex items-center space-x-4">
-                    <div className="flex space-x-1">
-                        <button onClick={onPrevMonth} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"><ChevronLeft size={18} /></button>
-                        <button onClick={onNextMonth} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"><ChevronRight size={18} /></button>
-                    </div>
-                    <h2 className="text-xl font-bold text-slate-800">
-                        {MONTH_NAMES_T[currentDate.getMonth()]} {currentDate.getFullYear()}
-                    </h2>
-                </div>
-                <h2 className="text-xl font-bold text-slate-800 md:hidden">{t('app.upcomingSchedule')}</h2>
-            </>
+          <div className="flex items-center space-x-4">
+            <div className="flex space-x-1">
+              <button onClick={onPrevMonth} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"><ChevronLeft size={18} /></button>
+              <button onClick={onNextMonth} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"><ChevronRight size={18} /></button>
+            </div>
+            <h2 className="text-xl font-bold text-slate-800">
+              {MONTH_NAMES_T[currentDate.getMonth()]} {currentDate.getFullYear()}
+            </h2>
+          </div>
         ) : (
-            <h2 className="text-xl font-bold text-slate-800">{t('app.upcomingSchedule')}</h2>
+          <h2 className="text-xl font-bold text-slate-800">{t('app.upcomingSchedule')}</h2>
         )}
 
-        {/* Controls */}
-        <div className="flex items-center space-x-2 w-full md:w-auto justify-end flex-wrap gap-2">
-            
-            {/* League Filter */}
-            {leagues.length > 0 && !hideLeagueFilter && (
-                <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
-                    <Filter size={16} className="text-slate-400" />
-                    <select 
-                        value={selectedLeagueId}
-                        onChange={(e) => onLeagueFilterChange(e.target.value)}
-                        className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
-                    >
-                        <option value="all">{t('app.allLeagues')}</option>
-                        <option disabled>──────────</option>
-                        {leagues.map(l => (
-                            <option key={l.id} value={l.id}>{l.name}</option>
-                        ))}
-                    </select>
-                </div>
-            )}
-
-            {/* Category Filter */}
-            {!hideCategoryFilter && leagues.length > 0 && (() => {
-                const categories = Array.from(new Set(leagues.map(l => l.category).filter(Boolean)));
-                return categories.length > 0 ? (
-                    <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
-                        <Filter size={16} className="text-slate-400" />
-                        <select 
-                            value={selectedCategory}
-                            onChange={(e) => onCategoryFilterChange(e.target.value)}
-                            className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
-                        >
-                            <option value="all">{t('app.allCategories')}</option>
-                            <option disabled>──────────</option>
-                            {categories.map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                        </select>
-                    </div>
-                ) : null;
-            })()}
-            
-            {/* Team Filter */}
-            {!hideTeamFilter && (
+        {/* Desktop Controls */}
+        <div className="flex items-center space-x-2 w-auto justify-end flex-wrap gap-2">
+          {/* League Filter */}
+          {leagues.length > 0 && !hideLeagueFilter && (
             <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
-                <Filter size={16} className="text-slate-400" />
-                <select 
-                    value={selectedTeamId}
-                    onChange={(e) => onTeamFilterChange(e.target.value)}
-                    className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
-                >
-                    <option value="all">{t('app.allTeams')}</option>
-                    <option disabled>──────────</option>
-                    {teams.map(t => (
-                        <option key={t.id} value={t.id}>{t.city} {t.name}</option>
-                    ))}
-                </select>
+              <Filter size={16} className="text-slate-400" />
+              <select value={selectedLeagueId} onChange={(e) => onLeagueFilterChange(e.target.value)} className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none">
+                <option value="all">{t('app.allLeagues')}</option>
+                <option disabled>──────────</option>
+                {leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
             </div>
-            )}
-
-            {/* View Toggle - desktop only, hidden when locked to list view */}
-            {!hideViewToggle && <div className="hidden md:flex bg-slate-200 p-1 rounded-lg">
-                <button 
-                    onClick={() => onViewTypeChange('grid')}
-                    className={`p-1.5 rounded-md transition-all ${viewType === 'grid' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                    title={t('app.calendarView')}
-                >
-                    <Grid size={18} />
-                </button>
-                <button
-                    onClick={() => onViewTypeChange('list')}
-                    className={`p-1.5 rounded-md transition-all ${viewType === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                    title={t('app.listView')}
-                >
-                    <List size={18} />
-                </button>
-            </div>}
-
-            {/* Print Schedule */}
-            <button
-              onClick={() => setShowPrint(true)}
-              className="no-print p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-              title={t('app.printPDF')}
-            >
-              <Printer size={20} />
+          )}
+          {/* Category Filter */}
+          {!hideCategoryFilter && categories.length > 0 && (
+            <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
+              <Filter size={16} className="text-slate-400" />
+              <select value={selectedCategory} onChange={(e) => onCategoryFilterChange(e.target.value)} className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none">
+                <option value="all">{t('app.allCategories')}</option>
+                <option disabled>──────────</option>
+                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+          )}
+          {/* Team Filter */}
+          {!hideTeamFilter && (
+            <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
+              <Filter size={16} className="text-slate-400" />
+              <select value={selectedTeamId} onChange={(e) => onTeamFilterChange(e.target.value)} className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none">
+                <option value="all">{t('app.allTeams')}</option>
+                <option disabled>──────────</option>
+                {teams.map(t => <option key={t.id} value={t.id}>{t.city} {t.name}</option>)}
+              </select>
+            </div>
+          )}
+          {/* View Toggle */}
+          {!hideViewToggle && (
+            <div className="flex bg-slate-200 p-1 rounded-lg">
+              <button onClick={() => onViewTypeChange('grid')} className={`p-1.5 rounded-md transition-all ${viewType === 'grid' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title={t('app.calendarView')}><Grid size={18} /></button>
+              <button onClick={() => onViewTypeChange('list')} className={`p-1.5 rounded-md transition-all ${viewType === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title={t('app.listView')}><List size={18} /></button>
+            </div>
+          )}
+          <button onClick={() => setShowPrint(true)} className="no-print p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title={t('app.printPDF')}><Printer size={20} /></button>
+          <button onClick={toggleFullscreen} className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title={isFullscreen ? t('app.exitFullscreen') : t('app.enterFullscreen')}>{isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}</button>
+          {onAddGame && (
+            <button onClick={onAddGame} className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors" title={t('app.addGameBtn')}>
+              <PlusCircle size={16} /><span>{t('app.addGameBtn')}</span>
             </button>
-
-            {/* Full Screen Toggle */}
-            <button
-              onClick={toggleFullscreen}
-              className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-              title={isFullscreen ? t('app.exitFullscreen') : t('app.enterFullscreen')}
-            >
-              {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
-            </button>
-
-            {/* Add Game */}
-            {onAddGame && (
-              <button
-                onClick={onAddGame}
-                className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-                title={t('app.addGameBtn')}
-              >
-                <PlusCircle size={16} />
-                <span>{t('app.addGameBtn')}</span>
-              </button>
-            )}
-
-            {/* Remove All Games */}
-            {onRemoveAllGames && (
-              <button
-                onClick={onRemoveAllGames}
-                className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title={t('app.removeAllGames')}
-              >
-                <Trash2 size={20} />
-              </button>
-            )}
+          )}
+          {onRemoveAllGames && (
+            <button onClick={onRemoveAllGames} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title={t('app.removeAllGames')}><Trash2 size={20} /></button>
+          )}
         </div>
       </div>
 
@@ -756,6 +725,100 @@ const Calendar: React.FC<CalendarProps> = ({
                   ))
               )}
           </div>
+      )}
+
+      {/* ── Mobile Filters Drawer (bottom sheet) ──────────────────────────── */}
+      {showFiltersDrawer && (
+        <div className="md:hidden fixed inset-0 z-[70]">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowFiltersDrawer(false)} />
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl">
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-slate-200" /></div>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+              <h3 className="font-semibold text-slate-800">Filters</h3>
+              <button onClick={() => setShowFiltersDrawer(false)} className="p-1 text-slate-400 hover:text-slate-600"><X size={20} /></button>
+            </div>
+            <div className="p-5 space-y-4 pb-8">
+              {leagues.length > 0 && !hideLeagueFilter && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">{t('app.allLeagues').replace('All ', '')}</label>
+                  <select value={selectedLeagueId} onChange={(e) => onLeagueFilterChange(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <option value="all">{t('app.allLeagues')}</option>
+                    {leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  </select>
+                </div>
+              )}
+              {!hideCategoryFilter && categories.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">{t('app.allCategories').replace('All ', '')}</label>
+                  <select value={selectedCategory} onChange={(e) => onCategoryFilterChange(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <option value="all">{t('app.allCategories')}</option>
+                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
+                </div>
+              )}
+              {!hideTeamFilter && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">{t('app.allTeams').replace('All ', '')}</label>
+                  <select value={selectedTeamId} onChange={(e) => onTeamFilterChange(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <option value="all">{t('app.allTeams')}</option>
+                    {teams.map(t => <option key={t.id} value={t.id}>{t.city} {t.name}</option>)}
+                  </select>
+                </div>
+              )}
+              <button onClick={() => setShowFiltersDrawer(false)} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold mt-2">
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile Actions Bottom Sheet ────────────────────────────────────── */}
+      {showActionsMenu && (
+        <div className="md:hidden fixed inset-0 z-[70]">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowActionsMenu(false)} />
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl">
+            <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-slate-200" /></div>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+              <h3 className="font-semibold text-slate-800">Actions</h3>
+              <button onClick={() => setShowActionsMenu(false)} className="p-1 text-slate-400 hover:text-slate-600"><X size={20} /></button>
+            </div>
+            <div className="p-3 pb-10">
+              {/* View toggle rows */}
+              {!hideViewToggle && (
+                <div className="flex gap-2 px-1 py-2 mb-1">
+                  <button onClick={() => { onViewTypeChange('grid'); setShowActionsMenu(false); }} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-colors ${viewType === 'grid' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                    <Grid size={16} />{t('app.calendarView')}
+                  </button>
+                  <button onClick={() => { onViewTypeChange('list'); setShowActionsMenu(false); }} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-colors ${viewType === 'list' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                    <List size={16} />{t('app.listView')}
+                  </button>
+                </div>
+              )}
+              {onAddGame && (
+                <button onClick={() => { onAddGame(); setShowActionsMenu(false); }} className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-indigo-50 transition-colors">
+                  <PlusCircle size={20} className="text-indigo-600 shrink-0" />
+                  <span className="font-medium text-slate-700">{t('app.addGameBtn')}</span>
+                </button>
+              )}
+              <button onClick={() => { setShowPrint(true); setShowActionsMenu(false); }} className="no-print flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-slate-50 transition-colors">
+                <Printer size={20} className="text-slate-500 shrink-0" />
+                <span className="font-medium text-slate-700">{t('app.printPDF')}</span>
+              </button>
+              <button onClick={() => { toggleFullscreen(); setShowActionsMenu(false); }} className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-slate-50 transition-colors">
+                {isFullscreen ? <Minimize size={20} className="text-slate-500 shrink-0" /> : <Maximize size={20} className="text-slate-500 shrink-0" />}
+                <span className="font-medium text-slate-700">{isFullscreen ? t('app.exitFullscreen') : t('app.enterFullscreen')}</span>
+              </button>
+              {onRemoveAllGames && (
+                <button onClick={() => { onRemoveAllGames(); setShowActionsMenu(false); }} className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-red-50 transition-colors">
+                  <Trash2 size={20} className="text-red-500 shrink-0" />
+                  <span className="font-medium text-red-600">{t('app.removeAllGames')}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {showPrint && (
