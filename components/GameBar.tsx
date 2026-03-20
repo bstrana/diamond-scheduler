@@ -55,11 +55,7 @@ const GameBar: React.FC<GameBarProps> = ({
   const [shareGameId, setShareGameId] = React.useState<string | null>(null);
   const [copiedGameId, setCopiedGameId] = React.useState<string | null>(null);
   const sharePopoverRef = React.useRef<HTMLDivElement>(null);
-  const [touchedCardId, setTouchedCardId] = React.useState<string | null>(null);
   const [fullscreenGame, setFullscreenGame] = React.useState<Game | null>(null);
-  const isTouchDevice = React.useMemo(() =>
-    typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0),
-  []);
 
   // Get cutoff date string for filtering
   const cutoffDate = new Date();
@@ -193,12 +189,6 @@ const GameBar: React.FC<GameBarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [shareGameId]);
 
-  useEffect(() => {
-    if (!touchedCardId) return;
-    const clear = () => setTouchedCardId(null);
-    document.addEventListener('touchstart', clear, { passive: true });
-    return () => document.removeEventListener('touchstart', clear);
-  }, [touchedCardId]);
 
   const renderStatusBadge = (status: Game['status']) => {
     if (status === 'live') {
@@ -268,11 +258,13 @@ const GameBar: React.FC<GameBarProps> = ({
 
     const overlay = (
       <div
-        style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.9)', padding: '16px' }}
+        style={{ position: 'fixed', inset: 0, zIndex: 9999, overflowY: 'auto', background: 'rgba(0,0,0,0.9)' }}
         onClick={() => setFullscreenGame(null)}
       >
+        {/* Inner wrapper — flex centering that allows card to scroll out of view on small viewports */}
+        <div style={{ minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
         <div
-          style={{ position: 'relative', width: '100%', maxWidth: '380px', borderRadius: '24px', overflow: 'hidden', background: bg, boxShadow: '0 32px 80px rgba(0,0,0,0.7)' }}
+          style={{ position: 'relative', width: '100%', maxWidth: '380px', borderRadius: '24px', overflow: 'hidden', background: bg, boxShadow: '0 32px 80px rgba(0,0,0,0.7)', flexShrink: 0 }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Cover image */}
@@ -362,6 +354,7 @@ const GameBar: React.FC<GameBarProps> = ({
             DIAMOND MANAGER SCHEDULER
           </div>
         </div>
+        </div>{/* end inner flex wrapper */}
       </div>
     );
 
@@ -615,10 +608,6 @@ const GameBar: React.FC<GameBarProps> = ({
                   <div
                     key={game.id}
                     onClick={onGameClick ? () => onGameClick(game) : undefined}
-                    onTouchStart={(e) => {
-                      e.stopPropagation();
-                      setTouchedCardId(game.id);
-                    }}
                     className={`flex-shrink-0 w-72 mx-2 rounded-lg p-4 transition-all group${onGameClick ? ' cursor-pointer' : ''}`}
                     style={{
                       position: 'relative',
@@ -701,14 +690,13 @@ const GameBar: React.FC<GameBarProps> = ({
                       <Share2 size={13} />
                     </button>
 
-                    {/* Expand/story button — always visible on touch devices, hover on desktop */}
+                    {/* Expand/story button — small screens only */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setFullscreenGame(game);
-                        setTouchedCardId(null);
                       }}
-                      className={isTouchDevice ? '' : 'opacity-0 group-hover:opacity-100 transition-opacity'}
+                      className="md:hidden"
                       style={{
                         position: 'absolute',
                         bottom: '6px',
