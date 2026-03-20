@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import html2canvas from 'html2canvas';
 import { Game, Team, League } from '../types';
 import { formatDate, buildGameShareText, copyToClipboard } from '../utils';
-import { ChevronLeft, ChevronRight, MapPin, Calendar as CalIcon, Clock, ChevronDown, SlidersHorizontal, Radio, Share2, Copy, Check, Maximize2, ImageDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Calendar as CalIcon, Clock, ChevronDown, SlidersHorizontal, Radio, Share2, Copy, Check, Maximize2, ImageDown, Link } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface GameBarProps {
@@ -65,6 +65,7 @@ const GameBar: React.FC<GameBarProps> = ({
   const [tappedCardId, setTappedCardId] = React.useState<string | null>(null);
   const cardRef = React.useRef<HTMLDivElement>(null);
   const [isCapturing, setIsCapturing] = React.useState(false);
+  const [copiedOverlayLink, setCopiedOverlayLink] = React.useState(false);
 
   // Get cutoff date string for filtering
   const cutoffDate = new Date();
@@ -413,8 +414,7 @@ const GameBar: React.FC<GameBarProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', flexShrink: 0 }} />
                 <span style={{ color: '#4ade80', fontWeight: 700 }}>
-                  {overlayInnInfo?.half === 'top' ? '▲ ' : overlayInnInfo?.half === 'bottom' ? '▼ ' : ''}
-                  {t('gameBar.inning', 'Inning')} {overlayInnInfo?.inning ?? '—'}
+                  {t('gameBar.inning', 'Inning')} {overlayInnInfo?.inning ?? '—'}{overlayInnInfo?.half === 'top' ? ' ▲' : overlayInnInfo?.half === 'bottom' ? ' ▼' : ''}
                 </span>
               </div>
             ) : (
@@ -423,7 +423,7 @@ const GameBar: React.FC<GameBarProps> = ({
                 <span>{dateFmt}{!hasScore && g.time ? ` · ${g.time}` : ''}</span>
               </div>
             )}
-            {g.location && (
+            {!isLive && g.location && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                 <MapPin size={13} style={{ flexShrink: 0 }} />
                 <span>{g.location}</span>
@@ -440,30 +440,59 @@ const GameBar: React.FC<GameBarProps> = ({
           </div>
         </div>
 
-        {/* Save as image button — outside the card so it's not captured */}
-        <button
-          onClick={(e) => { e.stopPropagation(); captureCard(g); }}
-          disabled={isCapturing}
-          style={{
-            marginTop: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 20px',
-            borderRadius: '999px',
-            border: 'none',
-            backgroundColor: isCapturing ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.15)',
-            color: '#fff',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            cursor: isCapturing ? 'default' : 'pointer',
-            backdropFilter: 'blur(6px)',
-            transition: 'background-color 0.15s',
-          }}
-        >
-          <ImageDown size={16} />
-          {isCapturing ? 'Saving…' : 'Save as image'}
-        </button>
+        {/* Buttons — outside the card so they're not captured */}
+        <div style={{ marginTop: '16px', display: 'flex', gap: '10px' }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); captureCard(g); }}
+            disabled={isCapturing}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 20px',
+              borderRadius: '999px',
+              border: 'none',
+              backgroundColor: isCapturing ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.15)',
+              color: '#fff',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: isCapturing ? 'default' : 'pointer',
+              backdropFilter: 'blur(6px)',
+              transition: 'background-color 0.15s',
+            }}
+          >
+            <ImageDown size={16} />
+            {isCapturing ? 'Saving…' : 'Save as image'}
+          </button>
+          {g.streamUrl && (
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                await copyToClipboard(g.streamUrl!);
+                setCopiedOverlayLink(true);
+                setTimeout(() => setCopiedOverlayLink(false), 2000);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 20px',
+                borderRadius: '999px',
+                border: 'none',
+                backgroundColor: copiedOverlayLink ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.15)',
+                color: copiedOverlayLink ? '#4ade80' : '#fff',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                backdropFilter: 'blur(6px)',
+                transition: 'background-color 0.15s, color 0.15s',
+              }}
+            >
+              {copiedOverlayLink ? <Check size={16} /> : <Link size={16} />}
+              {copiedOverlayLink ? 'Copied!' : 'Copy link'}
+            </button>
+          )}
+        </div>
         </div>{/* end inner flex wrapper */}
       </div>
     );
@@ -892,7 +921,7 @@ const GameBar: React.FC<GameBarProps> = ({
                         <div>
                           {isLive ? (
                             <div className="text-sm font-bold leading-tight" style={{ color: '#16a34a' }}>
-                              {innInfo?.half === 'top' ? '▲ ' : innInfo?.half === 'bottom' ? '▼ ' : ''}{t('gameBar.inn', 'Inn')} {innInfo?.inning ?? '—'}
+                              {t('gameBar.inn', 'Inn')} {innInfo?.inning ?? '—'}{innInfo?.half === 'top' ? ' ▲' : innInfo?.half === 'bottom' ? ' ▼' : ''}
                             </div>
                           ) : (
                             <>
