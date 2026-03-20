@@ -163,6 +163,8 @@
     "allStatuses": "All Statuses",
     "filters": "Filters",
     "filterMenu": "Filter Menu",
+    "showFilters": "Show filters",
+    "hideFilters": "Hide filters",
     "gameStatus": "Game Status",
     "statusScheduled": "Scheduled",
     "statusLive": "Live",
