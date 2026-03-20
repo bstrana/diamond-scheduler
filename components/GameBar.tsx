@@ -400,24 +400,28 @@ const GameBar: React.FC<GameBarProps> = ({
           )}
 
           {/* Teams & Score */}
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '24px 20px' }}>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: '8px', padding: '24px 20px' }}>
             <TeamBlock team={away} score={hasScore ? g.scores!.away : null} won={awayWon} />
-            <div style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 700, fontSize: '1.4rem', flexShrink: 0, paddingBottom: hasScore ? '48px' : '0' }}>
-              {hasScore ? '–' : '@'}
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+              {/* Separator — vertically centred inside the logo height */}
+              <div style={{ height: '96px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 700, fontSize: '1.4rem' }}>
+                  {hasScore ? '–' : '@'}
+                </span>
+              </div>
+              {/* Inning — sits at abbreviation level */}
+              {isLive && overlayInnInfo && overlayInnInfo.inning !== '—' && (
+                <div style={{ color: '#4ade80', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+                  {overlayInnInfo.inning}{overlayInnInfo.half === 'top' ? ' ▲' : overlayInnInfo.half === 'bottom' ? ' ▼' : ''}
+                </div>
+              )}
             </div>
             <TeamBlock team={home} score={hasScore ? g.scores!.home : null} won={homeWon} />
           </div>
 
           {/* Details */}
           <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '7px', padding: '0 20px 18px', color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem' }}>
-            {isLive ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', flexShrink: 0 }} />
-                <span style={{ color: '#4ade80', fontWeight: 700 }}>
-                  {t('gameBar.inning', 'Inning')} {overlayInnInfo?.inning ?? '—'}{overlayInnInfo?.half === 'top' ? ' ▲' : overlayInnInfo?.half === 'bottom' ? ' ▼' : ''}
-                </span>
-              </div>
-            ) : (
+            {!isLive && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                 <CalIcon size={13} style={{ flexShrink: 0 }} />
                 <span>{dateFmt}{!hasScore && g.time ? ` · ${g.time}` : ''}</span>
