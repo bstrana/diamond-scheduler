@@ -291,9 +291,9 @@ const GameBar: React.FC<GameBarProps> = ({
             </div>
           )}
 
-          {/* Status badge */}
-          {(isLive || isFinal || isPostponed) && (
-            <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', paddingTop: '14px' }}>
+          {/* Status badge + optional Watch Live link */}
+          {(isLive || isFinal || isPostponed || g.streamUrl) && (
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', paddingTop: '14px', flexWrap: 'wrap' }}>
               {isLive && (
                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#22c55e', color: '#fff', fontSize: '0.8rem', fontWeight: 700, padding: '5px 14px', borderRadius: '999px', letterSpacing: '0.06em' }}>
                   <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#fff', display: 'inline-block' }} />LIVE
@@ -301,6 +301,14 @@ const GameBar: React.FC<GameBarProps> = ({
               )}
               {isFinal && <span style={{ background: '#334155', color: '#fff', fontSize: '0.8rem', fontWeight: 700, padding: '5px 14px', borderRadius: '999px', letterSpacing: '0.06em' }}>FINAL</span>}
               {isPostponed && <span style={{ background: '#f97316', color: '#fff', fontSize: '0.8rem', fontWeight: 700, padding: '5px 14px', borderRadius: '999px', letterSpacing: '0.06em' }}>POSTPONED</span>}
+              {g.streamUrl && (
+                <a href={g.streamUrl} target="_blank" rel="noopener noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#4ade80', fontSize: '0.78rem', fontWeight: 600, textDecoration: 'none' }}
+                >
+                  <Radio size={12} />{t('gameBar.watchLiveStream')}
+                </a>
+              )}
             </div>
           )}
 
@@ -336,18 +344,6 @@ const GameBar: React.FC<GameBarProps> = ({
               <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.75rem', margin: '4px 0 0', lineHeight: 1.45 }}>{g.recap}</p>
             )}
           </div>
-
-          {/* Watch Live */}
-          {g.streamUrl && (
-            <div style={{ position: 'relative', padding: '0 16px 18px' }}>
-              <a href={g.streamUrl} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', padding: '11px', borderRadius: '12px', background: '#22c55e', color: '#fff', fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none' }}
-                onClick={e => e.stopPropagation()}
-              >
-                <Radio size={15} />{t('gameBar.watchLiveStream')}
-              </a>
-            </div>
-          )}
 
           {/* Branding */}
           <div style={{ position: 'relative', textAlign: 'center', padding: '0 16px 14px', color: 'rgba(255,255,255,0.25)', fontSize: '0.6rem', letterSpacing: '0.08em' }}>

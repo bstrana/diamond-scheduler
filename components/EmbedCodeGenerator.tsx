@@ -154,7 +154,8 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   width="100%"
   height="${finalHeight}px"
   frameborder="0"
-  scrolling="auto"${transparencyAttr}
+  scrolling="auto"
+  allowfullscreen${transparencyAttr}
   style="${bgStyle}border: 1px solid ${borderColor}; border-radius: ${borderRadius};">
 </iframe>`;
   }, [embedUrl, height, embedView, embedStyles]);
