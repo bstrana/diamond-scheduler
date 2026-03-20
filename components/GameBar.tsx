@@ -274,6 +274,21 @@ const GameBar: React.FC<GameBarProps> = ({
     return null;
   };
 
+  // ── Inning derivation ─────────────────────────────────────────────────────
+  // Count non-null half-inning slots in scores.innings and divide by 2.
+  // e.g. 5 filled slots → 2.5 → displayed as "2½"
+  const deriveInning = (game: Game): string => {
+    const innings = game.scores?.innings;
+    if (!innings || innings.length === 0) return game.currentInning != null ? String(game.currentInning) : '—';
+    const filled = innings.reduce(
+      (n, inn) => n + (inn.away != null ? 1 : 0) + (inn.home != null ? 1 : 0),
+      0,
+    );
+    if (filled === 0) return '—';
+    const val = filled / 2;
+    return val % 1 === 0 ? String(val) : `${Math.floor(val)}½`;
+  };
+
   // ── Fullscreen story overlay ──────────────────────────────────────────────
   const renderStoryOverlay = () => {
     if (!fullscreenGame) return null;
@@ -389,7 +404,7 @@ const GameBar: React.FC<GameBarProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', flexShrink: 0 }} />
                 <span style={{ color: '#4ade80', fontWeight: 700 }}>
-                  {t('gameBar.inning', 'Inning')} {g.currentInning ?? '—'}
+                  {t('gameBar.inning', 'Inning')} {deriveInning(g)}
                 </span>
               </div>
             ) : (
@@ -870,7 +885,7 @@ const GameBar: React.FC<GameBarProps> = ({
                                 {t('gameBar.inning', 'Inning')}
                               </div>
                               <div className="text-base font-bold" style={{ color: '#16a34a' }}>
-                                {game.currentInning ?? '—'}
+                                {deriveInning(game)}
                               </div>
                             </>
                           ) : (
