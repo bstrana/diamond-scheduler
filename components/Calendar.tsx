@@ -1,10 +1,11 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Game, Team, CalendarDay, League } from '../types';
 import { WEEKDAYS } from '../constants';
-import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio, Printer, SlidersHorizontal, MoreVertical, X, CheckSquare2, Square } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio, Printer, SlidersHorizontal, MoreVertical, X, CheckSquare2, Square, ImageDown } from 'lucide-react';
 import { formatDate } from '../utils';
 import { useTranslation } from 'react-i18next';
 import PrintSchedule from './PrintSchedule';
+import html2canvas from 'html2canvas';
 
 interface CalendarProps {
   currentDate: Date;
@@ -93,6 +94,25 @@ const Calendar: React.FC<CalendarProps> = ({
       if (next.has(gameId)) next.delete(gameId); else next.add(gameId);
       return next;
     });
+  };
+
+  const captureRef = useRef<HTMLDivElement>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+
+  const captureSchedule = async () => {
+    if (!captureRef.current || isCapturing || selectedGameIds.size === 0) return;
+    setIsCapturing(true);
+    try {
+      const canvas = await html2canvas(captureRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const link = document.createElement('a');
+      link.download = 'schedule.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      console.error('Failed to capture schedule:', err);
+    } finally {
+      setIsCapturing(false);
+    }
   };
 
   const categories = useMemo(
@@ -193,6 +213,16 @@ const Calendar: React.FC<CalendarProps> = ({
     });
     return groups;
   }, [upcomingGames]);
+
+  // Selected games grouped by date for capture
+  const selectedByDate = useMemo(() => {
+    const groups: { [key: string]: Game[] } = {};
+    upcomingGames.filter(g => selectedGameIds.has(g.id)).forEach(g => {
+      if (!groups[g.date]) groups[g.date] = [];
+      groups[g.date].push(g);
+    });
+    return groups;
+  }, [upcomingGames, selectedGameIds]);
 
   return (
     <div 
@@ -786,15 +816,27 @@ const Calendar: React.FC<CalendarProps> = ({
 
       {/* Bulk select action bar */}
       {isSelectMode && (
-        <div className="shrink-0 flex items-center justify-between px-4 py-3 bg-indigo-600 text-white">
-          <span className="text-sm font-semibold">
+        <div className="shrink-0 flex items-center justify-between px-4 py-3 bg-indigo-600 text-white gap-3">
+          <span className="text-sm font-semibold shrink-0">
             {selectedGameIds.size > 0
               ? `${selectedGameIds.size} ${t('calendar.selected', 'selected')}`
               : t('calendar.selectGamesHint', 'Tap games to select')}
           </span>
-          <button onClick={toggleSelectMode} className="text-sm font-medium px-3 py-1 bg-white/20 rounded-lg hover:bg-white/30 transition-colors">
-            {t('calendar.cancelSelect', 'Cancel')}
-          </button>
+          <div className="flex items-center gap-2">
+            {selectedGameIds.size > 0 && (
+              <button
+                onClick={captureSchedule}
+                disabled={isCapturing}
+                className="flex items-center gap-1.5 text-sm font-medium px-3 py-1 bg-white/20 rounded-lg hover:bg-white/30 transition-colors disabled:opacity-60"
+              >
+                <ImageDown size={15} />
+                {isCapturing ? t('common.saving', 'Saving…') : t('calendar.saveAsImage', 'Save as image')}
+              </button>
+            )}
+            <button onClick={toggleSelectMode} className="text-sm font-medium px-3 py-1 bg-white/20 rounded-lg hover:bg-white/30 transition-colors">
+              {t('calendar.cancelSelect', 'Cancel')}
+            </button>
+          </div>
         </div>
       )}
 
@@ -900,6 +942,62 @@ const Calendar: React.FC<CalendarProps> = ({
           onClose={() => setShowPrint(false)}
         />
       )}
+
+      {/* Off-screen schedule capture card */}
+      <div
+        ref={captureRef}
+        style={{
+          position: 'absolute', left: '-9999px', top: 0,
+          width: '480px',
+          background: '#ffffff',
+          fontFamily: 'Inter, system-ui, sans-serif',
+          padding: '20px 22px',
+          borderRadius: '12px',
+        }}
+      >
+        {/* Card header */}
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '14px', paddingBottom: '10px', borderBottom: '2px solid #4f46e5' }}>
+          <span style={{ fontWeight: 800, fontSize: '1rem', color: '#1e293b', letterSpacing: '-0.01em' }}>
+            {t('app.upcomingSchedule', 'Schedule')}
+          </span>
+          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+            {selectedGameIds.size} {t('calendar.selected', 'games')}
+          </span>
+        </div>
+
+        {/* Date groups */}
+        {Object.keys(selectedByDate).sort().map(dateStr => (
+          <div key={dateStr} style={{ marginBottom: '10px' }}>
+            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>
+              {new Date(dateStr + 'T00:00:00').toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric' })}
+            </div>
+            {selectedByDate[dateStr].sort((a, b) => a.time.localeCompare(b.time)).map(game => {
+              const home = getTeam(game.homeTeamId);
+              const away = getTeam(game.awayTeamId);
+              return (
+                <div key={game.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', borderRadius: '6px', background: '#f8fafc', marginBottom: '3px', fontSize: '0.8rem' }}>
+                  <span style={{ color: '#64748b', fontWeight: 600, minWidth: '40px', flexShrink: 0 }}>{game.time}</span>
+                  <span style={{ fontWeight: 700, flex: 1, color: '#1e293b', whiteSpace: 'nowrap' }}>
+                    <span style={{ color: away?.primaryColor || '#1e293b' }}>{away?.abbreviation ?? '?'}</span>
+                    <span style={{ color: '#94a3b8', margin: '0 4px' }}>@</span>
+                    <span style={{ color: home?.primaryColor || '#1e293b' }}>{home?.abbreviation ?? '?'}</span>
+                  </span>
+                  {game.location && (
+                    <span style={{ color: '#94a3b8', fontSize: '0.72rem', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>
+                      {game.location}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+
+        {/* Footer */}
+        <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid #e2e8f0', fontSize: '0.62rem', color: '#cbd5e1', textAlign: 'right' }}>
+          {(import.meta.env.VITE_ORG_NAME as string | undefined) || 'DIAMOND MANAGER SCHEDULER'}
+        </div>
+      </div>
     </div>
   );
 };
