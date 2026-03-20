@@ -1,5 +1,6 @@
 import { Game, CalendarDay, Team, League } from './types';
 import { WEEKDAYS } from './constants';
+import i18n from './i18n';
 
 export const generateUUID = (): string => {
   return crypto.randomUUID();
@@ -220,7 +221,7 @@ export function buildGameShareText(
   leagueNames?: string[]
 ): string {
   const gameDate = new Date(game.date + 'T00:00:00');
-  const dateStr = gameDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  const dateStr = gameDate.toLocaleDateString(i18n.language, { weekday: 'short', month: 'short', day: 'numeric' });
 
   const isScored = (game.status === 'live' || game.status === 'final') && game.scores != null;
   let line1: string;

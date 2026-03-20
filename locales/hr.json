@@ -454,5 +454,28 @@
     "colLocation": "Location",
     "colLeague": "League",
     "colStatus": "Result / Status"
+  },
+  "days": {
+    "mon": "Pon",
+    "tue": "Uto",
+    "wed": "Sri",
+    "thu": "Čet",
+    "fri": "Pet",
+    "sat": "Sub",
+    "sun": "Ned"
+  },
+  "months": {
+    "january": "Siječanj",
+    "february": "Veljača",
+    "march": "Ožujak",
+    "april": "Travanj",
+    "may": "Svibanj",
+    "june": "Lipanj",
+    "july": "Srpanj",
+    "august": "Kolovoz",
+    "september": "Rujan",
+    "october": "Listopad",
+    "november": "Studeni",
+    "december": "Prosinac"
   }
 }

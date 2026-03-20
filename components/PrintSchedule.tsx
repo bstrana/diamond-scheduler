@@ -11,7 +11,7 @@ interface PrintScheduleProps {
 }
 
 const PrintSchedule: React.FC<PrintScheduleProps> = ({ games, onClose, teams, leagues }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   // Lock body scroll while open
   useEffect(() => {
@@ -60,7 +60,7 @@ const PrintSchedule: React.FC<PrintScheduleProps> = ({ games, onClose, teams, le
 
   const formatDateLong = (dateStr: string) => {
     const [y, m, d] = dateStr.split('-').map(Number);
-    return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    return new Date(y, m - 1, d).toLocaleDateString(i18n.language, {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     });
   };
@@ -115,7 +115,7 @@ const PrintSchedule: React.FC<PrintScheduleProps> = ({ games, onClose, teams, le
           {/* Print-only title */}
           <div className="hidden print:block mb-6">
             <h1 className="text-2xl font-bold">{t('print.title')}</h1>
-            <p className="text-sm text-slate-500 mt-1">{t('print.generatedOn')} {new Date().toLocaleDateString()}</p>
+            <p className="text-sm text-slate-500 mt-1">{t('print.generatedOn')} {new Date().toLocaleDateString(i18n.language)}</p>
           </div>
 
           {sortedGames.length === 0 ? (

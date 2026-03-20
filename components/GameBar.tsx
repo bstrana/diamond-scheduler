@@ -46,7 +46,7 @@ const GameBar: React.FC<GameBarProps> = ({
   hideStatusFilter = false,
   includePastDays = 0,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const [scrollPosition, setScrollPosition] = React.useState(0);
   const [showFiltersMenu, setShowFiltersMenu] = React.useState(false);
@@ -244,7 +244,7 @@ const GameBar: React.FC<GameBarProps> = ({
     const awayWon = hasScore && g.scores!.away > g.scores!.home;
     const homeWon = hasScore && g.scores!.home > g.scores!.away;
     const gameDate = new Date(g.date + 'T00:00:00');
-    const dateFmt = gameDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    const dateFmt = gameDate.toLocaleDateString(i18n.language, { weekday: 'short', month: 'short', day: 'numeric' });
     const league = gameLeagues[0];
 
     // Build gradient from team colors
@@ -793,10 +793,10 @@ const GameBar: React.FC<GameBarProps> = ({
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-xs font-semibold uppercase tracking-wider opacity-80">
-                            {gameDate.toLocaleDateString(undefined, { weekday: 'short' })}
+                            {gameDate.toLocaleDateString(i18n.language, { weekday: 'short' })}
                           </div>
                           <div className="text-base font-bold">
-                            {gameDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                            {gameDate.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
                           </div>
                         </div>
                         <div className="flex flex-col items-end space-y-1">

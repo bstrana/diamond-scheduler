@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Game, Team, CalendarDay, League } from '../types';
-import { WEEKDAYS, MONTH_NAMES } from '../constants';
+import { WEEKDAYS } from '../constants';
 import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio, Printer } from 'lucide-react';
 import { formatDate } from '../utils';
 import { useTranslation } from 'react-i18next';
@@ -66,7 +66,14 @@ const Calendar: React.FC<CalendarProps> = ({
   hideTeamFilter = false,
   hideViewToggle = false
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+
+  const MONTH_NAMES_T = [
+    t('months.january'), t('months.february'), t('months.march'), t('months.april'),
+    t('months.may'), t('months.june'), t('months.july'), t('months.august'),
+    t('months.september'), t('months.october'), t('months.november'), t('months.december'),
+  ];
+  const WEEKDAYS_T = [t('days.mon'), t('days.tue'), t('days.wed'), t('days.thu'), t('days.fri'), t('days.sat'), t('days.sun')];
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showPrint, setShowPrint] = useState(false);
@@ -181,7 +188,7 @@ const Calendar: React.FC<CalendarProps> = ({
                         <button onClick={onNextMonth} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"><ChevronRight size={18} /></button>
                     </div>
                     <h2 className="text-xl font-bold text-slate-800">
-                        {MONTH_NAMES[currentDate.getMonth()]} {currentDate.getFullYear()}
+                        {MONTH_NAMES_T[currentDate.getMonth()]} {currentDate.getFullYear()}
                     </h2>
                 </div>
                 <h2 className="text-xl font-bold text-slate-800 md:hidden">{t('app.upcomingSchedule')}</h2>
@@ -316,7 +323,7 @@ const Calendar: React.FC<CalendarProps> = ({
           <>
             {/* Weekday Headers - desktop only */}
             <div className="hidden md:grid grid-cols-7 border-b border-slate-200 bg-slate-100 shrink-0">
-                {WEEKDAYS.map(day => (
+                {WEEKDAYS_T.map(day => (
                 <div key={day} className="py-2 text-center text-sm font-semibold text-slate-500 uppercase tracking-wider">
                     {day}
                 </div>
@@ -495,7 +502,7 @@ const Calendar: React.FC<CalendarProps> = ({
                       <div key={dateStr}>
                           <div className="flex items-center space-x-4 mb-3">
                               <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
-                                  {new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+                                  {new Date(dateStr + 'T00:00:00').toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric' })}
                               </h3>
                               <div className="h-px bg-slate-200 flex-1"></div>
                           </div>
