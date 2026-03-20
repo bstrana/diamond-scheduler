@@ -1,8 +1,9 @@
 import React, { useMemo, useEffect } from 'react';
 import ReactDOM from 'react-dom';
+import html2canvas from 'html2canvas';
 import { Game, Team, League } from '../types';
 import { formatDate, buildGameShareText, copyToClipboard } from '../utils';
-import { ChevronLeft, ChevronRight, MapPin, Calendar as CalIcon, Clock, ChevronDown, SlidersHorizontal, Radio, Share2, Copy, Check, Maximize2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Calendar as CalIcon, Clock, ChevronDown, SlidersHorizontal, Radio, Share2, Copy, Check, Maximize2, ImageDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface GameBarProps {
@@ -62,6 +63,8 @@ const GameBar: React.FC<GameBarProps> = ({
   const sharePopoverRef = React.useRef<HTMLDivElement>(null);
   const [fullscreenGame, setFullscreenGame] = React.useState<Game | null>(null);
   const [tappedCardId, setTappedCardId] = React.useState<string | null>(null);
+  const cardRef = React.useRef<HTMLDivElement>(null);
+  const [isCapturing, setIsCapturing] = React.useState(false);
 
   // Get cutoff date string for filtering
   const cutoffDate = new Date();
@@ -220,6 +223,27 @@ const GameBar: React.FC<GameBarProps> = ({
     } catch { /* ignore */ }
   };
 
+  const captureCard = async (game: Game) => {
+    if (!cardRef.current || isCapturing) return;
+    setIsCapturing(true);
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        useCORS: true,
+        allowTaint: true,
+        scale: 2,
+        backgroundColor: null,
+      });
+      const link = document.createElement('a');
+      const away = getTeam(game.awayTeamId);
+      const home = getTeam(game.homeTeamId);
+      const slug = `${away?.abbreviation ?? 'away'}-vs-${home?.abbreviation ?? 'home'}-${game.date}`;
+      link.download = `${slug}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch { /* ignore capture errors */ } finally {
+      setIsCapturing(false);
+    }
+  };
 
   const renderStatusBadge = (status: Game['status']) => {
     if (status === 'live') {
@@ -293,8 +317,8 @@ const GameBar: React.FC<GameBarProps> = ({
         onClick={() => closeFullscreen()}
       >
         {/* Inner wrapper — flex centering that allows card to scroll out of view on small viewports */}
-        <div style={{ minHeight: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
-        <div
+        <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px', boxSizing: 'border-box' }}>
+        <div ref={cardRef}
           style={{ position: 'relative', width: '100%', maxWidth: '380px', borderRadius: '24px', overflow: 'hidden', background: bg, boxShadow: '0 32px 80px rgba(0,0,0,0.7)', flexShrink: 0 }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -381,6 +405,31 @@ const GameBar: React.FC<GameBarProps> = ({
             DIAMOND MANAGER SCHEDULER
           </div>
         </div>
+
+        {/* Save as image button — outside the card so it's not captured */}
+        <button
+          onClick={(e) => { e.stopPropagation(); captureCard(g); }}
+          disabled={isCapturing}
+          style={{
+            marginTop: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 20px',
+            borderRadius: '999px',
+            border: 'none',
+            backgroundColor: isCapturing ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.15)',
+            color: '#fff',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            cursor: isCapturing ? 'default' : 'pointer',
+            backdropFilter: 'blur(6px)',
+            transition: 'background-color 0.15s',
+          }}
+        >
+          <ImageDown size={16} />
+          {isCapturing ? 'Saving…' : 'Save as image'}
+        </button>
         </div>{/* end inner flex wrapper */}
       </div>
     );
