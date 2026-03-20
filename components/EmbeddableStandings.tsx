@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { League, Team, Game } from '../types';
 import { buildStandingsShareText, copyToClipboard, calculateStandings, StandingsRow } from '../utils';
-import { Share2, Copy, Check } from 'lucide-react';
+import { Share2, Copy, Check, ImageDown } from 'lucide-react';
 import * as storageApi from '../services/storage';
+import html2canvas from 'html2canvas';
 import { useTranslation } from 'react-i18next';
 
 function getGameLeagueIds(game: Game): string[] {
@@ -43,7 +44,9 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
   const shareMenuRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (dataOverride) { setData(dataOverride); return; }
@@ -104,6 +107,30 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
       getGameLeagueIds(g).includes(league.id)
     );
   }, [data, league]);
+
+  const captureStandings = async () => {
+    if (!cardRef.current || isCapturing) return;
+    setIsCapturing(true);
+    setShowShareMenu(false);
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null,
+      });
+      const link = document.createElement('a');
+      const leagueLabel = league
+        ? (league.shortName || league.name) + (league.category ? ` – ${league.category}` : '')
+        : 'standings';
+      link.download = `standings-${leagueLabel.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      console.error('Failed to capture standings:', err);
+    } finally {
+      setIsCapturing(false);
+    }
+  };
 
   const root: React.CSSProperties = {
     fontFamily: 'var(--embed-font, Inter, sans-serif)',
@@ -284,7 +311,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
                 right: 0,
                 zIndex: 30,
                 padding: '6px',
-                width: '148px',
+                width: '168px',
                 borderRadius: '8px',
                 border: '1px solid var(--embed-border, #e2e8f0)',
                 backgroundColor: 'var(--embed-card-bg, #ffffff)',
@@ -322,13 +349,37 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
                 }
                 {copied ? t('common.copied') : t('standings.copyText')}
               </button>
+              <button
+                onClick={captureStandings}
+                disabled={isCapturing}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  width: '100%',
+                  padding: '6px 8px',
+                  fontSize: '0.8125rem',
+                  color: 'var(--embed-text, #334155)',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: isCapturing ? 'default' : 'pointer',
+                  textAlign: 'left',
+                  opacity: isCapturing ? 0.6 : 1,
+                }}
+                onMouseEnter={(e) => { if (!isCapturing) e.currentTarget.style.backgroundColor = 'var(--embed-bg, #f8fafc)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              >
+                <ImageDown size={14} style={{ flexShrink: 0 }} />
+                {isCapturing ? t('common.saving', 'Saving…') : t('standings.saveAsImage', 'Save as image')}
+              </button>
             </div>
           )}
         </div>
       </div>
 
       {/* Table */}
-      <div style={{
+      <div ref={cardRef} style={{
         background: 'var(--embed-card-bg, #fff)',
         borderRadius: 'var(--embed-card-radius, 8px)',
         border: '1px solid var(--embed-border, #e2e8f0)',
