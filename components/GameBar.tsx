@@ -275,18 +275,26 @@ const GameBar: React.FC<GameBarProps> = ({
   };
 
   // ── Inning derivation ─────────────────────────────────────────────────────
-  // Count non-null half-inning slots in scores.innings and divide by 2.
-  // e.g. 5 filled slots → 2.5 → displayed as "2½"
-  const deriveInning = (game: Game): string => {
+  // Count non-null half-inning slots and derive the current inning number and
+  // half (top/bottom) automatically:
+  //   odd filled count  → top half  (away just scored, home not yet entered)
+  //   even filled count → bottom half (home slot set to 0 when bottom starts)
+  // Falls back to game.currentInning / game.inningHalf when no innings data.
+  const deriveInningInfo = (game: Game): { inning: string; half: 'top' | 'bottom' | null } => {
     const innings = game.scores?.innings;
-    if (!innings || innings.length === 0) return game.currentInning != null ? String(game.currentInning) : '—';
+    if (!innings || innings.length === 0) {
+      return {
+        inning: game.currentInning != null ? String(game.currentInning) : '—',
+        half: game.inningHalf ?? null,
+      };
+    }
     const filled = innings.reduce(
       (n, inn) => n + (inn.away != null ? 1 : 0) + (inn.home != null ? 1 : 0),
       0,
     );
-    if (filled === 0) return '—';
-    const val = filled / 2;
-    return val % 1 === 0 ? String(val) : `${Math.floor(val)}½`;
+    if (filled === 0) return { inning: '—', half: null };
+    const half: 'top' | 'bottom' = filled % 2 !== 0 ? 'top' : 'bottom';
+    return { inning: String(Math.ceil(filled / 2)), half };
   };
 
   // ── Fullscreen story overlay ──────────────────────────────────────────────
@@ -302,6 +310,7 @@ const GameBar: React.FC<GameBarProps> = ({
     const isFinal = g.status === 'final';
     const isPostponed = g.status === 'postponed';
     const hasScore = (isLive || isFinal) && g.scores != null;
+    const overlayInnInfo = isLive ? deriveInningInfo(g) : null;
     const awayWon = hasScore && g.scores!.away > g.scores!.home;
     const homeWon = hasScore && g.scores!.home > g.scores!.away;
     const gameDate = new Date(g.date + 'T00:00:00');
@@ -404,8 +413,8 @@ const GameBar: React.FC<GameBarProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', flexShrink: 0 }} />
                 <span style={{ color: '#4ade80', fontWeight: 700 }}>
-                  {g.inningHalf === 'top' ? '▲ ' : g.inningHalf === 'bottom' ? '▼ ' : ''}
-                  {t('gameBar.inning', 'Inning')} {deriveInning(g)}
+                  {overlayInnInfo?.half === 'top' ? '▲ ' : overlayInnInfo?.half === 'bottom' ? '▼ ' : ''}
+                  {t('gameBar.inning', 'Inning')} {overlayInnInfo?.inning ?? '—'}
                 </span>
               </div>
             ) : (
@@ -427,7 +436,7 @@ const GameBar: React.FC<GameBarProps> = ({
 
           {/* Branding */}
           <div style={{ position: 'relative', textAlign: 'center', padding: '0 16px 14px', color: 'rgba(255,255,255,0.25)', fontSize: '0.6rem', letterSpacing: '0.08em' }}>
-            DIAMOND MANAGER SCHEDULER
+            {(import.meta.env.VITE_ORG_NAME as string | undefined) || 'DIAMOND MANAGER SCHEDULER'}
           </div>
         </div>
 
@@ -672,6 +681,7 @@ const GameBar: React.FC<GameBarProps> = ({
                 const isFinal = game.status === 'final';
                 const isPostponed = game.status === 'postponed';
                 const hasScore = (isLive || isFinal) && game.scores != null;
+                const innInfo = isLive ? deriveInningInfo(game) : null;
 
                 if (!home || !away) return null;
 
@@ -881,14 +891,9 @@ const GameBar: React.FC<GameBarProps> = ({
                       <div className="flex items-center justify-between">
                         <div>
                           {isLive ? (
-                            <>
-                              <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#16a34a', opacity: 0.9 }}>
-                                {game.inningHalf === 'top' ? '▲ ' : game.inningHalf === 'bottom' ? '▼ ' : ''}{t('gameBar.inning', 'Inning')}
-                              </div>
-                              <div className="text-base font-bold" style={{ color: '#16a34a' }}>
-                                {deriveInning(game)}
-                              </div>
-                            </>
+                            <div className="text-sm font-bold leading-tight" style={{ color: '#16a34a' }}>
+                              {innInfo?.half === 'top' ? '▲ ' : innInfo?.half === 'bottom' ? '▼ ' : ''}{t('gameBar.inn', 'Inn')} {innInfo?.inning ?? '—'}
+                            </div>
                           ) : (
                             <>
                               <div className="text-xs font-semibold uppercase tracking-wider opacity-80">
