@@ -395,7 +395,6 @@ const GameBar: React.FC<GameBarProps> = ({
                   >
                     {!hideStatusFilter && (
                       <div className="space-y-1">
-                        <div className="text-xs font-semibold text-slate-500">{t('gameBar.gameStatus')}</div>
                         <select value={selectedStatus} onChange={(e) => onStatusFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
                           <option value="all">{t('gameBar.allStatuses')}</option>
                           <option disabled>──────────</option>
@@ -407,7 +406,6 @@ const GameBar: React.FC<GameBarProps> = ({
                     )}
                     {leagues.length > 0 && !hideLeagueFilter && (
                       <div className="space-y-1">
-                        <div className="text-xs font-semibold text-slate-500">{t('gameBar.league')}</div>
                         <select value={selectedLeagueId} onChange={(e) => onLeagueFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
                           <option value="all">{t('gameBar.allLeagues')}</option>
                           <option disabled>──────────</option>
@@ -417,7 +415,6 @@ const GameBar: React.FC<GameBarProps> = ({
                     )}
                     {categories.length > 0 && !hideCategoryFilter && (
                       <div className="space-y-1">
-                        <div className="text-xs font-semibold text-slate-500">{t('gameBar.category')}</div>
                         <select value={selectedCategory} onChange={(e) => onCategoryFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
                           <option value="all">{t('gameBar.allCategories')}</option>
                           <option disabled>──────────</option>
@@ -427,7 +424,6 @@ const GameBar: React.FC<GameBarProps> = ({
                     )}
                     {!hideTeamFilter && (
                       <div className="space-y-1">
-                        <div className="text-xs font-semibold text-slate-500">{t('gameBar.team')}</div>
                         <select value={selectedTeamId} onChange={(e) => onTeamFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
                           <option value="all">{t('gameBar.allTeams')}</option>
                           <option disabled>──────────</option>
@@ -451,7 +447,6 @@ const GameBar: React.FC<GameBarProps> = ({
           >
             {!hideStatusFilter && (
               <div className="space-y-1">
-                <div className="text-xs font-semibold text-slate-500">{t('gameBar.gameStatus')}</div>
                 <select value={selectedStatus} onChange={(e) => onStatusFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
                   <option value="all">{t('gameBar.allStatuses')}</option>
                   <option disabled>──────────</option>
@@ -463,7 +458,6 @@ const GameBar: React.FC<GameBarProps> = ({
             )}
             {leagues.length > 0 && !hideLeagueFilter && (
               <div className="space-y-1">
-                <div className="text-xs font-semibold text-slate-500">{t('gameBar.league')}</div>
                 <select value={selectedLeagueId} onChange={(e) => onLeagueFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
                   <option value="all">{t('gameBar.allLeagues')}</option>
                   <option disabled>──────────</option>
@@ -473,7 +467,6 @@ const GameBar: React.FC<GameBarProps> = ({
             )}
             {categories.length > 0 && !hideCategoryFilter && (
               <div className="space-y-1">
-                <div className="text-xs font-semibold text-slate-500">{t('gameBar.category')}</div>
                 <select value={selectedCategory} onChange={(e) => onCategoryFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
                   <option value="all">{t('gameBar.allCategories')}</option>
                   <option disabled>──────────</option>
@@ -483,7 +476,6 @@ const GameBar: React.FC<GameBarProps> = ({
             )}
             {!hideTeamFilter && (
               <div className="space-y-1">
-                <div className="text-xs font-semibold text-slate-500">{t('gameBar.team')}</div>
                 <select value={selectedTeamId} onChange={(e) => onTeamFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
                   <option value="all">{t('gameBar.allTeams')}</option>
                   <option disabled>──────────</option>
