@@ -361,7 +361,7 @@ const GameBar: React.FC<GameBarProps> = ({
   return (
     <>
     <div
-      className="h-full flex flex-col rounded-xl shadow-sm"
+      className="h-full flex flex-col sm:flex-row rounded-xl shadow-sm"
       style={{
         backgroundColor: 'var(--embed-card-bg, #ffffff)',
         border: 'var(--embed-border-width, 1px) solid var(--embed-border, #e2e8f0)',
@@ -369,149 +369,134 @@ const GameBar: React.FC<GameBarProps> = ({
       }}
     >
       {!hideFilters && (!hideLeagueFilter || !hideCategoryFilter || !hideTeamFilter || !hideStatusFilter) && (
-        <div
-          className="relative border-b px-3 py-2"
-          style={{
-            borderBottomColor: 'var(--embed-border, #e2e8f0)',
-            backgroundColor: 'var(--embed-bg, #f8fafc)'
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              {t('gameBar.filters')}
-            </div>
-            <div className="relative" ref={filtersMenuRef}>
-              <button
-                onClick={() => setShowFiltersMenu((prev) => !prev)}
-                className="flex items-center space-x-2 rounded-md px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100"
-              >
-                <SlidersHorizontal size={16} />
-                <span>{t('gameBar.filterMenu')}</span>
-                <ChevronDown size={14} className="text-slate-500" />
-              </button>
-              {showFiltersMenu && (
-                <div
-                  className="absolute right-0 mt-2 w-60 rounded-lg border bg-white p-3 shadow-lg z-20 space-y-3"
-                  style={{
-                    borderColor: 'var(--embed-border, #e2e8f0)'
-                  }}
+        <>
+          {/* Mobile: compact top bar with dropdown */}
+          <div
+            className="sm:hidden relative border-b px-3 py-2"
+            style={{
+              borderBottomColor: 'var(--embed-border, #e2e8f0)',
+              backgroundColor: 'var(--embed-bg, #f8fafc)'
+            }}
+          >
+            <div className="flex items-center justify-end">
+              <div className="relative" ref={filtersMenuRef}>
+                <button
+                  onClick={() => setShowFiltersMenu((prev) => !prev)}
+                  className="flex items-center space-x-2 rounded-md px-2 py-1 text-sm font-medium text-slate-700 hover:bg-slate-100"
                 >
-                  {/* Status Filter */}
-                  {!hideStatusFilter && (
-                    <div className="space-y-1">
-                      <div className="text-xs font-semibold text-slate-500">{t('gameBar.gameStatus')}</div>
-                      <select
-                        value={selectedStatus}
-                        onChange={(e) => onStatusFilterChange(e.target.value)}
-                        className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2"
-                        style={{
-                          backgroundColor: 'var(--embed-card-bg, #ffffff)',
-                          border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)',
-                          borderRadius: 'var(--embed-card-radius, 0.375rem)',
-                          color: 'var(--embed-text, #334155)',
-                          fontFamily: 'var(--embed-font, inherit)',
-                          fontSize: 'var(--embed-font-size, 0.875rem)',
-                          '--tw-ring-color': 'var(--embed-primary, #4f46e5)'
-                        } as React.CSSProperties}
-                      >
-                        <option value="all">{t('gameBar.allStatuses')}</option>
-                        <option disabled>──────────</option>
-                        <option value="scheduled">{t('gameBar.statusScheduled')}</option>
-                        <option value="live">{t('gameBar.statusLive')}</option>
-                        <option value="final">{t('gameBar.statusFinal')}</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {/* League Filter */}
-                  {leagues.length > 0 && !hideLeagueFilter && (
-                    <div className="space-y-1">
-                      <div className="text-xs font-semibold text-slate-500">{t('gameBar.league')}</div>
-                      <select
-                        value={selectedLeagueId}
-                        onChange={(e) => onLeagueFilterChange(e.target.value)}
-                        className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2"
-                        style={{
-                          backgroundColor: 'var(--embed-card-bg, #ffffff)',
-                          border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)',
-                          borderRadius: 'var(--embed-card-radius, 0.375rem)',
-                          color: 'var(--embed-text, #334155)',
-                          fontFamily: 'var(--embed-font, inherit)',
-                          fontSize: 'var(--embed-font-size, 0.875rem)',
-                          '--tw-ring-color': 'var(--embed-primary, #4f46e5)'
-                        } as React.CSSProperties}
-                      >
-                        <option value="all">{t('gameBar.allLeagues')}</option>
-                        <option disabled>──────────</option>
-                        {leagues.map(l => (
-                          <option key={l.id} value={l.id}>{l.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Category Filter */}
-                  {categories.length > 0 && !hideCategoryFilter && (
-                    <div className="space-y-1">
-                      <div className="text-xs font-semibold text-slate-500">{t('gameBar.category')}</div>
-                      <select
-                        value={selectedCategory}
-                        onChange={(e) => onCategoryFilterChange(e.target.value)}
-                        className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2"
-                        style={{
-                          backgroundColor: 'var(--embed-card-bg, #ffffff)',
-                          border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)',
-                          borderRadius: 'var(--embed-card-radius, 0.375rem)',
-                          color: 'var(--embed-text, #334155)',
-                          fontFamily: 'var(--embed-font, inherit)',
-                          fontSize: 'var(--embed-font-size, 0.875rem)',
-                          '--tw-ring-color': 'var(--embed-primary, #4f46e5)'
-                        } as React.CSSProperties}
-                      >
-                        <option value="all">{t('gameBar.allCategories')}</option>
-                        <option disabled>──────────</option>
-                        {categories.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Team Filter */}
-                  {!hideTeamFilter && (
-                    <div className="space-y-1">
-                      <div className="text-xs font-semibold text-slate-500">{t('gameBar.team')}</div>
-                      <select
-                        value={selectedTeamId}
-                        onChange={(e) => onTeamFilterChange(e.target.value)}
-                        className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2"
-                        style={{
-                          backgroundColor: 'var(--embed-card-bg, #ffffff)',
-                          border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)',
-                          borderRadius: 'var(--embed-card-radius, 0.375rem)',
-                          color: 'var(--embed-text, #334155)',
-                          fontFamily: 'var(--embed-font, inherit)',
-                          fontSize: 'var(--embed-font-size, 0.875rem)',
-                          '--tw-ring-color': 'var(--embed-primary, #4f46e5)'
-                        } as React.CSSProperties}
-                      >
-                        <option value="all">{t('gameBar.allTeams')}</option>
-                        <option disabled>──────────</option>
-                        {teams.map(t => (
-                          <option key={t.id} value={t.id}>{t.city} {t.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              )}
+                  <SlidersHorizontal size={16} />
+                  <span>{t('gameBar.filterMenu')}</span>
+                  <ChevronDown size={14} className="text-slate-500" />
+                </button>
+                {showFiltersMenu && (
+                  <div
+                    className="absolute right-0 mt-2 w-60 rounded-lg border bg-white p-3 shadow-lg z-20 space-y-3"
+                    style={{ borderColor: 'var(--embed-border, #e2e8f0)' }}
+                  >
+                    {!hideStatusFilter && (
+                      <div className="space-y-1">
+                        <div className="text-xs font-semibold text-slate-500">{t('gameBar.gameStatus')}</div>
+                        <select value={selectedStatus} onChange={(e) => onStatusFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
+                          <option value="all">{t('gameBar.allStatuses')}</option>
+                          <option disabled>──────────</option>
+                          <option value="scheduled">{t('gameBar.statusScheduled')}</option>
+                          <option value="live">{t('gameBar.statusLive')}</option>
+                          <option value="final">{t('gameBar.statusFinal')}</option>
+                        </select>
+                      </div>
+                    )}
+                    {leagues.length > 0 && !hideLeagueFilter && (
+                      <div className="space-y-1">
+                        <div className="text-xs font-semibold text-slate-500">{t('gameBar.league')}</div>
+                        <select value={selectedLeagueId} onChange={(e) => onLeagueFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
+                          <option value="all">{t('gameBar.allLeagues')}</option>
+                          <option disabled>──────────</option>
+                          {leagues.map(l => (<option key={l.id} value={l.id}>{l.name}</option>))}
+                        </select>
+                      </div>
+                    )}
+                    {categories.length > 0 && !hideCategoryFilter && (
+                      <div className="space-y-1">
+                        <div className="text-xs font-semibold text-slate-500">{t('gameBar.category')}</div>
+                        <select value={selectedCategory} onChange={(e) => onCategoryFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
+                          <option value="all">{t('gameBar.allCategories')}</option>
+                          <option disabled>──────────</option>
+                          {categories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}
+                        </select>
+                      </div>
+                    )}
+                    {!hideTeamFilter && (
+                      <div className="space-y-1">
+                        <div className="text-xs font-semibold text-slate-500">{t('gameBar.team')}</div>
+                        <select value={selectedTeamId} onChange={(e) => onTeamFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
+                          <option value="all">{t('gameBar.allTeams')}</option>
+                          <option disabled>──────────</option>
+                          {teams.map(t => (<option key={t.id} value={t.id}>{t.city} {t.name}</option>))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+
+          {/* Desktop: left sidebar with filters expanded */}
+          <div
+            className="hidden sm:flex sm:flex-col sm:flex-shrink-0 sm:w-44 sm:border-r sm:overflow-y-auto gap-4 p-3"
+            style={{
+              borderRightColor: 'var(--embed-border, #e2e8f0)',
+              backgroundColor: 'var(--embed-bg, #f8fafc)'
+            }}
+          >
+            {!hideStatusFilter && (
+              <div className="space-y-1">
+                <div className="text-xs font-semibold text-slate-500">{t('gameBar.gameStatus')}</div>
+                <select value={selectedStatus} onChange={(e) => onStatusFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
+                  <option value="all">{t('gameBar.allStatuses')}</option>
+                  <option disabled>──────────</option>
+                  <option value="scheduled">{t('gameBar.statusScheduled')}</option>
+                  <option value="live">{t('gameBar.statusLive')}</option>
+                  <option value="final">{t('gameBar.statusFinal')}</option>
+                </select>
+              </div>
+            )}
+            {leagues.length > 0 && !hideLeagueFilter && (
+              <div className="space-y-1">
+                <div className="text-xs font-semibold text-slate-500">{t('gameBar.league')}</div>
+                <select value={selectedLeagueId} onChange={(e) => onLeagueFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
+                  <option value="all">{t('gameBar.allLeagues')}</option>
+                  <option disabled>──────────</option>
+                  {leagues.map(l => (<option key={l.id} value={l.id}>{l.name}</option>))}
+                </select>
+              </div>
+            )}
+            {categories.length > 0 && !hideCategoryFilter && (
+              <div className="space-y-1">
+                <div className="text-xs font-semibold text-slate-500">{t('gameBar.category')}</div>
+                <select value={selectedCategory} onChange={(e) => onCategoryFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
+                  <option value="all">{t('gameBar.allCategories')}</option>
+                  <option disabled>──────────</option>
+                  {categories.map(cat => (<option key={cat} value={cat}>{cat}</option>))}
+                </select>
+              </div>
+            )}
+            {!hideTeamFilter && (
+              <div className="space-y-1">
+                <div className="text-xs font-semibold text-slate-500">{t('gameBar.team')}</div>
+                <select value={selectedTeamId} onChange={(e) => onTeamFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
+                  <option value="all">{t('gameBar.allTeams')}</option>
+                  <option disabled>──────────</option>
+                  {teams.map(t => (<option key={t.id} value={t.id}>{t.city} {t.name}</option>))}
+                </select>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* Scrollable Game Bar - Single Row */}
-      <div className="flex-1 flex flex-col relative overflow-hidden">
+      <div className="flex-1 min-w-0 flex flex-col relative overflow-hidden">
         {/* Scroll Buttons */}
         <button
           onClick={() => scroll('left')}
