@@ -1157,7 +1157,7 @@ const App: React.FC = () => {
                         <h3 className="font-bold text-slate-800">{t('app.editGameTitle')}</h3>
                         <button onClick={closeEditModal}><X size={20} className="text-slate-400 hover:text-slate-600" /></button>
                     </div>
-                    <form onSubmit={handleGameUpdate} className="p-6 space-y-4 overflow-y-auto">
+                    <form onSubmit={handleGameUpdate} className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
 
                         {/* League Selection - Multi-select */}
                         <div>
