@@ -362,12 +362,18 @@ const GameBar: React.FC<GameBarProps> = ({
                   )}
                   <div>
                     <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.2 }}>{league.name}</div>
-                    {league.shortName && league.shortName !== league.name && (
+                    {!isFinal && league.shortName && league.shortName !== league.name && (
                       <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem' }}>{league.shortName}</div>
                     )}
                   </div>
                 </div>
               ))}
+              {isFinal && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', marginTop: '2px', flexWrap: 'wrap' }}>
+                  <CalIcon size={11} style={{ flexShrink: 0 }} />
+                  <span>{dateFmt}{g.location ? ` · ${g.location}` : ''}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -421,13 +427,13 @@ const GameBar: React.FC<GameBarProps> = ({
 
           {/* Details */}
           <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '7px', padding: '0 20px 18px', color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem' }}>
-            {!isLive && (
+            {!isLive && !isFinal && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                 <CalIcon size={13} style={{ flexShrink: 0 }} />
                 <span>{dateFmt}{!hasScore && g.time ? ` · ${g.time}` : ''}</span>
               </div>
             )}
-            {!isLive && g.location && (
+            {!isLive && !isFinal && g.location && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                 <MapPin size={13} style={{ flexShrink: 0 }} />
                 <span>{g.location}</span>
