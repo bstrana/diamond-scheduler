@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Team, League } from '../types';
-import { Plus, Trash2, Trophy, Save, Shield, Check, Settings2, FolderOpen, Pencil, X, MapPin } from 'lucide-react';
+import { Plus, Trash2, Trophy, Save, Shield, Check, Settings2, FolderOpen, Pencil, X, MapPin, Upload, Link } from 'lucide-react';
 import { generateUUID, validateLeagueName, validateCategory, validateTeamName, validateAbbreviation, validateCity, sanitizeString } from '../utils';
 import { useTranslation } from 'react-i18next';
 
@@ -50,6 +50,10 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
     country: 'USA'
   });
   const [rosterText, setRosterText] = useState('');
+  const [rosterImportUrl, setRosterImportUrl] = useState('');
+  const [rosterImportStatus, setRosterImportStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+  const [rosterImportMsg, setRosterImportMsg] = useState('');
+  const rosterFileRef = useRef<HTMLInputElement>(null);
 
   const countryOptions = [
     'USA',
@@ -147,6 +151,90 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
   const formatRosterText = (roster?: Team['roster']) => {
     if (!roster || roster.length === 0) return '';
     return roster.map(player => `${player.number}, ${player.name}, ${player.position}`).join('\n');
+  };
+
+  // Convert parsed roster array to text lines and append/replace rosterText
+  const applyImportedRoster = (players: Team['roster'], append: boolean) => {
+    if (!players || players.length === 0) return 0;
+    const lines = players.map(p => `${p.number}, ${p.name}, ${p.position}`).join('\n');
+    setRosterText(prev => append && prev.trim() ? prev.trim() + '\n' + lines : lines);
+    return players.length;
+  };
+
+  // Parse a JSON value that may be an array of player objects or {players:[]}
+  const parseRosterJson = (raw: unknown): Team['roster'] => {
+    const arr: unknown[] = Array.isArray(raw) ? raw : Array.isArray((raw as any)?.players) ? (raw as any).players : [];
+    return arr
+      .map((item: any) => ({
+        number: Number.isFinite(Number(item?.number ?? item?.num ?? item?.jersey)) ? Number(item.number ?? item.num ?? item.jersey) : 0,
+        name: String(item?.name ?? item?.fullName ?? item?.playerName ?? '').trim().slice(0, 100),
+        position: String(item?.position ?? item?.pos ?? '').trim().slice(0, 50),
+      }))
+      .filter(p => p.name);
+  };
+
+  // Parse CSV text (with or without header row)
+  const parseRosterCsv = (text: string): Team['roster'] => {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    // Detect header: first row has non-numeric first cell
+    const firstCell = lines[0]?.split(',')[0]?.trim() ?? '';
+    const start = Number.isNaN(Number(firstCell)) && firstCell !== '' ? 1 : 0;
+    return lines.slice(start).map(line => {
+      const parts = line.split(',').map(p => p.trim());
+      const number = Number.parseInt(parts[0] ?? '', 10);
+      return {
+        number: Number.isFinite(number) && number >= 0 && number <= 999 ? number : 0,
+        name: (parts[1] ?? '').slice(0, 100),
+        position: (parts[2] ?? '').slice(0, 50),
+      };
+    }).filter(p => p.name);
+  };
+
+  const handleRosterUrlImport = async () => {
+    const url = rosterImportUrl.trim();
+    if (!url) return;
+    setRosterImportStatus('loading');
+    setRosterImportMsg('');
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const players = parseRosterJson(json);
+      if (players.length === 0) throw new Error(t('league.rosterImportNoPlayers'));
+      const count = applyImportedRoster(players, true);
+      setRosterImportStatus('ok');
+      setRosterImportMsg(t('league.rosterImportSuccess', { count }));
+    } catch (err: any) {
+      setRosterImportStatus('error');
+      setRosterImportMsg(err.message || t('league.rosterImportFailed'));
+    }
+  };
+
+  const handleRosterFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      try {
+        let players: Team['roster'];
+        if (file.name.endsWith('.csv')) {
+          players = parseRosterCsv(text);
+        } else {
+          players = parseRosterJson(JSON.parse(text));
+        }
+        if (!players || players.length === 0) throw new Error(t('league.rosterImportNoPlayers'));
+        const count = applyImportedRoster(players, true);
+        setRosterImportStatus('ok');
+        setRosterImportMsg(t('league.rosterImportSuccess', { count }));
+      } catch (err: any) {
+        setRosterImportStatus('error');
+        setRosterImportMsg(err.message || t('league.rosterImportFailed'));
+      }
+      // Reset file input so same file can be re-selected
+      if (rosterFileRef.current) rosterFileRef.current.value = '';
+    };
+    reader.readAsText(file);
   };
 
   // Handle switching between Create New and Edit Existing
@@ -638,6 +726,54 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                           onChange={e => setRosterText(e.target.value)}
                         />
                         <p className="text-xs text-slate-500 mt-1">{t('league.rosterHelp')}</p>
+
+                        {/* Roster Import */}
+                        <div className="mt-3 border border-slate-200 rounded-lg p-3 bg-slate-50 space-y-2">
+                          <p className="text-xs font-semibold text-slate-500 uppercase">{t('league.rosterImportTitle')}</p>
+
+                          {/* URL import */}
+                          <div className="flex gap-2">
+                            <div className="flex items-center text-slate-400 shrink-0"><Link size={14} /></div>
+                            <input
+                              type="url"
+                              className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-sm bg-white"
+                              placeholder={t('league.rosterImportUrlPlaceholder')}
+                              value={rosterImportUrl}
+                              onChange={e => { setRosterImportUrl(e.target.value); setRosterImportStatus('idle'); }}
+                            />
+                            <button
+                              type="button"
+                              disabled={!rosterImportUrl.trim() || rosterImportStatus === 'loading'}
+                              onClick={handleRosterUrlImport}
+                              className="px-3 py-1.5 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 disabled:opacity-50 shrink-0"
+                            >
+                              {rosterImportStatus === 'loading' ? t('common.loading') : t('league.rosterImportFetch')}
+                            </button>
+                          </div>
+
+                          {/* File import */}
+                          <div className="flex gap-2 items-center">
+                            <div className="flex items-center text-slate-400 shrink-0"><Upload size={14} /></div>
+                            <label className="flex-1 cursor-pointer flex items-center gap-2 border border-dashed border-slate-300 rounded px-2 py-1.5 bg-white hover:border-indigo-400 transition-colors">
+                              <span className="text-xs text-slate-500">{t('league.rosterImportFileLabel')}</span>
+                              <input
+                                ref={rosterFileRef}
+                                type="file"
+                                accept=".json,.csv"
+                                className="hidden"
+                                onChange={handleRosterFileImport}
+                              />
+                            </label>
+                          </div>
+
+                          {/* Status message */}
+                          {rosterImportStatus !== 'idle' && (
+                            <p className={`text-xs font-medium ${rosterImportStatus === 'ok' ? 'text-emerald-600' : rosterImportStatus === 'error' ? 'text-red-600' : 'text-slate-500'}`}>
+                              {rosterImportMsg}
+                            </p>
+                          )}
+                          <p className="text-xs text-slate-400">{t('league.rosterImportHint')}</p>
+                        </div>
                     </div>
                     <div className="md:col-span-2 space-y-2">
                         <button type="submit" className="w-full h-9 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm font-medium">

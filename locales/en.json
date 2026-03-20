@@ -238,7 +238,15 @@
     "teamLimitReached": "Team limit reached ({{limit}}).",
     "needTwoTeamsAlert": "Please add at least 2 teams to the league.",
     "deleteTeamTitle": "Delete Team",
-    "deleteLeagueConfirm": "Delete {{label}}? This cannot be undone."
+    "deleteLeagueConfirm": "Delete {{label}}? This cannot be undone.",
+    "rosterImportTitle": "Import Roster",
+    "rosterImportUrlPlaceholder": "https://example.com/roster.json",
+    "rosterImportFetch": "Fetch",
+    "rosterImportFileLabel": "Choose JSON or CSV file…",
+    "rosterImportSuccess": "Imported {{count}} player(s) successfully.",
+    "rosterImportNoPlayers": "No valid players found in the file.",
+    "rosterImportFailed": "Import failed. Check the file format.",
+    "rosterImportHint": "JSON: array of {number, name, position}. CSV: number, name, position (one per line)."
   },
   "teams": {
     "leagueTeams": "League Teams",

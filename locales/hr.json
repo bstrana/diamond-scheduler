@@ -238,7 +238,15 @@
     "teamLimitReached": "Team limit reached ({{limit}}).",
     "needTwoTeamsAlert": "Please add at least 2 teams to the league.",
     "deleteTeamTitle": "Delete Team",
-    "deleteLeagueConfirm": "Delete {{label}}? This cannot be undone."
+    "deleteLeagueConfirm": "Delete {{label}}? This cannot be undone.",
+    "rosterImportTitle": "Uvezi popis igrača",
+    "rosterImportUrlPlaceholder": "https://primjer.com/roster.json",
+    "rosterImportFetch": "Dohvati",
+    "rosterImportFileLabel": "Odaberi JSON ili CSV datoteku…",
+    "rosterImportSuccess": "Uspješno uvezeno {{count}} igrač(a).",
+    "rosterImportNoPlayers": "Nisu pronađeni valjani igrači u datoteci.",
+    "rosterImportFailed": "Uvoz nije uspio. Provjerite format datoteke.",
+    "rosterImportHint": "JSON: niz objekata {number, name, position}. CSV: broj, ime, pozicija (jedan po retku)."
   },
   "teams": {
     "leagueTeams": "League Teams",
