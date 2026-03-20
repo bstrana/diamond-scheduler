@@ -429,7 +429,7 @@ const App: React.FC = () => {
 
   const handleGameClick = (game: Game) => {
     setEditingGame(game);
-    // Initialize form with game's current values
+    // Initialize form with all game's current values so nothing is lost on save
     const gameLeagueIds = getGameLeagueIds(game);
     setNewGameForm({
       date: game.date,
@@ -439,7 +439,11 @@ const App: React.FC = () => {
       awayTeamId: game.awayTeamId,
       leagueIds: gameLeagueIds,
       gameNumber: game.gameNumber,
-      seriesName: game.seriesName
+      seriesName: game.seriesName,
+      status: game.status,
+      scores: game.scores,
+      recap: game.recap,
+      streamUrl: game.streamUrl,
     });
     setShowEditModal(true);
   };
