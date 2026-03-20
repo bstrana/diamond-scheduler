@@ -385,10 +385,19 @@ const GameBar: React.FC<GameBarProps> = ({
 
           {/* Details */}
           <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '7px', padding: '0 20px 18px', color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-              <CalIcon size={13} style={{ flexShrink: 0 }} />
-              <span>{dateFmt}{!hasScore && g.time ? ` · ${g.time}` : ''}</span>
-            </div>
+            {isLive ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', flexShrink: 0 }} />
+                <span style={{ color: '#4ade80', fontWeight: 700 }}>
+                  {t('gameBar.inning', 'Inning')} {g.currentInning ?? '—'}
+                </span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <CalIcon size={13} style={{ flexShrink: 0 }} />
+                <span>{dateFmt}{!hasScore && g.time ? ` · ${g.time}` : ''}</span>
+              </div>
+            )}
             {g.location && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                 <MapPin size={13} style={{ flexShrink: 0 }} />
@@ -855,12 +864,25 @@ const GameBar: React.FC<GameBarProps> = ({
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="text-xs font-semibold uppercase tracking-wider opacity-80">
-                            {gameDate.toLocaleDateString(i18n.language, { weekday: 'short' })}
-                          </div>
-                          <div className="text-base font-bold">
-                            {gameDate.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
-                          </div>
+                          {isLive ? (
+                            <>
+                              <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#16a34a', opacity: 0.9 }}>
+                                {t('gameBar.inning', 'Inning')}
+                              </div>
+                              <div className="text-base font-bold" style={{ color: '#16a34a' }}>
+                                {game.currentInning ?? '—'}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-xs font-semibold uppercase tracking-wider opacity-80">
+                                {gameDate.toLocaleDateString(i18n.language, { weekday: 'short' })}
+                              </div>
+                              <div className="text-base font-bold">
+                                {gameDate.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
+                              </div>
+                            </>
+                          )}
                         </div>
                         <div className="flex flex-col items-end space-y-1">
                           {/* Status badge — always shown when live/final/postponed; TODAY shown for scheduled */}

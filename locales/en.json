@@ -182,7 +182,8 @@
     "tryAdjustingFilters": "Try adjusting your filters",
     "watchLiveStream": "Watch Live Stream",
     "shareGame": "Share game",
-    "copyText": "Copy text"
+    "copyText": "Copy text",
+    "inning": "Inning"
   },
   "league": {
     "selectAction": "Select Action",
