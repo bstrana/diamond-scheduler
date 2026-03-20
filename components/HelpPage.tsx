@@ -3,7 +3,8 @@ import {
   Trophy, Users, Calendar, Clock, Send, Code, Star,
   CheckCircle, ChevronDown, ChevronUp, Radio, MapPin,
   BarChart2, Layers, Palette, RefreshCw, Globe, Zap,
-  Moon, Printer, GitBranch, QrCode, Wand2, PlusCircle, Plus
+  Moon, Printer, GitBranch, QrCode, Wand2, PlusCircle,
+  Download, Upload, FileText, Info
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -144,7 +145,7 @@ const HelpPage: React.FC = () => {
             {[
               { icon: <Calendar size={16} />, label: 'Calendar', color: 'bg-indigo-50 border-indigo-200', text: 'Full month grid or upcoming-games list. When a single team is selected, both teams are displayed on each card (not just the opponent).' },
               { icon: <Layers size={16} />, label: 'Game Bar', color: 'bg-sky-50 border-sky-200', text: 'Compact horizontal ticker showing upcoming and live games. Shows W-L records on each card. Single-team filter shows both teams\' logos and names.' },
-              { icon: <BarChart2 size={16} />, label: 'Standings', color: 'bg-violet-50 border-violet-200', text: 'Live GP/W/L table with PCT, GB, RS, RA, and DIFF. Category filter lets visitors narrow by division. Watch Live button appears during live games.' },
+              { icon: <BarChart2 size={16} />, label: 'Standings', color: 'bg-violet-50 border-violet-200', text: 'Live GP/W/L table with PCT, GB, RS, RA, and DIFF. Category filter lets visitors narrow by division. Watch Live button appears during live games. Optional info text appears at the bottom left next to the share icon.' },
               { icon: <GitBranch size={16} />, label: 'Series / Playoff Bracket', color: 'bg-emerald-50 border-emerald-200', text: 'Horizontal bracket showing all playoff series (Quarterfinal, Semifinal, Final, etc.) with team rows, win tallies, and per-game scores. Ordered by first game date. Filter by league for a focused bracket.' },
             ].map(({ icon, label, color, text }) => (
               <div key={label} className={`border rounded-lg p-3 ${color}`}>
@@ -163,6 +164,7 @@ const HelpPage: React.FC = () => {
                 { icon: <Star size={13} />, text: 'When a single team is selected, a Team Deep-link URL is shown — share it so fans can embed or bookmark just their team\'s schedule' },
                 { icon: <Calendar size={13} />, text: 'Calendar embeds in List view hide the grid/list toggle so visitors stay in list mode' },
                 { icon: <Radio size={13} />, text: 'Announcement banners (set per-league in League Creator) appear automatically at the top of every embedded Calendar, Game Bar, and Standings widget. Visitors can dismiss them.' },
+                { icon: <Info size={13} />, text: 'Standings embed — optional Info Text field lets you add a short note (e.g. "Last updated: March 2026") that appears inline at the bottom left of the standings table, next to the share icon.' },
               ].map(({ icon, text }, i) => (
                 <li key={i} className="flex items-start gap-2">
                   <span className="mt-0.5 text-slate-400 flex-shrink-0">{icon}</span>
@@ -398,6 +400,33 @@ const HelpPage: React.FC = () => {
       ),
     },
     {
+      id: 'importexport',
+      icon: <Download size={18} />,
+      title: 'Import & Export',
+      color: 'text-sky-600',
+      content: (
+        <div className="space-y-4 text-sm text-slate-600">
+          <p>Use the <strong>Import / Export</strong> buttons in the Calendar toolbar to move game data in and out of the app.</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="bg-sky-50 border border-sky-200 rounded-lg p-4 space-y-2">
+              <p className="font-semibold text-sky-800 flex items-center gap-1.5"><Upload size={14} /> Import CSV</p>
+              <p>Upload a <code className="bg-white border border-sky-200 px-1 rounded text-xs">.csv</code> file to bulk-add games. Each row maps to a game — team names are matched against your existing roster. Unrecognised teams are skipped with a warning.</p>
+              <p className="text-xs text-sky-600">Useful for migrating a schedule built in a spreadsheet into Diamond Manager.</p>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 space-y-2">
+              <p className="font-semibold text-emerald-800 flex items-center gap-1.5"><Download size={14} /> Export CSV</p>
+              <p>Downloads all currently visible games as a <code className="bg-white border border-emerald-200 px-1 rounded text-xs">.csv</code> file. Respects active filters — so you can export just one league's schedule if needed.</p>
+              <p className="text-xs text-emerald-600">Open in Excel, Google Sheets, or any spreadsheet app.</p>
+            </div>
+            <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 space-y-2">
+              <p className="font-semibold text-violet-800 flex items-center gap-1.5"><FileText size={14} /> Export ICS</p>
+              <p>Downloads a standard <code className="bg-white border border-violet-200 px-1 rounded text-xs">.ics</code> calendar file. Import it into Google Calendar, Apple Calendar, Outlook, or any calendar app to see games as events with date, time, location, and team names.</p>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
       id: 'tips',
       icon: <Star size={18} />,
       title: 'Tips & Shortcuts',
@@ -420,6 +449,8 @@ const HelpPage: React.FC = () => {
             { title: 'Game Bar quick-update', text: 'Open a game from any embedded Game Bar widget and use Save & Publish to push score updates live without leaving the page.' },
             { title: 'Mobile list view', text: 'On small screens the Calendar automatically switches to list view — the month grid is desktop-only.' },
             { title: 'Schedule key per season', text: 'Use a different schedule key for each season or tournament so you can load historical schedules later without overwriting the current one.' },
+            { title: 'Export to calendar apps', text: 'Use Export ICS (Calendar toolbar) to push your schedule to Google Calendar, Apple Calendar, or Outlook — each game becomes a calendar event with time, location, and team names.' },
+            { title: 'Standings info text', text: 'In the Embed Code tab for Standings, type an Info Text note (e.g. "Updated after each game") — it appears inline at the bottom left of the embedded table next to the share button.' },
           ].map(({ title, text }) => (
             <div key={title} className="flex items-start space-x-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
               <CheckCircle size={14} className="mt-0.5 text-emerald-500 flex-shrink-0" />
