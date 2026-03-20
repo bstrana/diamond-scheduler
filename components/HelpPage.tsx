@@ -3,7 +3,7 @@ import {
   Trophy, Users, Calendar, Clock, Send, Code, Star,
   CheckCircle, ChevronDown, ChevronUp, Radio, MapPin,
   BarChart2, Layers, Palette, RefreshCw, Globe, Zap,
-  Moon, Printer, GitBranch, QrCode
+  Moon, Printer, GitBranch, QrCode, Wand2, PlusCircle, Plus
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -51,11 +51,13 @@ const HelpPage: React.FC = () => {
             {[
               'Build leagues with custom categories, playing fields, and announcements',
               'Roster teams with primary + secondary colors, logos, and player lists',
-              'Generate round-robin schedules in seconds with automatic conflict detection',
+              'Generate round-robin or playoff series schedules in seconds with automatic conflict detection',
+              'Create playoff matchups manually or automatically based on current standings',
+              'Append new games to an existing calendar instead of replacing the whole schedule',
               'Update scores inning-by-inning in real time; mark games Live, Final, or Postponed',
               'View a visual playoff bracket auto-built from series-named games',
-              'Print or export any calendar view to PDF with one click',
-              'Publish and embed live standings (with GP column), calendars, and a game bar on any website',
+              'Print a clean table-format schedule (with game numbers) directly from the calendar',
+              'Publish and embed live standings, calendars, a game bar, and a playoff bracket on any website',
             ].map((item, i) => (
               <li key={i} className="flex items-start space-x-2">
                 <CheckCircle size={14} className="mt-0.5 text-emerald-500 flex-shrink-0" />
@@ -84,6 +86,8 @@ const HelpPage: React.FC = () => {
           </Step>
           <Step n={3} title="Build the Schedule">
             <p>Open the <strong>Scheduler</strong> tab. Choose a league, set the start date, number of rounds, and time slots, then click <strong>Generate Schedule</strong>. The app creates a full round-robin matchup list instantly.</p>
+            <p className="mt-1">Choose a <strong>Game Format</strong>: Single Game, Double Header, Back-to-Back Series, or <em>Playoff Series</em>. In Playoff Series mode you define matchups manually or let the app pick teams automatically <strong>By Standings</strong> (1st vs 4th, 2nd vs 3rd, etc.).</p>
+            <p className="mt-1">Use the <strong>Replace / Append</strong> toggle to either overwrite the calendar or add the new games on top of an existing schedule.</p>
             <p className="mt-1">Switch to the <strong>Calendar</strong> view to drag games to different dates, add individual games manually, or move games to the <em>Edit Mode</em> holding area while you reorganize.</p>
           </Step>
           <Step n={4} title="Record Results">
@@ -136,11 +140,12 @@ const HelpPage: React.FC = () => {
       content: (
         <div className="space-y-4 text-sm text-slate-600">
           <p>Go to the <strong>Embed Code</strong> tab. Configure the embed, then copy the <code className="bg-slate-100 px-1 rounded text-xs">&lt;iframe&gt;</code> snippet and paste it into any webpage — WordPress, Squarespace, plain HTML, etc.</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {[
               { icon: <Calendar size={16} />, label: 'Calendar', color: 'bg-indigo-50 border-indigo-200', text: 'Full month grid or upcoming-games list. When a single team is selected, both teams are displayed on each card (not just the opponent).' },
               { icon: <Layers size={16} />, label: 'Game Bar', color: 'bg-sky-50 border-sky-200', text: 'Compact horizontal ticker showing upcoming and live games. Shows W-L records on each card. Single-team filter shows both teams\' logos and names.' },
               { icon: <BarChart2 size={16} />, label: 'Standings', color: 'bg-violet-50 border-violet-200', text: 'Live GP/W/L table with PCT, GB, RS, RA, and DIFF. Category filter lets visitors narrow by division. Watch Live button appears during live games.' },
+              { icon: <GitBranch size={16} />, label: 'Series / Playoff Bracket', color: 'bg-emerald-50 border-emerald-200', text: 'Horizontal bracket showing all playoff series (Quarterfinal, Semifinal, Final, etc.) with team rows, win tallies, and per-game scores. Ordered by first game date. Filter by league for a focused bracket.' },
             ].map(({ icon, label, color, text }) => (
               <div key={label} className={`border rounded-lg p-3 ${color}`}>
                 <p className="font-semibold text-slate-700 flex items-center gap-1.5 mb-1">{icon}{label}</p>
@@ -203,29 +208,54 @@ const HelpPage: React.FC = () => {
     {
       id: 'bracket',
       icon: <GitBranch size={18} />,
-      title: 'Playoff Bracket',
+      title: 'Playoff Bracket & Series Scheduling',
       color: 'text-violet-600',
       content: (
-        <div className="space-y-3 text-sm text-slate-600">
+        <div className="space-y-4 text-sm text-slate-600">
           <p>
-            The <strong>Playoff Bracket</strong> view (GitBranch icon in the nav) automatically builds a visual bracket from any games that have a <strong>Series Name</strong> set.
+            The <strong>Playoff Bracket</strong> view (GitBranch icon in the nav) automatically builds a visual bracket from any games that have a <strong>Series Name</strong> set. You can tag games individually or generate a full playoff series schedule in one go from the Scheduler.
           </p>
+
           <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 space-y-2">
-            <p className="font-semibold text-indigo-800">How to set it up</p>
+            <p className="font-semibold text-indigo-800">Option A — Tag games manually</p>
             <ol className="list-decimal list-inside space-y-1 text-indigo-700">
               <li>Open the Edit Game modal for a playoff game.</li>
               <li>Enter a <strong>Series Name</strong> (e.g. <code className="bg-white px-1 rounded text-xs">Quarterfinal</code>, <code className="bg-white px-1 rounded text-xs">Semifinal</code>, <code className="bg-white px-1 rounded text-xs">Championship</code>).</li>
-              <li>Repeat for all bracket games. Games with the same series name and same pair of teams are grouped into a single matchup card.</li>
+              <li>Repeat for all bracket games. Games with the same series name and same pair of teams are grouped into one matchup card.</li>
             </ol>
           </div>
+
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 space-y-2">
+            <p className="font-semibold text-emerald-800 flex items-center gap-1.5"><Wand2 size={14} /> Option B — Generate with the Scheduler (Playoff Series mode)</p>
+            <ol className="list-decimal list-inside space-y-1 text-emerald-700">
+              <li>Open the <strong>Scheduler</strong> tab and select <em>Playoff Series (Best of N)</em> as the Game Format.</li>
+              <li>Choose Best of 3, 5, or 7, and pick Alternate Games or Back-to-Back Games mode.</li>
+              <li>Under <strong>Series Matchups</strong>, add one row per matchup. Give each matchup a Series Name (e.g. "Semifinal") and pick the two teams.</li>
+              <li>Click <strong>Generate Schedule</strong>. All games are created with the Series Name pre-filled and scheduled on consecutive days from your chosen start date.</li>
+            </ol>
+            <div className="mt-2 bg-white border border-emerald-200 rounded p-3 space-y-1">
+              <p className="font-semibold text-emerald-700 flex items-center gap-1.5"><Trophy size={13} /> By Standings (automatic team placement)</p>
+              <p className="text-emerald-700">Instead of picking team names manually, switch the matchup mode to <strong>By Standings</strong>. Each team slot becomes a standings position (1st Place, 2nd Place, etc.) showing the current W-L record. When you click Generate, the app resolves those positions to the actual teams at that moment — so 1st vs 4th and 2nd vs 3rd are filled in automatically based on the live table.</p>
+              <p className="text-xs text-emerald-600 mt-1">Note: positions are resolved once at generation time, not updated dynamically afterwards.</p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-              <p className="font-semibold text-slate-700 mb-1">Rounds</p>
-              <p>Rounds are ordered by the date of the first game in each series. Each round is a column in the bracket.</p>
+              <p className="font-semibold text-slate-700 mb-1">Rounds in the bracket</p>
+              <p>Rounds are ordered by the date of the first game in each series. Each round is a column. Filter the bracket by league using the selector at the top.</p>
             </div>
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
               <p className="font-semibold text-slate-700 mb-1">Scores &amp; results</p>
-              <p>Completed games show per-game scores. The team leading the series has their row highlighted in green. Individual game details (date, score, status) appear in each matchup card.</p>
+              <p>Completed games show per-game scores. The team leading the series is highlighted in green. Individual game details (date, score, status) appear inside each matchup card.</p>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <p className="font-semibold text-slate-700 mb-1 flex items-center gap-1.5"><Code size={13} /> Bracket embed</p>
+              <p>The <em>Series / Playoff Bracket</em> embed type in the Embed Code tab lets you put the bracket directly on your website. It updates live as scores are recorded and published.</p>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <p className="font-semibold text-slate-700 mb-1">Append to calendar</p>
+              <p>Use the <strong>Replace / Append</strong> toggle in the Scheduler to add playoff games on top of your existing regular-season schedule instead of overwriting it.</p>
             </div>
           </div>
         </div>
@@ -262,6 +292,112 @@ const HelpPage: React.FC = () => {
       ),
     },
     {
+      id: 'scheduler',
+      icon: <Wand2 size={18} />,
+      title: 'Game Scheduler',
+      color: 'text-emerald-600',
+      content: (
+        <div className="space-y-4 text-sm text-slate-600">
+          <p>The Scheduler generates a complete game calendar automatically. Open it from the <strong>Scheduler</strong> tab in the navigation.</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[
+              { label: 'Single Game (Standard)', text: 'One game per matchup per round. The classic round-robin format.' },
+              { label: 'Double Header (Same Day)', text: 'Two games between the same pair of teams on the same day.' },
+              { label: 'Back-to-Back Series', text: 'Two games on consecutive days (e.g. Saturday + Sunday). Select the start day and the second game is placed the following day automatically.' },
+              { label: 'Playoff Series (Best of N)', text: 'A best-of-3, 5, or 7 series between defined pairs. Games are spread across consecutive days from the series start date.' },
+            ].map(({ label, text }) => (
+              <div key={label} className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <p className="font-semibold text-slate-700 mb-0.5">{label}</p>
+                <p>{text}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 space-y-3">
+            <p className="font-semibold text-emerald-800">Playoff Series — Series Matchups</p>
+            <p>For Playoff Series mode, define one row per matchup under <strong>Series Matchups</strong>. Each row has a Series Name (e.g. "Quarterfinal", "Semifinal") and two team slots.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="bg-white border border-emerald-200 rounded p-3">
+                <p className="font-semibold text-slate-700 mb-1">Manual mode</p>
+                <p>Pick team names directly from the league roster for each slot.</p>
+              </div>
+              <div className="bg-white border border-emerald-200 rounded p-3">
+                <p className="font-semibold text-slate-700 mb-1 flex items-center gap-1"><Trophy size={12} className="text-emerald-600" /> By Standings mode</p>
+                <p>Each slot becomes a standings position (1st Place, 2nd Place…) with the current W-L shown. Positions resolve to real teams when you click Generate.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
+            <p className="font-semibold text-slate-700">Game Mode (Playoff Series only)</p>
+            <ul className="space-y-1">
+              <li><strong>Alternate Games</strong> — Home/away alternates each game (Game 1 at Team 1, Game 2 at Team 2, Game 3 at Team 1…).</li>
+              <li><strong>Back-to-Back Games</strong> — All games in the series are played at Team 1's home field.</li>
+            </ul>
+          </div>
+
+          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 space-y-2">
+            <p className="font-semibold text-indigo-800 flex items-center gap-1.5"><PlusCircle size={14} /> Replace vs Append</p>
+            <p>The toggle just above the Generate button controls what happens to your existing calendar:</p>
+            <ul className="space-y-1 text-indigo-700">
+              <li><strong>Replace Existing</strong> — The generated games overwrite the current schedule entirely.</li>
+              <li><strong>Append to Existing</strong> — The new games are added on top of whatever is already in the calendar. Use this to bolt playoff games onto a finished regular season.</li>
+            </ul>
+          </div>
+
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+            <strong>Conflict detection:</strong> After generating, the Scheduler warns you if any team ends up with two games on the same date. Review the calendar and drag games to resolve any clashes.
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'print',
+      icon: <Printer size={18} />,
+      title: 'Printing the Schedule',
+      color: 'text-slate-600',
+      content: (
+        <div className="space-y-3 text-sm text-slate-600">
+          <p>Click the <strong>printer icon</strong> in the Calendar toolbar to open the <strong>Print Preview</strong> modal. It shows all currently-filtered games in a clean table grouped by date — exactly what will be printed.</p>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
+            <p className="font-semibold text-slate-700">Table columns</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+              {[
+                { col: '#', desc: 'Sequential row number' },
+                { col: 'Game #', desc: 'Game number from the game record (if set)' },
+                { col: 'Time', desc: 'Scheduled start time; series name shown in parentheses' },
+                { col: 'Away / Home', desc: 'Team name with logo or colour dot' },
+                { col: 'Location', desc: 'Playing field' },
+                { col: 'League', desc: 'League name(s)' },
+                { col: 'Result / Status', desc: 'Score for finished games, LIVE, PPD, or time for upcoming' },
+              ].map(({ col, desc }) => (
+                <div key={col} className="bg-white border border-slate-200 rounded p-2">
+                  <p className="font-semibold text-slate-700">{col}</p>
+                  <p className="text-slate-500">{desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <ul className="space-y-1.5">
+            {[
+              'The print view respects all active filters — only the games visible in the calendar are printed.',
+              'Games are grouped under bold date headers and sorted by date then time.',
+              'Press Escape or click the backdrop to close without printing.',
+              'The "Print / Save PDF" button sends only the table to the printer — all app UI is hidden on the printed page.',
+            ].map((item, i) => (
+              <li key={i} className="flex items-start space-x-2">
+                <CheckCircle size={14} className="mt-0.5 text-emerald-500 flex-shrink-0" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ),
+    },
+    {
       id: 'tips',
       icon: <Star size={18} />,
       title: 'Tips & Shortcuts',
@@ -270,8 +406,12 @@ const HelpPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-600">
           {[
             { title: 'Drag & drop games', text: 'On the Calendar grid view, drag any game card to a new date to reschedule it instantly.' },
-            { title: 'Playoff Bracket view', text: 'Tag games with a Series Name (e.g. "Quarterfinal", "Semifinal", "Final") in the Edit Game modal. The Playoff Bracket tab auto-builds a visual bracket with W-L tallies and game scores.' },
-            { title: 'Print / PDF export', text: 'Click the printer icon in the Calendar toolbar to open the print dialog. Buttons and navigation are hidden automatically so only the schedule prints.' },
+            { title: 'Playoff Bracket view', text: 'Tag games with a Series Name (e.g. "Quarterfinal", "Semifinal", "Final") in the Edit Game modal or generate them via the Playoff Series scheduler. The Bracket tab auto-builds a visual bracket with W-L tallies and per-game scores.' },
+            { title: 'Playoff series by standings', text: 'In the Scheduler → Playoff Series mode, switch matchups to "By Standings" to let the app fill team slots from the current standings table automatically (1st vs 4th, 2nd vs 3rd, etc.).' },
+            { title: 'Append games to calendar', text: 'Use the Replace / Append toggle in the Scheduler to add playoff or extra games on top of an existing schedule without overwriting it.' },
+            { title: 'Print table view', text: 'Click the printer icon to open a full print preview modal. Games are listed in a table grouped by date, with game numbers, team names, locations, and scores. Only the table is sent to the printer.' },
+            { title: 'Sticky Edit Mode tray', text: 'The "Games in Edit Mode" holding area sticks to the top of the calendar as you scroll — your staged games stay visible no matter how far down the page you go.' },
+            { title: 'Bracket embed', text: 'Use the "Series / Playoff Bracket" embed type in the Embed Code tab to put a live, updating bracket on your website — rounds are ordered automatically by first game date.' },
             { title: 'Dark mode', text: 'Toggle dark mode with the Moon/Sun button in the top-right header. Your preference is saved across sessions.' },
             { title: 'Conflict detection', text: 'After generating a schedule, the Scheduler shows a warning if any team has two games on the same date.' },
             { title: 'W-L record on cards', text: 'Game Bar and Calendar list cards show each team\'s season W-L record (e.g. 3-2) calculated from all final games.' },
@@ -279,7 +419,6 @@ const HelpPage: React.FC = () => {
             { title: 'Multi-league games', text: 'A single game can be tagged to multiple leagues at once — useful for playoff rounds spanning divisions.' },
             { title: 'Game Bar quick-update', text: 'Open a game from any embedded Game Bar widget and use Save & Publish to push score updates live without leaving the page.' },
             { title: 'Mobile list view', text: 'On small screens the Calendar automatically switches to list view — the month grid is desktop-only.' },
-            { title: 'Edit Mode holding area', text: 'Drag games into the "Games in Edit Mode" tray to temporarily remove them from the calendar while reorganizing the schedule.' },
             { title: 'Schedule key per season', text: 'Use a different schedule key for each season or tournament so you can load historical schedules later without overwriting the current one.' },
           ].map(({ title, text }) => (
             <div key={title} className="flex items-start space-x-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
