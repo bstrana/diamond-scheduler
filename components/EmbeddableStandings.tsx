@@ -268,20 +268,8 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
         </div>
       )}
 
-      {/* Header */}
-      <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {league.logoUrl && (
-            <img src={league.logoUrl} alt={league.name} style={{ width: '34px', height: '34px', objectFit: 'contain' }} />
-          )}
-          <div>
-            <h2 style={{ margin: 0, fontSize: '1.1em', fontWeight: 700 }}>
-              {league.name}{league.category ? ` – ${league.category}` : ''}
-            </h2>
-            <p style={{ margin: 0, fontSize: '0.78em', opacity: 0.6 }}>{t('standings.title')}</p>
-          </div>
-        </div>
-
+      {/* Header — share button only; league title is inside the card for image capture */}
+      <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'flex-end' }}>
         {/* Share button */}
         <div ref={shareMenuRef} style={{ position: 'relative', flexShrink: 0 }}>
           <button
@@ -390,8 +378,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
         <div style={{
           display: 'flex', alignItems: 'center', gap: '10px',
           padding: '10px 14px',
-          background: 'var(--embed-primary, #4f46e5)',
-          color: '#fff',
+          borderBottom: '1px solid var(--embed-border, #e2e8f0)',
         }}>
           {league.logoUrl && (
             <img
