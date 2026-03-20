@@ -404,6 +404,7 @@ const GameBar: React.FC<GameBarProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4ade80', display: 'inline-block', flexShrink: 0 }} />
                 <span style={{ color: '#4ade80', fontWeight: 700 }}>
+                  {g.inningHalf === 'top' ? '▲ ' : g.inningHalf === 'bottom' ? '▼ ' : ''}
                   {t('gameBar.inning', 'Inning')} {deriveInning(g)}
                 </span>
               </div>
@@ -882,7 +883,7 @@ const GameBar: React.FC<GameBarProps> = ({
                           {isLive ? (
                             <>
                               <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#16a34a', opacity: 0.9 }}>
-                                {t('gameBar.inning', 'Inning')}
+                                {game.inningHalf === 'top' ? '▲ ' : game.inningHalf === 'bottom' ? '▼ ' : ''}{t('gameBar.inning', 'Inning')}
                               </div>
                               <div className="text-base font-bold" style={{ color: '#16a34a' }}>
                                 {deriveInning(game)}

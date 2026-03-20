@@ -542,10 +542,19 @@ const Calendar: React.FC<CalendarProps> = ({
                                         {/* Time / Status badge in top right corner */}
                                         <div className="absolute top-4 right-4 flex flex-col items-end space-y-1">
                                             {game.status === 'live' ? (
-                                                <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-green-500 text-white">
-                                                    <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span></span>
-                                                    LIVE
-                                                </span>
+                                                <>
+                                                    <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-green-500 text-white">
+                                                        <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span></span>
+                                                        LIVE
+                                                    </span>
+                                                    {game.currentInning != null && (
+                                                        <span className="flex items-center gap-0.5 text-xs font-bold text-green-600 tabular-nums">
+                                                            {game.inningHalf === 'top' && <span className="text-[10px] leading-none">▲</span>}
+                                                            {game.inningHalf === 'bottom' && <span className="text-[10px] leading-none">▼</span>}
+                                                            {game.currentInning}
+                                                        </span>
+                                                    )}
+                                                </>
                                             ) : game.status === 'final' ? (
                                                 <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-700 text-white">FINAL</span>
                                             ) : (
@@ -694,11 +703,13 @@ const Calendar: React.FC<CalendarProps> = ({
                                                 </div>
                                             )}
 
-                                            {/* Location below teams */}
-                                            <div className="text-xs text-slate-500 flex items-center justify-center mt-2">
-                                                <MapPin size={10} className="mr-1" />
-                                                {game.location}
-                                            </div>
+                                            {/* Location below teams — hidden when game is live */}
+                                            {game.status !== 'live' && (
+                                                <div className="text-xs text-slate-500 flex items-center justify-center mt-2">
+                                                    <MapPin size={10} className="mr-1" />
+                                                    {game.location}
+                                                </div>
+                                            )}
 
                                             {/* Live stream link */}
                                             {game.streamUrl && (

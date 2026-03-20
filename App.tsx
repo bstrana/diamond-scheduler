@@ -471,6 +471,8 @@ const App: React.FC = () => {
       scores: newGameForm.scores !== undefined ? newGameForm.scores : editingGame.scores,
       recap: newGameForm.recap !== undefined ? newGameForm.recap : editingGame.recap,
       streamUrl: newGameForm.streamUrl !== undefined ? newGameForm.streamUrl : editingGame.streamUrl,
+      currentInning: newGameForm.currentInning !== undefined ? newGameForm.currentInning : editingGame.currentInning,
+      inningHalf: newGameForm.inningHalf !== undefined ? newGameForm.inningHalf : editingGame.inningHalf,
     };
 
     if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
@@ -513,6 +515,8 @@ const App: React.FC = () => {
       scores: newGameForm.scores !== undefined ? newGameForm.scores : editingGame.scores,
       recap: newGameForm.recap !== undefined ? newGameForm.recap : editingGame.recap,
       streamUrl: newGameForm.streamUrl !== undefined ? newGameForm.streamUrl : editingGame.streamUrl,
+      currentInning: newGameForm.currentInning !== undefined ? newGameForm.currentInning : editingGame.currentInning,
+      inningHalf: newGameForm.inningHalf !== undefined ? newGameForm.inningHalf : editingGame.inningHalf,
     };
 
     if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
@@ -1285,6 +1289,43 @@ const App: React.FC = () => {
                                 <p className="text-xs text-orange-600 mt-1">{t('gameForm.postponedHint')}</p>
                             )}
                         </div>
+
+                        {/* Current Inning (live games only) */}
+                        {(newGameForm.status === 'live' || (!newGameForm.status && editingGame.status === 'live')) && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Current Inning</label>
+                                <div className="flex items-center gap-3">
+                                    {/* Top / Bottom toggle */}
+                                    <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+                                        {(['top', 'bottom'] as const).map(half => {
+                                            const currentHalf = newGameForm.inningHalf !== undefined ? newGameForm.inningHalf : editingGame.inningHalf;
+                                            const isActive = currentHalf === half;
+                                            return (
+                                                <button
+                                                    key={half}
+                                                    type="button"
+                                                    onClick={() => setNewGameForm({...newGameForm, inningHalf: half})}
+                                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${isActive ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                                                >
+                                                    <span className="text-[11px] leading-none">{half === 'top' ? '▲' : '▼'}</span>
+                                                    {half.charAt(0).toUpperCase() + half.slice(1)}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {/* Inning number */}
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={20}
+                                        placeholder="—"
+                                        value={(newGameForm.currentInning !== undefined ? newGameForm.currentInning : editingGame.currentInning) ?? ''}
+                                        onChange={e => setNewGameForm({...newGameForm, currentInning: e.target.value === '' ? undefined : parseInt(e.target.value)})}
+                                        className="w-16 border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm text-center text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                    />
+                                </div>
+                            </div>
+                        )}
 
                         {/* Score by Inning */}
                         {(() => {

@@ -48,6 +48,7 @@ export interface Game {
   seriesName?: string; // Name of the series (e.g., "Semifinal", "Final")
   streamUrl?: string; // Optional live stream URL
   currentInning?: number; // Current inning for live games
+  inningHalf?: 'top' | 'bottom'; // Top (▲) or bottom (▼) of the inning
 }
 
 export type ViewMode = 'calendar' | 'list' | 'teams' | 'leagues' | 'league_builder' | 'scheduler' | 'embed' | 'gamebar' | 'help' | 'bracket';
