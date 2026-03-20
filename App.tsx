@@ -32,6 +32,7 @@ import ScheduleGenerator from './components/ScheduleGenerator';
 import EmbedCodeGenerator from './components/EmbedCodeGenerator';
 import HelpPage from './components/HelpPage';
 import PlayoffBracket from './components/PlayoffBracket';
+import LanguageSwitcher from './components/LanguageSwitcher';
 
 const App: React.FC = () => {
   const { t } = useTranslation();
@@ -822,6 +823,7 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="flex items-center space-x-3 relative" ref={userMenuRef}>
+                  <LanguageSwitcher />
                   <button
                     onClick={toggleDarkMode}
                     className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
