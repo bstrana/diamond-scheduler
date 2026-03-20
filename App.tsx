@@ -25,7 +25,8 @@ import {
   HelpCircle,
   Moon,
   Sun,
-  GitBranch
+  GitBranch,
+  Menu
 } from 'lucide-react';
 import LeagueBuilder from './components/LeagueBuilder';
 import ScheduleGenerator from './components/ScheduleGenerator';
@@ -773,14 +774,22 @@ const App: React.FC = () => {
                   <div className="relative" ref={navMenuRef}>
                     <button
                       onClick={() => setShowNavMenu((prev) => !prev)}
-                      className="flex items-center space-x-3 px-2 py-1 rounded-md hover:bg-slate-100"
+                      className="flex items-center space-x-2 px-2 py-1 rounded-md hover:bg-slate-100"
                     >
                       <img
                         src="/logo.png"
                         alt="Diamond Manager Scheduler logo"
-                        className="h-8 w-8 rounded-lg object-contain bg-slate-100 p-1"
+                        className="h-8 w-8 rounded-lg object-contain bg-slate-100 p-1 flex-shrink-0"
                       />
-                      <div className="text-left">
+                      {/* Mobile: menu icon + current section */}
+                      <div className="flex items-center space-x-1 md:hidden">
+                        <span className="text-sm font-semibold text-slate-700 truncate max-w-[110px]">
+                          {viewMode === 'league_builder' ? t('nav.leagueManagement') : viewMode === 'scheduler' ? t('nav.scheduler') : viewMode === 'teams' ? t('nav.teams') : viewMode === 'embed' ? t('nav.embedCode') : viewMode === 'help' ? t('nav.helpGuide') : viewMode === 'bracket' ? t('nav.playoffBracket') : t('nav.calendar')}
+                        </span>
+                        <ChevronDown size={14} className="text-slate-500 flex-shrink-0" />
+                      </div>
+                      {/* Desktop: full title + subtitle */}
+                      <div className="hidden md:block text-left">
                         <div className="text-lg font-bold tracking-tight text-slate-900 flex items-center">
                           <span>{t('app.title')}</span>
                           <ChevronDown size={16} className="ml-2 text-slate-500" />
@@ -789,7 +798,7 @@ const App: React.FC = () => {
                       </div>
                     </button>
                     {showNavMenu && (
-                      <div className="absolute left-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                      <div className="absolute left-0 top-full mt-2 w-56 max-w-[calc(100vw-1.5rem)] bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
                         <div className="py-2">
                           {navItems.map(({ mode, label, icon: Icon }) => (
                             <button
@@ -798,8 +807,8 @@ const App: React.FC = () => {
                                 setViewMode(mode);
                                 setShowNavMenu(false);
                               }}
-                              className={`w-full flex items-center space-x-3 px-4 py-2 text-sm transition-colors ${
-                                viewMode === mode ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700 hover:bg-slate-100'
+                              className={`w-full flex items-center space-x-3 px-4 py-2.5 text-sm transition-colors ${
+                                viewMode === mode ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-700 hover:bg-slate-100'
                               }`}
                             >
                               <Icon size={18} />
