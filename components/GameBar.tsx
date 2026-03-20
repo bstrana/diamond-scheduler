@@ -928,6 +928,7 @@ const GameBar: React.FC<GameBarProps> = ({
                               </span>
                             </div>
                           )}
+                          {!isLive && (
                           <div className="flex items-center space-x-1 text-xs">
                             <MapPin
                               size={10}
@@ -945,6 +946,7 @@ const GameBar: React.FC<GameBarProps> = ({
                               {game.location}
                             </span>
                           </div>
+                          )}
                           {game.streamUrl && (
                             <a
                               href={game.streamUrl}

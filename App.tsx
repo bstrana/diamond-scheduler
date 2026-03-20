@@ -444,6 +444,8 @@ const App: React.FC = () => {
       scores: game.scores,
       recap: game.recap,
       streamUrl: game.streamUrl,
+      currentInning: game.currentInning,
+      inningHalf: game.inningHalf,
     });
     setShowEditModal(true);
   };
