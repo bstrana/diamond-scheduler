@@ -22,6 +22,8 @@ const hideLeagueFilter = urlParams.get('hide_league_filter') === '1';
 const hideCategoryFilter = urlParams.get('hide_category_filter') === '1';
 const hideTeamFilter = urlParams.get('hide_team_filter') === '1';
 const hideStatusFilter = urlParams.get('hide_status_filter') === '1';
+const hideLeagueName = urlParams.get('hide_league_name') === '1';
+const hideGameNumber = urlParams.get('hide_game_number') === '1';
 
 // Sanitize CSS property values to prevent CSS injection
 const sanitizeCssColor = (value: unknown, fallback: string): string => {
@@ -195,6 +197,8 @@ if (!rootElement) {
           hideCategoryFilter={hideCategoryFilter}
           hideTeamFilter={hideTeamFilter}
           hideStatusFilter={hideStatusFilter}
+          hideLeagueName={hideLeagueName}
+          hideGameNumber={hideGameNumber}
         />
       );
     }

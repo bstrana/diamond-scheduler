@@ -23,6 +23,8 @@ interface GameBarProps {
   hideCategoryFilter?: boolean;
   hideTeamFilter?: boolean;
   hideStatusFilter?: boolean;
+  hideLeagueName?: boolean;
+  hideGameNumber?: boolean;
   /** Include games from this many days in the past (default 0 = only future games) */
   includePastDays?: number;
 }
@@ -45,6 +47,8 @@ const GameBar: React.FC<GameBarProps> = ({
   hideCategoryFilter = false,
   hideTeamFilter = false,
   hideStatusFilter = false,
+  hideLeagueName = false,
+  hideGameNumber = false,
   includePastDays = 0,
 }) => {
   const { t, i18n } = useTranslation();
@@ -577,6 +581,14 @@ const GameBar: React.FC<GameBarProps> = ({
                     }
                 }
 
+                const leagueColor = gameLeagues[0]?.color;
+                const cardBorderColor = isLive
+                  ? '#22c55e'
+                  : leagueColor || 'var(--embed-card-border, #e2e8f0)';
+                const cardHoverBorderColor = isLive
+                  ? '#16a34a'
+                  : leagueColor || 'var(--embed-primary, #6366f1)';
+
                 return (
                   <div
                     key={game.id}
@@ -588,7 +600,7 @@ const GameBar: React.FC<GameBarProps> = ({
                       backgroundColor: 'var(--embed-card-bg, #ffffff)',
                       border: isLive
                         ? '1.5px solid #22c55e'
-                        : 'var(--embed-border-width, 1px) solid var(--embed-card-border, #e2e8f0)',
+                        : `var(--embed-border-width, 1px) solid ${leagueColor || 'var(--embed-card-border, #e2e8f0)'}`,
                       borderRadius: 'var(--embed-card-radius, 0.5rem)',
                       boxShadow: isLive
                         ? '0 0 0 2px rgba(34,197,94,0.15)'
@@ -596,11 +608,11 @@ const GameBar: React.FC<GameBarProps> = ({
                       padding: 'var(--embed-padding, 1rem)'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = isLive ? '#16a34a' : 'var(--embed-primary, #6366f1)';
+                      e.currentTarget.style.borderColor = cardHoverBorderColor;
                       e.currentTarget.style.boxShadow = 'var(--embed-card-shadow, 0 10px 15px -3px rgba(0, 0, 0, 0.1))';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = isLive ? '#22c55e' : 'var(--embed-card-border, #e2e8f0)';
+                      e.currentTarget.style.borderColor = cardBorderColor;
                       e.currentTarget.style.boxShadow = isLive
                         ? '0 0 0 2px rgba(34,197,94,0.15)'
                         : 'var(--embed-card-shadow, 0 1px 3px 0 rgba(0, 0, 0, 0.1))';
@@ -825,7 +837,7 @@ const GameBar: React.FC<GameBarProps> = ({
                     </div>
 
                     {/* Series Name, League & Game Number */}
-                    {(game.seriesName || gameLeagues.length > 0 || game.gameNumber) && (
+                    {(game.seriesName || (!hideLeagueName && gameLeagues.length > 0) || (!hideGameNumber && game.gameNumber)) && (
                       <div className="flex items-center justify-between mb-2 text-xs">
                         <div className="flex items-center space-x-2">
                           {game.seriesName && (
@@ -839,10 +851,10 @@ const GameBar: React.FC<GameBarProps> = ({
                               {game.seriesName}
                             </span>
                           )}
-                          {game.seriesName && gameLeagues.length > 0 && (
+                          {game.seriesName && !hideLeagueName && gameLeagues.length > 0 && (
                             <span style={{ color: 'var(--embed-border, #cbd5e1)' }}>|</span>
                           )}
-                          {gameLeagues.length > 0 && (
+                          {!hideLeagueName && gameLeagues.length > 0 && (
                             <div className="flex flex-wrap items-center gap-1">
                               {gameLeagues.map((league, idx) => (
                                 <React.Fragment key={league.id}>
@@ -871,7 +883,7 @@ const GameBar: React.FC<GameBarProps> = ({
                             </div>
                           )}
                         </div>
-                        {game.gameNumber && (
+                        {!hideGameNumber && game.gameNumber && (
                           <span
                             className="font-semibold"
                             style={{ color: 'var(--embed-primary, #4f46e5)' }}

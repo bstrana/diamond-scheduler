@@ -22,6 +22,7 @@ export interface League {
   logoUrl?: string;
   coverImageUrl?: string;
   category: string;
+  color?: string;
   teams: Team[];
   fields?: string[];
   announcement?: string;

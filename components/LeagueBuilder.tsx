@@ -34,6 +34,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [category, setCategory] = useState('');
   const [announcement, setAnnouncement] = useState('');
+  const [leagueColor, setLeagueColor] = useState('#4f46e5');
   
   // Fields State
   const [fields, setFields] = useState<string[]>([]);
@@ -248,6 +249,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
         setLogoUrl('');
         setCoverImageUrl('');
         setCategory('');
+        setLeagueColor('#4f46e5');
         setTeams([]);
         setFields([]);
     } else {
@@ -260,6 +262,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
             setCoverImageUrl(league.coverImageUrl || '');
             setCategory(league.category);
             setAnnouncement(league.announcement || '');
+            setLeagueColor(league.color || '#4f46e5');
             setTeams([...league.teams]);
             setFields([...(league.fields || [])]);
         }
@@ -406,6 +409,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
             logoUrl: sanitizedLogoUrl,
             coverImageUrl: sanitizedCoverImageUrl,
             category: sanitizedCategory,
+            color: leagueColor || undefined,
             teams: teams,
             fields: fields,
             announcement: sanitizedAnnouncement,
@@ -420,6 +424,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
             logoUrl: sanitizedLogoUrl,
             coverImageUrl: sanitizedCoverImageUrl,
             category: sanitizedCategory,
+            color: leagueColor || undefined,
             teams: teams,
             fields: fields,
             announcement: sanitizedAnnouncement,
@@ -432,6 +437,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
         setCoverImageUrl('');
         setCategory('');
         setAnnouncement('');
+        setLeagueColor('#4f46e5');
         setTeams([]);
         setFields([]);
     }
@@ -569,6 +575,27 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                 )}
               </div>
             </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('league.leagueColor')}</label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="color"
+                    value={leagueColor}
+                    onChange={(e) => setLeagueColor(e.target.value)}
+                    className="h-9 w-14 rounded border border-slate-300 cursor-pointer p-0.5"
+                  />
+                  <input
+                    type="text"
+                    value={leagueColor}
+                    onChange={(e) => setLeagueColor(e.target.value)}
+                    className="flex-1 border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-sm"
+                    placeholder="#4f46e5"
+                    maxLength={7}
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-1">{t('league.leagueColorHelp')}</p>
+              </div>
             {/* Announcement */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">{t('league.announcement')}</label>

@@ -44,6 +44,8 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   const [hideCategoryFilter, setHideCategoryFilter] = useState(false);
   const [hideTeamFilter, setHideTeamFilter] = useState(false);
   const [hideStatusFilter, setHideStatusFilter] = useState(false);
+  const [hideLeagueName, setHideLeagueName] = useState(false);
+  const [hideGameNumber, setHideGameNumber] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showStyler, setShowStyler] = useState(false);
   const [embedStyles, setEmbedStyles] = useState<EmbedStyles | null>(null);
@@ -108,6 +110,8 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
       if (hideCategoryFilter) params.set('hide_category_filter', '1');
       if (hideTeamFilter) params.set('hide_team_filter', '1');
       if (embedView === 'gamebar' && hideStatusFilter) params.set('hide_status_filter', '1');
+      if (embedView === 'gamebar' && hideLeagueName) params.set('hide_league_name', '1');
+      if (embedView === 'gamebar' && hideGameNumber) params.set('hide_game_number', '1');
       if (embedView === 'calendar' && viewType !== 'grid') params.set('view', viewType);
     }
     params.set('height', `${height}px`);
@@ -137,7 +141,9 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     hideLeagueFilter,
     hideCategoryFilter,
     hideTeamFilter,
-    hideStatusFilter
+    hideStatusFilter,
+    hideLeagueName,
+    hideGameNumber
   ]);
 
   // Generate embed code
@@ -279,6 +285,28 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                     />
                     <span>{t('embed.statusFilter')}</span>
                   </label>
+                )}
+                {embedView === 'gamebar' && (
+                  <>
+                    <label className="flex items-center space-x-2 text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={!hideLeagueName}
+                        onChange={(e) => setHideLeagueName(!e.target.checked)}
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span>{t('embed.showLeagueName')}</span>
+                    </label>
+                    <label className="flex items-center space-x-2 text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={!hideGameNumber}
+                        onChange={(e) => setHideGameNumber(!e.target.checked)}
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span>{t('embed.showGameNumber')}</span>
+                    </label>
+                  </>
                 )}
               </div>
             </div>
@@ -523,6 +551,9 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                 hideLeagueFilter={hideLeagueFilter}
                 hideCategoryFilter={hideCategoryFilter}
                 hideTeamFilter={hideTeamFilter}
+                hideStatusFilter={hideStatusFilter}
+                hideLeagueName={hideLeagueName}
+                hideGameNumber={hideGameNumber}
               />
             ) : embedView === 'standings' ? (
               <EmbeddableStandings
