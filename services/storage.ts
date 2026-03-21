@@ -88,27 +88,12 @@ const loadFromPocketBase = async (context?: StorageContext): Promise<StorageData
       filter = `${baseFilter} && user_id="${safeUserId}"`;
     }
     
-    try {
-      const record = await pocketbaseClient
-        .collection(pocketbaseCollection)
-        .getFirstListItem(filter);
-      const payload = (record as { payload?: StorageData }).payload;
-      if (!payload) return null;
-      return payload;
-    } catch (filterError: any) {
-      // If filter fails (e.g., field doesn't exist), try without org_id/user_id
-      // This handles cases where the schema hasn't been updated yet
-      if (filterError?.status === 400 && (safeOrgId || safeUserId)) {
-        console.warn('PocketBase filter failed, trying without org_id/user_id filter.', filterError);
-        const record = await pocketbaseClient
-          .collection(pocketbaseCollection)
-          .getFirstListItem(baseFilter);
-        const payload = (record as { payload?: StorageData }).payload;
-        if (!payload) return null;
-        return payload;
-      }
-      throw filterError;
-    }
+    const record = await pocketbaseClient
+      .collection(pocketbaseCollection)
+      .getFirstListItem(filter);
+    const payload = (record as { payload?: StorageData }).payload;
+    if (!payload) return null;
+    return payload;
   } catch (error) {
     console.warn('PocketBase load failed, falling back to local storage.', error);
     return null;
@@ -130,37 +115,17 @@ const saveToPocketBase = async (data: StorageData, context?: StorageContext) => 
       filter = `${baseFilter} && user_id="${safeUserId}"`;
     }
     
-    try {
-      const existing = await pocketbaseClient
-        .collection(pocketbaseCollection)
-        .getFirstListItem(filter);
-      await pocketbaseClient
-        .collection(pocketbaseCollection)
-        .update(existing.id, { 
-          app_id: appId,
-          org_id: safeOrgId || undefined,
-          user_id: safeUserId || undefined,
-          payload: data 
-        });
-    } catch (filterError: any) {
-      // If filter fails (e.g., field doesn't exist), try without org_id/user_id
-      if (filterError?.status === 400 && (safeOrgId || safeUserId)) {
-        console.warn('PocketBase filter failed, trying without org_id/user_id filter.', filterError);
-        const existing = await pocketbaseClient
-          .collection(pocketbaseCollection)
-          .getFirstListItem(baseFilter);
-        await pocketbaseClient
-          .collection(pocketbaseCollection)
-          .update(existing.id, { 
-            app_id: appId,
-            org_id: safeOrgId || undefined,
-            user_id: safeUserId || undefined,
-            payload: data 
-          });
-        return;
-      }
-      throw filterError;
-    }
+    const existing = await pocketbaseClient
+      .collection(pocketbaseCollection)
+      .getFirstListItem(filter);
+    await pocketbaseClient
+      .collection(pocketbaseCollection)
+      .update(existing.id, {
+        app_id: appId,
+        org_id: safeOrgId || undefined,
+        user_id: safeUserId || undefined,
+        payload: data
+      });
   } catch (error) {
     try {
       const safeOrgId = sanitizeFilterValue(context?.orgId);
@@ -272,6 +237,19 @@ const saveScheduleToPocketBase = async (
     const record = await pocketbaseClient
       .collection(scheduleCollection)
       .getFirstListItem(`app_id="${appId}" && schedule_key="${finalKey}"`);
+
+    // Verify the record belongs to the calling user's org before updating
+    const safeOrgIdCheck = sanitizeFilterValue(context?.orgId);
+    if (safeOrgIdCheck && record.org_id !== safeOrgIdCheck) {
+      return { ok: false, reason: 'Schedule not found or access denied.' };
+    }
+    if (!safeOrgIdCheck && context?.userId) {
+      const safeUserIdCheck = sanitizeFilterValue(context.userId);
+      if (safeUserIdCheck && record.user_id !== safeUserIdCheck) {
+        return { ok: false, reason: 'Schedule not found or access denied.' };
+      }
+    }
+
     await pocketbaseClient.collection(scheduleCollection).update(record.id, payload);
     return { ok: true };
   } catch (error) {
@@ -547,13 +525,28 @@ export const listScoreLinks = async (
 
 export const updateScoreLink = async (
   id: string,
-  data: Partial<Pick<ScoreLink, 'disabled' | 'autoSync'>>
+  data: Partial<Pick<ScoreLink, 'disabled' | 'autoSync'>>,
+  context?: StorageContext
 ): Promise<boolean> => {
   if (!pocketbaseClient) return false;
-  const payload: Record<string, unknown> = {};
-  if (data.disabled !== undefined) payload.disabled = data.disabled;
-  if (data.autoSync !== undefined) payload.auto_sync = data.autoSync;
   try {
+    // Verify the record belongs to the calling user's org before modifying
+    const record = await pocketbaseClient.collection(scoreLinksCollection).getOne(id);
+    const safeOrgId = sanitizeFilterValue(context?.orgId);
+    if (safeOrgId && record.org_id !== safeOrgId) {
+      console.warn('updateScoreLink: access denied (org_id mismatch)');
+      return false;
+    }
+    if (!safeOrgId && context?.userId) {
+      const safeUserId = sanitizeFilterValue(context.userId);
+      if (safeUserId && record.user_id !== safeUserId) {
+        console.warn('updateScoreLink: access denied (user_id mismatch)');
+        return false;
+      }
+    }
+    const payload: Record<string, unknown> = {};
+    if (data.disabled !== undefined) payload.disabled = data.disabled;
+    if (data.autoSync !== undefined) payload.auto_sync = data.autoSync;
     await pocketbaseClient.collection(scoreLinksCollection).update(id, payload);
     return true;
   } catch (error) {
@@ -594,7 +587,28 @@ export const saveScoreEdit = async (edit: Omit<ScoreEdit, 'id' | 'updated'>): Pr
   if (!pocketbaseClient) return false;
   const safeKey    = sanitizeFilterValue(edit.scheduleKey);
   const safeGameId = edit.gameId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 100);
-  if (!safeKey || !safeGameId) return false;
+  const safeToken  = edit.token.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 100);
+  if (!safeKey || !safeGameId || !safeToken) return false;
+
+  // Re-validate the token server-side: verify it exists, is not disabled, not expired,
+  // and actually corresponds to the game and schedule being edited.
+  try {
+    const linkRecord = await pocketbaseClient
+      .collection(scoreLinksCollection)
+      .getFirstListItem(`token="${safeToken}" && disabled=false`);
+    if (
+      linkRecord.game_id !== safeGameId ||
+      linkRecord.schedule_key !== safeKey ||
+      new Date(linkRecord.expires_at) < new Date()
+    ) {
+      console.warn('saveScoreEdit: token mismatch or expired');
+      return false;
+    }
+  } catch {
+    console.warn('saveScoreEdit: invalid or unknown token');
+    return false;
+  }
+
   try {
     let existingId: string | null = null;
     try {
@@ -607,7 +621,7 @@ export const saveScoreEdit = async (edit: Omit<ScoreEdit, 'id' | 'updated'>): Pr
     const payload = {
       game_id:      safeGameId,
       schedule_key: safeKey,
-      token:        edit.token,
+      token:        safeToken,
       status:       edit.status,
       scores:       edit.scores ?? null,
     };

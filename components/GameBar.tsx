@@ -1,6 +1,5 @@
 import React, { useMemo, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import html2canvas from 'html2canvas';
 import { Game, Team, League } from '../types';
 import { formatDate, buildGameShareText, copyToClipboard } from '../utils';
 import { ChevronLeft, ChevronRight, MapPin, Calendar as CalIcon, Clock, ChevronDown, SlidersHorizontal, Radio, Share2, Copy, Check, Maximize2, ImageDown, Link } from 'lucide-react';
@@ -228,6 +227,7 @@ const GameBar: React.FC<GameBarProps> = ({
     if (!cardRef.current || isCapturing) return;
     setIsCapturing(true);
     try {
+      const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(cardRef.current, {
         useCORS: true,
         allowTaint: true,

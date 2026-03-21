@@ -5,7 +5,6 @@ import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, 
 import { formatDate } from '../utils';
 import { useTranslation } from 'react-i18next';
 import PrintSchedule from './PrintSchedule';
-import html2canvas from 'html2canvas';
 
 interface CalendarProps {
   currentDate: Date;
@@ -105,6 +104,7 @@ const Calendar: React.FC<CalendarProps> = ({
     if (!captureRef.current || isCapturing || selectedGameIds.size === 0) return;
     setIsCapturing(true);
     try {
+      const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(captureRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
       const link = document.createElement('a');
       link.download = 'schedule.png';

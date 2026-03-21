@@ -69,7 +69,7 @@ const ScoreLinksManager: React.FC<ScoreLinksManagerProps> = ({
   const handleDisable = async (link: ScoreLink) => {
     if (!link.id) return;
     setDisabling(link.id);
-    await storageApi.updateScoreLink(link.id, { disabled: true });
+    await storageApi.updateScoreLink(link.id, { disabled: true }, { userId, orgId });
     setLinks(prev => prev.map(l => l.id === link.id ? { ...l, disabled: true } : l));
     setDisabling(null);
   };
@@ -78,7 +78,7 @@ const ScoreLinksManager: React.FC<ScoreLinksManagerProps> = ({
     if (!link.id) return;
     setTogglingSync(link.id);
     const next = !link.autoSync;
-    await storageApi.updateScoreLink(link.id, { autoSync: next });
+    await storageApi.updateScoreLink(link.id, { autoSync: next }, { userId, orgId });
     setLinks(prev => prev.map(l => l.id === link.id ? { ...l, autoSync: next } : l));
     setTogglingSync(null);
   };

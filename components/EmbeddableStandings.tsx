@@ -3,7 +3,6 @@ import { League, Team, Game } from '../types';
 import { buildStandingsShareText, copyToClipboard, calculateStandings, StandingsRow } from '../utils';
 import { Share2, Copy, Check, ImageDown } from 'lucide-react';
 import * as storageApi from '../services/storage';
-import html2canvas from 'html2canvas';
 import { useTranslation } from 'react-i18next';
 
 function getGameLeagueIds(game: Game): string[] {
@@ -115,6 +114,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
     setIsCapturing(true);
     setShowShareMenu(false);
     try {
+      const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(cardRef.current, {
         scale: 2,
         useCORS: true,
