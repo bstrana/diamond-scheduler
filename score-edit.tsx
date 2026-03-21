@@ -21,7 +21,9 @@ function hoursLeft(expiresAt: string): number {
 // ── Score-entry form ──────────────────────────────────────────────────────────
 
 const ScoreEditApp: React.FC = () => {
-  const [phase, setPhase] = useState<'loading' | 'invalid' | 'form' | 'submitting' | 'done' | 'error'>('loading');
+  const [phase, setPhase] = useState<'loading' | 'invalid' | 'form' | 'submitting'>('loading');
+  const [savedAt, setSavedAt]   = useState<Date | null>(null);
+  const [saveError, setSaveError] = useState(false);
   const [link, setLink]   = useState<ScoreLink | null>(null);
   const [game, setGame]   = useState<Game | null>(null);
   const [homeTeam, setHomeTeam] = useState<Team | null>(null);
@@ -73,6 +75,7 @@ const ScoreEditApp: React.FC = () => {
     e.preventDefault();
     if (!link || !game) return;
     setPhase('submitting');
+    setSaveError(false);
     const ok = await saveScoreEdit({
       gameId:      game.id,
       scheduleKey: link.scheduleKey,
@@ -84,7 +87,13 @@ const ScoreEditApp: React.FC = () => {
         innings: innings.map(i => ({ home: i.home ?? 0, away: i.away ?? 0 })),
       },
     });
-    setPhase(ok ? 'done' : 'error');
+    setPhase('form');
+    if (ok) {
+      setSavedAt(new Date());
+      setTimeout(() => setSavedAt(null), 4000);
+    } else {
+      setSaveError(true);
+    }
   };
 
   const addInning = () => setInnings(prev => [...prev, { home: null, away: null }]);
@@ -110,45 +119,6 @@ const ScoreEditApp: React.FC = () => {
           <AlertCircle size={40} className="mx-auto text-red-400" />
           <h1 className="text-lg font-semibold text-slate-800">Link unavailable</h1>
           <p className="text-sm text-slate-500">This score-entry link is invalid, expired, or has been disabled by the schedule owner.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (phase === 'done') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 max-w-sm w-full text-center space-y-3">
-          <CheckCircle size={40} className="mx-auto text-emerald-500" />
-          <h1 className="text-lg font-semibold text-slate-800">Score submitted!</h1>
-          <p className="text-sm text-slate-500">The schedule owner will see this update and can absorb it into the live schedule.</p>
-          {link && (
-            <p className="text-xs text-slate-400">Link valid for {hoursLeft(link.expiresAt)} more hour(s). You may submit again if needed.</p>
-          )}
-          <button
-            onClick={() => setPhase('form')}
-            className="mt-2 text-sm text-indigo-600 underline hover:text-indigo-800"
-          >
-            Edit again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (phase === 'error') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 max-w-sm w-full text-center space-y-3">
-          <AlertCircle size={40} className="mx-auto text-red-400" />
-          <h1 className="text-lg font-semibold text-slate-800">Submission failed</h1>
-          <p className="text-sm text-slate-500">Could not save the score. Please check your connection and try again.</p>
-          <button
-            onClick={() => setPhase('form')}
-            className="mt-2 text-sm text-indigo-600 underline hover:text-indigo-800"
-          >
-            Try again
-          </button>
         </div>
       </div>
     );
@@ -248,6 +218,20 @@ const ScoreEditApp: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+
+          {savedAt && (
+            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2.5 text-sm text-emerald-800">
+              <CheckCircle size={16} className="text-emerald-500 flex-shrink-0" />
+              <span>Saved at {savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+            </div>
+          )}
+
+          {saveError && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-sm text-red-800">
+              <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
+              <span>Could not save — check your connection and try again.</span>
             </div>
           )}
 
