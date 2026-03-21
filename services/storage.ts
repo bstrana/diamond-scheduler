@@ -505,14 +505,14 @@ export const createScoreLink = async (
       token:        link.token,
       game_id:      link.gameId,
       schedule_key: link.scheduleKey,
-      org_id:       link.orgId || null,
-      user_id:      link.userId || null,
+      org_id:       link.orgId || '',
+      user_id:      link.userId || '',
       disabled:     false,
       expires_at:   link.expiresAt.replace('T', ' '),
     });
     return scoreLinkFromRecord(record);
-  } catch (error) {
-    console.warn('createScoreLink failed', error);
+  } catch (error: any) {
+    console.warn('createScoreLink failed', error?.message, error?.response?.data ?? error);
     return null;
   }
 };
