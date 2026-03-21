@@ -508,7 +508,7 @@ export const createScoreLink = async (
       org_id:       link.orgId || null,
       user_id:      link.userId || null,
       disabled:     false,
-      expires_at:   link.expiresAt,
+      expires_at:   link.expiresAt.replace('T', ' '),
     });
     return scoreLinkFromRecord(record);
   } catch (error) {
