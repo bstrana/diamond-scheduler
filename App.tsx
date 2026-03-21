@@ -64,6 +64,7 @@ const App: React.FC = () => {
   const teamLimit = Number.isFinite(maxTeams) ? maxTeams : undefined;
   const navMenuRef = useRef<HTMLDivElement | null>(null);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const gamesRef = useRef<Game[]>([]);
 
   const keycloakEnv = {
     url: import.meta.env.VITE_KEYCLOAK_URL,
@@ -162,6 +163,7 @@ const App: React.FC = () => {
   const [teams, setTeams] = useState<Team[]>([]);
 
   const [games, setGames] = useState<Game[]>([]);
+  useEffect(() => { gamesRef.current = games; }, [games]);
 
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -628,17 +630,51 @@ const App: React.FC = () => {
     setIsSyncing(false);
   };
 
-  // Poll remote edit count when a scheduleKey is loaded
+  // Returns true if now is within 1 hour before → 4 hours after the game's scheduled time
+  const isWithinAutoSyncWindow = (game: Game): boolean => {
+    if (!game.date || !game.time) return false;
+    const gameMs = new Date(`${game.date}T${game.time}`).getTime();
+    if (Number.isNaN(gameMs)) return false;
+    const now = Date.now();
+    return now >= gameMs - 60 * 60_000 && now <= gameMs + 4 * 60 * 60_000;
+  };
+
+  // Poll remote edit count when a scheduleKey is loaded; auto-apply edits from autoSync links
   useEffect(() => {
     if (!scheduleKey) return;
     const check = async () => {
-      const edits = await storageApi.listScoreEditsByScheduleKey(scheduleKey);
-      setRemoteEditCount(edits.length);
+      const [edits, scoreLinks] = await Promise.all([
+        storageApi.listScoreEditsByScheduleKey(scheduleKey),
+        storageApi.listScoreLinks({ userId, orgId }, scheduleKey),
+      ]);
+      // Build a map of token → gameId for auto-sync links that are within their game window
+      const autoSyncTokens = new Set<string>();
+      const currentGames = gamesRef.current;
+      for (const link of scoreLinks) {
+        if (!link.autoSync || link.disabled) continue;
+        const game = currentGames.find(g => g.id === link.gameId);
+        if (game && isWithinAutoSyncWindow(game)) {
+          autoSyncTokens.add(link.token);
+        }
+      }
+      if (autoSyncTokens.size > 0) {
+        const autoSyncEdits = edits.filter(e => autoSyncTokens.has(e.token));
+        if (autoSyncEdits.length > 0) {
+          const autoSyncMap = new Map(autoSyncEdits.map(e => [e.gameId, e]));
+          setGames(prev => prev.map(g => {
+            const edit = autoSyncMap.get(g.id);
+            if (!edit) return g;
+            return { ...g, status: edit.status, scores: edit.scores ?? g.scores };
+          }));
+        }
+      }
+      const manualEdits = edits.filter(e => !autoSyncTokens.has(e.token));
+      setRemoteEditCount(manualEdits.length);
     };
     check();
     const id = setInterval(check, 60_000);
     return () => clearInterval(id);
-  }, [scheduleKey]);
+  }, [scheduleKey, userId, orgId]);
 
   // ─────────────────────────────────────────────────────────────────────────────
 
