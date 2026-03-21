@@ -500,22 +500,19 @@ export const createScoreLink = async (
   link: Omit<ScoreLink, 'id' | 'created'>
 ): Promise<ScoreLink | null> => {
   if (!pocketbaseClient) return null;
-  const payload = {
-    token:        link.token,
-    game_id:      link.gameId,
-    schedule_key: link.scheduleKey,
-    org_id:       link.orgId || '',
-    user_id:      link.userId || '',
-    disabled:     false,
-    expires_at:   link.expiresAt.replace('T', ' '),
-  };
-  console.log('createScoreLink payload:', JSON.stringify(payload));
   try {
-    const record = await pocketbaseClient.collection(scoreLinksCollection).create(payload);
+    const record = await pocketbaseClient.collection(scoreLinksCollection).create({
+      token:        link.token,
+      game_id:      link.gameId,
+      schedule_key: link.scheduleKey,
+      org_id:       link.orgId || '',
+      user_id:      link.userId || '',
+      disabled:     false,
+      expires_at:   link.expiresAt.replace('T', ' '),
+    });
     return scoreLinkFromRecord(record);
   } catch (error: any) {
-    const detail = error?.data ?? error?.response?.data ?? error;
-    console.warn('createScoreLink failed:', error?.status, error?.message, JSON.stringify(detail));
+    console.warn('createScoreLink failed', error);
     return null;
   }
 };
