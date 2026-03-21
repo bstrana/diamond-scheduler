@@ -51,7 +51,29 @@ export interface Game {
   inningHalf?: 'top' | 'bottom'; // Top (▲) or bottom (▼) of the inning
 }
 
-export type ViewMode = 'calendar' | 'list' | 'teams' | 'leagues' | 'league_builder' | 'scheduler' | 'embed' | 'gamebar' | 'help' | 'bracket';
+export type ViewMode = 'calendar' | 'list' | 'teams' | 'leagues' | 'league_builder' | 'scheduler' | 'embed' | 'gamebar' | 'help' | 'bracket' | 'score_links';
+
+export interface ScoreLink {
+  id?: string;          // PocketBase record id
+  token: string;        // UUID token that goes in the share URL
+  gameId: string;       // game.id this link covers
+  scheduleKey: string;  // which published schedule
+  orgId?: string;
+  userId?: string;
+  disabled: boolean;
+  expiresAt: string;    // ISO datetime (48 h from creation)
+  created?: string;
+}
+
+export interface ScoreEdit {
+  id?: string;
+  gameId: string;
+  scheduleKey: string;
+  token: string;       // link token used (for audit)
+  status: Game['status'];
+  scores?: Game['scores'];
+  updated?: string;
+}
 
 export interface CalendarDay {
   date: Date;

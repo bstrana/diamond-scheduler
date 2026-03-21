@@ -1,5 +1,5 @@
 import PocketBase from 'pocketbase';
-import { Game, League, Team } from '../types';
+import { Game, League, Team, ScoreLink, ScoreEdit } from '../types';
 
 export type StorageData = {
   leagues: League[];
@@ -34,6 +34,13 @@ const pocketbaseUrl = import.meta.env.VITE_PB_URL;
 const pocketbaseCollection = import.meta.env.VITE_PB_COLLECTION || DEFAULT_COLLECTION;
 
 const scheduleCollection = import.meta.env.VITE_PB_SCHEDULE_COLLECTION;
+// Score-link collections – set VITE_PB_SCORE_LINKS_COLLECTION and
+// VITE_PB_SCORE_EDITS_COLLECTION in your .env (defaults shown here).
+// Both collections must allow unauthenticated API access in PocketBase:
+//   score_links  – List/View rules: empty (public read)
+//   score_edits  – List/View/Create/Update rules: empty (public read+write)
+const scoreLinksCollection = import.meta.env.VITE_PB_SCORE_LINKS_COLLECTION || 'score_links';
+const scoreEditsCollection  = import.meta.env.VITE_PB_SCORE_EDITS_COLLECTION  || 'score_edits';
 const schedulePublishEnabled =
   (import.meta.env.VITE_PB_SCHEDULE_PUBLISH || 'false').toLowerCase() === 'true';
 const scheduleKeyEnv = import.meta.env.VITE_PB_SCHEDULE_KEY;
@@ -472,5 +479,158 @@ export const loadPublishedScheduleById = async (
   } catch (error) {
     console.warn('PocketBase schedule fetch failed.', error);
     return null;
+  }
+};
+
+// ─── Score Links ─────────────────────────────────────────────────────────────
+
+const scoreLinkFromRecord = (r: any): ScoreLink => ({
+  id:          r.id,
+  token:       r.token,
+  gameId:      r.game_id,
+  scheduleKey: r.schedule_key,
+  orgId:       r.org_id || undefined,
+  userId:      r.user_id || undefined,
+  disabled:    r.disabled === true,
+  expiresAt:   r.expires_at,
+  created:     r.created,
+});
+
+export const createScoreLink = async (
+  link: Omit<ScoreLink, 'id' | 'created'>
+): Promise<ScoreLink | null> => {
+  if (!pocketbaseClient) return null;
+  try {
+    const record = await pocketbaseClient.collection(scoreLinksCollection).create({
+      token:        link.token,
+      game_id:      link.gameId,
+      schedule_key: link.scheduleKey,
+      org_id:       link.orgId || null,
+      user_id:      link.userId || null,
+      disabled:     false,
+      expires_at:   link.expiresAt,
+    });
+    return scoreLinkFromRecord(record);
+  } catch (error) {
+    console.warn('createScoreLink failed', error);
+    return null;
+  }
+};
+
+export const listScoreLinks = async (
+  context?: StorageContext,
+  scheduleKey?: string
+): Promise<ScoreLink[]> => {
+  if (!pocketbaseClient) return [];
+  try {
+    const filters: string[] = [];
+    const safeOrgId  = sanitizeFilterValue(context?.orgId);
+    const safeUserId = sanitizeFilterValue(context?.userId);
+    if (safeOrgId)       filters.push(`org_id="${safeOrgId}"`);
+    else if (safeUserId) filters.push(`user_id="${safeUserId}"`);
+    if (scheduleKey) {
+      const safeKey = sanitizeFilterValue(scheduleKey);
+      if (safeKey) filters.push(`schedule_key="${safeKey}"`);
+    }
+    const filter = filters.join(' && ');
+    const result = await pocketbaseClient
+      .collection(scoreLinksCollection)
+      .getList(1, 500, { filter, sort: '-created' });
+    return (result.items || []).map(scoreLinkFromRecord);
+  } catch (error) {
+    console.warn('listScoreLinks failed', error);
+    return [];
+  }
+};
+
+export const updateScoreLink = async (
+  id: string,
+  data: Partial<Pick<ScoreLink, 'disabled'>>
+): Promise<boolean> => {
+  if (!pocketbaseClient) return false;
+  try {
+    await pocketbaseClient.collection(scoreLinksCollection).update(id, {
+      disabled: data.disabled,
+    });
+    return true;
+  } catch (error) {
+    console.warn('updateScoreLink failed', error);
+    return false;
+  }
+};
+
+export const validateScoreLink = async (token: string): Promise<ScoreLink | null> => {
+  if (!pocketbaseClient || !token) return null;
+  const safeToken = token.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 100);
+  if (!safeToken) return null;
+  try {
+    const record = await pocketbaseClient
+      .collection(scoreLinksCollection)
+      .getFirstListItem(`token="${safeToken}" && disabled=false`);
+    const link = scoreLinkFromRecord(record);
+    if (new Date(link.expiresAt) < new Date()) return null;
+    return link;
+  } catch {
+    return null;
+  }
+};
+
+// ─── Score Edits (overlay) ────────────────────────────────────────────────────
+
+const scoreEditFromRecord = (r: any): ScoreEdit => ({
+  id:          r.id,
+  gameId:      r.game_id,
+  scheduleKey: r.schedule_key,
+  token:       r.token,
+  status:      r.status,
+  scores:      r.scores || undefined,
+  updated:     r.updated,
+});
+
+export const saveScoreEdit = async (edit: Omit<ScoreEdit, 'id' | 'updated'>): Promise<boolean> => {
+  if (!pocketbaseClient) return false;
+  const safeKey    = sanitizeFilterValue(edit.scheduleKey);
+  const safeGameId = edit.gameId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 100);
+  if (!safeKey || !safeGameId) return false;
+  try {
+    let existingId: string | null = null;
+    try {
+      const existing = await pocketbaseClient
+        .collection(scoreEditsCollection)
+        .getFirstListItem(`game_id="${safeGameId}" && schedule_key="${safeKey}"`);
+      existingId = existing.id;
+    } catch { /* no existing record – will create */ }
+
+    const payload = {
+      game_id:      safeGameId,
+      schedule_key: safeKey,
+      token:        edit.token,
+      status:       edit.status,
+      scores:       edit.scores ?? null,
+    };
+    if (existingId) {
+      await pocketbaseClient.collection(scoreEditsCollection).update(existingId, payload);
+    } else {
+      await pocketbaseClient.collection(scoreEditsCollection).create(payload);
+    }
+    return true;
+  } catch (error) {
+    console.warn('saveScoreEdit failed', error);
+    return false;
+  }
+};
+
+export const listScoreEditsByScheduleKey = async (scheduleKey: string): Promise<ScoreEdit[]> => {
+  if (!pocketbaseClient || !scheduleKey) return [];
+  const safeKey = sanitizeFilterValue(scheduleKey);
+  if (!safeKey) return [];
+  try {
+    const result = await pocketbaseClient
+      .collection(scoreEditsCollection)
+      .getList(1, 1000, { filter: `schedule_key="${safeKey}"`, sort: '-updated' });
+    return (result.items || []).map(scoreEditFromRecord);
+  } catch (error) {
+    console.warn('listScoreEditsByScheduleKey failed', error);
+    return [];
   }
 };

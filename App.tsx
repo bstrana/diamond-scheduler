@@ -26,7 +26,9 @@ import {
   Moon,
   Sun,
   GitBranch,
-  Menu
+  Menu,
+  Link2,
+  Download,
 } from 'lucide-react';
 import LeagueBuilder from './components/LeagueBuilder';
 import ScheduleGenerator from './components/ScheduleGenerator';
@@ -34,6 +36,7 @@ import EmbedCodeGenerator from './components/EmbedCodeGenerator';
 import HelpPage from './components/HelpPage';
 import PlayoffBracket from './components/PlayoffBracket';
 import LanguageSwitcher from './components/LanguageSwitcher';
+import ScoreLinksManager from './components/ScoreLinksManager';
 
 const App: React.FC = () => {
   const { t } = useTranslation();
@@ -174,6 +177,10 @@ const App: React.FC = () => {
   
   // Game Holding Area State (for games in edit mode)
   const [gamesInHoldingArea, setGamesInHoldingArea] = useState<Game[]>([]);
+  const [remoteEditCount, setRemoteEditCount] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [generatingLinkFor, setGeneratingLinkFor] = useState<string | null>(null);
+  const [generatedLinkUrl, setGeneratedLinkUrl] = useState<string | null>(null);
 
   // New Game Form State
   const [newGameForm, setNewGameForm] = useState<Partial<Game> & { leagueIds?: string[] }>({
@@ -551,6 +558,90 @@ const App: React.FC = () => {
     }
   };
 
+  // ── Score links ───────────────────────────────────────────────────────────────
+
+  const handleGenerateScoreLink = async (gameId: string) => {
+    if (!scheduleKey) {
+      alert('Publish a schedule first to generate score links.');
+      return;
+    }
+    setGeneratingLinkFor(gameId);
+    setGeneratedLinkUrl(null);
+    const expiresAt = new Date(Date.now() + 48 * 3_600_000).toISOString();
+    const link = await storageApi.createScoreLink({
+      token: generateUUID(),
+      gameId,
+      scheduleKey,
+      orgId,
+      userId,
+      disabled: false,
+      expiresAt,
+    });
+    setGeneratingLinkFor(null);
+    if (link) {
+      const url = `${window.location.origin}/score-edit.html?token=${link.token}`;
+      setGeneratedLinkUrl(url);
+      try { await navigator.clipboard.writeText(url); } catch { /* ignore */ }
+    } else {
+      alert('Could not create score link. Make sure the score_links collection is configured in PocketBase.');
+    }
+  };
+
+  const handleGenerateScoreLinksForGames = async (gameIds: string[]) => {
+    if (!scheduleKey) {
+      alert('Publish a schedule first to generate score links.');
+      return;
+    }
+    const expiresAt = new Date(Date.now() + 48 * 3_600_000).toISOString();
+    const created: string[] = [];
+    for (const gameId of gameIds) {
+      const link = await storageApi.createScoreLink({
+        token: generateUUID(),
+        gameId,
+        scheduleKey,
+        orgId,
+        userId,
+        disabled: false,
+        expiresAt,
+      });
+      if (link) created.push(link.token);
+    }
+    alert(`Generated ${created.length} score link(s). View and copy them from Score Links in the user menu.`);
+  };
+
+  const handleSyncRemoteScores = async () => {
+    if (!scheduleKey) return;
+    setIsSyncing(true);
+    const edits = await storageApi.listScoreEditsByScheduleKey(scheduleKey);
+    if (edits.length === 0) {
+      setRemoteEditCount(0);
+      setIsSyncing(false);
+      return;
+    }
+    const editMap = new Map(edits.map(e => [e.gameId, e]));
+    setGames(prev => prev.map(g => {
+      const edit = editMap.get(g.id);
+      if (!edit) return g;
+      return { ...g, status: edit.status, scores: edit.scores ?? g.scores };
+    }));
+    setRemoteEditCount(0);
+    setIsSyncing(false);
+  };
+
+  // Poll remote edit count when a scheduleKey is loaded
+  useEffect(() => {
+    if (!scheduleKey) return;
+    const check = async () => {
+      const edits = await storageApi.listScoreEditsByScheduleKey(scheduleKey);
+      setRemoteEditCount(edits.length);
+    };
+    check();
+    const id = setInterval(check, 60_000);
+    return () => clearInterval(id);
+  }, [scheduleKey]);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
   const handleDateClick = (date: Date) => {
     if (leagues.length === 0) {
       alert(t('schedule.selectLeagueFirst'));
@@ -911,6 +1002,13 @@ const App: React.FC = () => {
                       </div>
                       <div className="border-t border-slate-100">
                         <button
+                          onClick={() => { setShowUserMenu(false); setViewMode('score_links'); }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                          <span>Score Links</span>
+                          <Link2 size={16} />
+                        </button>
+                        <button
                           onClick={() => { setShowUserMenu(false); setViewMode('help'); }}
                           className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
                         >
@@ -945,6 +1043,21 @@ const App: React.FC = () => {
                   onGameClick={handleGameClick}
                 />
               </div>
+              {remoteEditCount > 0 && (
+                <div className="mb-3 flex items-center justify-between gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 text-sm">
+                  <div className="flex items-center gap-2 text-indigo-800">
+                    <Download size={15} className="text-indigo-500 flex-shrink-0" />
+                    <span><strong>{remoteEditCount}</strong> remote score update{remoteEditCount !== 1 ? 's' : ''} waiting — submitted via score links.</span>
+                  </div>
+                  <button
+                    onClick={handleSyncRemoteScores}
+                    disabled={isSyncing}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60 flex-shrink-0"
+                  >
+                    {isSyncing ? 'Syncing…' : 'Sync Remote Scores'}
+                  </button>
+                </div>
+              )}
               <Calendar
                 currentDate={currentDate}
                 days={days} // Contains filtered games for Grid
@@ -970,6 +1083,7 @@ const App: React.FC = () => {
                 onLeagueFilterChange={setSelectedLeagueId}
                 selectedCategory={selectedCategory}
                 onCategoryFilterChange={setSelectedCategory}
+                onGenerateScoreLinks={scheduleKey ? handleGenerateScoreLinksForGames : undefined}
               />
             </>
           )}
@@ -1044,6 +1158,17 @@ const App: React.FC = () => {
           )}
 
           {viewMode === 'help' && <HelpPage />}
+
+          {viewMode === 'score_links' && (
+            <ScoreLinksManager
+              scheduleKey={scheduleKey}
+              games={games}
+              teams={teams}
+              leagues={leagues}
+              userId={userId}
+              orgId={orgId}
+            />
+          )}
 
         </div>
 
@@ -1160,6 +1285,7 @@ const App: React.FC = () => {
           const closeEditModal = () => {
             setShowEditModal(false);
             setEditingGame(null);
+            setGeneratedLinkUrl(null);
             setNewGameForm({
               date: formatDate(new Date()),
               time: '15:00',
@@ -1461,6 +1587,32 @@ const App: React.FC = () => {
                             >
                                 {isPublishing ? 'Publishing...' : 'Save & Publish'}
                             </button>
+
+                            {/* Generate Score Link */}
+                            {scheduleKey && (
+                              <div className="pt-1 border-t border-slate-100">
+                                {generatedLinkUrl && generatingLinkFor === null ? (
+                                  <div className="bg-indigo-50 rounded-lg px-3 py-2 space-y-1">
+                                    <p className="text-xs font-semibold text-indigo-700 flex items-center gap-1"><Link2 size={12} />Score link copied!</p>
+                                    <div className="flex items-center gap-2">
+                                      <input readOnly value={generatedLinkUrl} className="flex-1 text-xs font-mono bg-white border border-indigo-200 rounded px-2 py-1 truncate text-slate-600" onClick={e => (e.target as HTMLInputElement).select()} />
+                                      <button type="button" onClick={() => navigator.clipboard.writeText(generatedLinkUrl)} className="p-1.5 rounded text-indigo-500 hover:bg-indigo-100"><Copy size={13} /></button>
+                                    </div>
+                                    <button type="button" className="text-xs text-indigo-500 underline" onClick={() => setGeneratedLinkUrl(null)}>Generate another</button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled={generatingLinkFor === editingGame.id}
+                                    onClick={() => { setGeneratedLinkUrl(null); handleGenerateScoreLink(editingGame.id); }}
+                                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors disabled:opacity-60"
+                                  >
+                                    <Link2 size={14} />
+                                    {generatingLinkFor === editingGame.id ? 'Generating…' : 'Generate Score Link (48h)'}
+                                  </button>
+                                )}
+                              </div>
+                            )}
                         </div>
                     </form>
                 </div>

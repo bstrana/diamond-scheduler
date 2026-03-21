@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Game, Team, CalendarDay, League } from '../types';
 import { WEEKDAYS } from '../constants';
-import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio, Printer, SlidersHorizontal, MoreVertical, X, CheckSquare2, Square, ImageDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio, Printer, SlidersHorizontal, MoreVertical, X, CheckSquare2, Square, ImageDown, Link2 } from 'lucide-react';
 import { formatDate } from '../utils';
 import { useTranslation } from 'react-i18next';
 import PrintSchedule from './PrintSchedule';
@@ -36,6 +36,7 @@ interface CalendarProps {
   hideCategoryFilter?: boolean;
   hideTeamFilter?: boolean;
   hideViewToggle?: boolean;
+  onGenerateScoreLinks?: (gameIds: string[]) => void;
 }
 
 const Calendar: React.FC<CalendarProps> = ({ 
@@ -65,7 +66,8 @@ const Calendar: React.FC<CalendarProps> = ({
   hideLeagueFilter = false,
   hideCategoryFilter = false,
   hideTeamFilter = false,
-  hideViewToggle = false
+  hideViewToggle = false,
+  onGenerateScoreLinks,
 }) => {
   const { t, i18n } = useTranslation();
 
@@ -822,16 +824,27 @@ const Calendar: React.FC<CalendarProps> = ({
               ? `${selectedGameIds.size} ${t('calendar.selected', 'selected')}`
               : t('calendar.selectGamesHint', 'Tap games to select')}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {selectedGameIds.size > 0 && (
-              <button
-                onClick={captureSchedule}
-                disabled={isCapturing}
-                className="flex items-center gap-1.5 text-sm font-medium px-3 py-1 bg-white/20 rounded-lg hover:bg-white/30 transition-colors disabled:opacity-60"
-              >
-                <ImageDown size={15} />
-                {isCapturing ? t('common.saving', 'Saving…') : t('calendar.saveAsImage', 'Save as image')}
-              </button>
+              <>
+                <button
+                  onClick={captureSchedule}
+                  disabled={isCapturing}
+                  className="flex items-center gap-1.5 text-sm font-medium px-3 py-1 bg-white/20 rounded-lg hover:bg-white/30 transition-colors disabled:opacity-60"
+                >
+                  <ImageDown size={15} />
+                  {isCapturing ? t('common.saving', 'Saving…') : t('calendar.saveAsImage', 'Save as image')}
+                </button>
+                {onGenerateScoreLinks && (
+                  <button
+                    onClick={() => onGenerateScoreLinks(Array.from(selectedGameIds))}
+                    className="flex items-center gap-1.5 text-sm font-medium px-3 py-1 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
+                  >
+                    <Link2 size={15} />
+                    {t('calendar.generateScoreLinks', 'Score links')}
+                  </button>
+                )}
+              </>
             )}
             <button onClick={toggleSelectMode} className="text-sm font-medium px-3 py-1 bg-white/20 rounded-lg hover:bg-white/30 transition-colors">
               {t('calendar.cancelSelect', 'Cancel')}

@@ -6,7 +6,7 @@ import EmbeddableStandings from './components/EmbeddableStandings';
 import EmbeddableSeries from './components/EmbeddableSeries';
 import './index.css';
 import './i18n';
-import { loadPublishedScheduleByKey, StorageData } from './services/storage';
+import { loadPublishedScheduleByKey, listScoreEditsByScheduleKey, StorageData } from './services/storage';
 
 // Get URL parameters
 const urlParams = new URLSearchParams(window.location.search);
@@ -134,9 +134,19 @@ if (!rootElement) {
       }
       let isActive = true;
       const loadSchedule = async () => {
-        // Only load from published schedules - never from local storage
-        const data = await loadPublishedScheduleByKey(scheduleKey);
+        const [data, scoreEdits] = await Promise.all([
+          loadPublishedScheduleByKey(scheduleKey),
+          listScoreEditsByScheduleKey(scheduleKey),
+        ]);
         if (!isActive) return;
+        if (data && scoreEdits.length > 0) {
+          const editMap = new Map(scoreEdits.map(e => [e.gameId, e]));
+          data.games = data.games.map(g => {
+            const edit = editMap.get(g.id);
+            if (!edit) return g;
+            return { ...g, status: edit.status, scores: edit.scores ?? g.scores };
+          });
+        }
         setScheduleData(data);
         setIsLoading(false);
       };
@@ -150,8 +160,21 @@ if (!rootElement) {
     useEffect(() => {
       if (!scheduleKey) return;
       const interval = setInterval(async () => {
-        const data = await loadPublishedScheduleByKey(scheduleKey);
-        if (data) setScheduleData(data);
+        const [data, scoreEdits] = await Promise.all([
+          loadPublishedScheduleByKey(scheduleKey),
+          listScoreEditsByScheduleKey(scheduleKey),
+        ]);
+        if (data) {
+          if (scoreEdits.length > 0) {
+            const editMap = new Map(scoreEdits.map(e => [e.gameId, e]));
+            data.games = data.games.map(g => {
+              const edit = editMap.get(g.id);
+              if (!edit) return g;
+              return { ...g, status: edit.status, scores: edit.scores ?? g.scores };
+            });
+          }
+          setScheduleData(data);
+        }
       }, 60000);
       return () => clearInterval(interval);
     }, []);
