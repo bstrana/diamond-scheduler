@@ -1,5 +1,5 @@
 import PocketBase from 'pocketbase';
-import { Game, League, Team, ScoreLink, ScoreEdit } from '../types';
+import { Game, League, Team, ScoreLink, ScoreEdit, Tenant, TenantPlan, TenantLimits, PLAN_LIMITS } from '../types';
 
 export type StorageData = {
   leagues: League[];
@@ -41,6 +41,7 @@ const scheduleCollection = import.meta.env.VITE_PB_SCHEDULE_COLLECTION;
 //   score_edits  – List/View/Create/Update rules: empty (public read+write)
 const scoreLinksCollection = import.meta.env.VITE_PB_SCORE_LINKS_COLLECTION || 'score_links';
 const scoreEditsCollection  = import.meta.env.VITE_PB_SCORE_EDITS_COLLECTION  || 'score_edits';
+const tenantsCollection     = import.meta.env.VITE_PB_TENANTS_COLLECTION      || 'tenants';
 const schedulePublishEnabled =
   (import.meta.env.VITE_PB_SCHEDULE_PUBLISH || 'false').toLowerCase() === 'true';
 const scheduleKeyEnv = import.meta.env.VITE_PB_SCHEDULE_KEY;
@@ -649,5 +650,99 @@ export const listScoreEditsByScheduleKey = async (scheduleKey: string): Promise<
   } catch (error) {
     console.warn('listScoreEditsByScheduleKey failed', error);
     return [];
+  }
+};
+
+// ─── Tenant / SaaS ────────────────────────────────────────────────────────────
+
+const tenantFromRecord = (r: any): Tenant => {
+  const plan: TenantPlan = (['free', 'starter', 'pro', 'enterprise'].includes(r.plan)
+    ? r.plan
+    : 'free') as TenantPlan;
+  const planDefaults = PLAN_LIMITS[plan];
+  return {
+    id:          r.id,
+    orgId:       r.org_id,
+    name:        r.name || '',
+    plan,
+    limits: {
+      leagues:            r.limits?.leagues            ?? planDefaults.leagues,
+      teams:              r.limits?.teams              ?? planDefaults.teams,
+      scoreLinks:         r.limits?.scoreLinks         ?? planDefaults.scoreLinks,
+      publishedSchedules: r.limits?.publishedSchedules ?? planDefaults.publishedSchedules,
+    },
+    active:      r.active !== false,
+    trialEndsAt: r.trial_ends_at || undefined,
+    branding:    r.branding     || undefined,
+    created:     r.created,
+  };
+};
+
+/**
+ * Load the tenant record for a given org_id.
+ * Returns null if the tenant is not found or PocketBase is not configured.
+ */
+export const loadTenant = async (orgId: string): Promise<Tenant | null> => {
+  if (!pocketbaseClient || !orgId) return null;
+  const safeOrgId = sanitizeFilterValue(orgId);
+  if (!safeOrgId) return null;
+  try {
+    const record = await pocketbaseClient
+      .collection(tenantsCollection)
+      .getFirstListItem(`org_id="${safeOrgId}"`);
+    return tenantFromRecord(record);
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Create a new tenant record. Intended for system admins / onboarding flow.
+ */
+export const createTenant = async (
+  tenant: Omit<Tenant, 'id' | 'created'>
+): Promise<Tenant | null> => {
+  if (!pocketbaseClient) return null;
+  const safeOrgId = sanitizeFilterValue(tenant.orgId);
+  if (!safeOrgId) return null;
+  try {
+    const record = await pocketbaseClient.collection(tenantsCollection).create({
+      org_id:        safeOrgId,
+      name:          tenant.name.slice(0, 200),
+      plan:          tenant.plan,
+      limits:        tenant.limits,
+      active:        tenant.active,
+      trial_ends_at: tenant.trialEndsAt || null,
+      branding:      tenant.branding    || null,
+    });
+    return tenantFromRecord(record);
+  } catch (error) {
+    console.warn('createTenant failed', error);
+    return null;
+  }
+};
+
+/**
+ * Update mutable tenant fields (plan, limits, active, branding, trialEndsAt).
+ * The record id must be known (from a previous loadTenant call).
+ */
+export const updateTenant = async (
+  id: string,
+  patch: Partial<Pick<Tenant, 'plan' | 'limits' | 'active' | 'trialEndsAt' | 'branding' | 'name'>>
+): Promise<Tenant | null> => {
+  if (!pocketbaseClient || !id) return null;
+  const payload: Record<string, unknown> = {};
+  if (patch.name          !== undefined) payload.name           = patch.name.slice(0, 200);
+  if (patch.plan          !== undefined) payload.plan           = patch.plan;
+  if (patch.limits        !== undefined) payload.limits         = patch.limits;
+  if (patch.active        !== undefined) payload.active         = patch.active;
+  if (patch.trialEndsAt   !== undefined) payload.trial_ends_at  = patch.trialEndsAt || null;
+  if (patch.branding      !== undefined) payload.branding       = patch.branding    || null;
+  try {
+    const record = await pocketbaseClient.collection(tenantsCollection).update(id, payload);
+    return tenantFromRecord(record);
+  } catch (error) {
+    console.warn('updateTenant failed', error);
+    return null;
   }
 };

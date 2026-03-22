@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useKeycloak } from '@react-keycloak/web';
 import { useTranslation } from 'react-i18next';
-import { Team, Game, ViewMode, League } from './types';
+import { Team, Game, ViewMode, League, Tenant, PLAN_LIMITS } from './types';
 import { getMonthDays, formatDate, generateUUID } from './utils';
 import * as storageApi from './services/storage';
 import Calendar from './components/Calendar';
@@ -58,10 +58,23 @@ const App: React.FC = () => {
   const [isPublishing, setIsPublishing] = useState(false);
   const [copiedSubscribeUrl, setCopiedSubscribeUrl] = useState(false);
 
-  const maxLeagues = Number.parseInt(import.meta.env.VITE_LEAGUE_LIMIT || '', 10);
-  const maxTeams = Number.parseInt(import.meta.env.VITE_TEAM_LIMT || '', 10);
-  const leagueLimit = Number.isFinite(maxLeagues) ? maxLeagues : undefined;
-  const teamLimit = Number.isFinite(maxTeams) ? maxTeams : undefined;
+  const [tenant, setTenant] = useState<Tenant | null>(null);
+
+  // ── Role helpers (populated once Keycloak token is available) ──────────────
+  const realmRolesSet = new Set((keycloak.tokenParsed as any)?.realm_access?.roles as string[] ?? []);
+  const isSystemAdmin  = realmRolesSet.has('system_admin');
+  const isTenantAdmin  = realmRolesSet.has('tenant_admin') || isSystemAdmin;
+  const isEditor       = realmRolesSet.has('scheduler_editor') || realmRolesSet.has('scheduler_admin') || isTenantAdmin;
+  const isAdminRole    = realmRolesSet.has('scheduler_admin')  || isTenantAdmin;
+
+  // ── Plan-based limits (tenant record overrides env vars) ──────────────────
+  const planLimits     = tenant ? tenant.limits : PLAN_LIMITS['enterprise'];
+  // Env-var values act as a secondary override for single-tenant deployments
+  const maxLeaguesEnv  = Number.parseInt(import.meta.env.VITE_LEAGUE_LIMIT || '', 10);
+  const maxTeamsEnv    = Number.parseInt(import.meta.env.VITE_TEAM_LIMT    || '', 10);
+  const leagueLimit    = Number.isFinite(maxLeaguesEnv) ? maxLeaguesEnv : planLimits.leagues;
+  const teamLimit      = Number.isFinite(maxTeamsEnv)   ? maxTeamsEnv   : planLimits.teams;
+
   const navMenuRef = useRef<HTMLDivElement | null>(null);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const gamesRef = useRef<Game[]>([]);
@@ -79,24 +92,21 @@ const App: React.FC = () => {
     keycloak.tokenParsed?.preferred_username ||
     keycloak.tokenParsed?.email ||
     'Signed in';
-  const userEmail = keycloak.tokenParsed?.email as string | undefined;
+  const userEmail  = keycloak.tokenParsed?.email as string | undefined;
   const userDomain = window.location.hostname;
-  const realmRoles = (keycloak.tokenParsed as any)?.realm_access?.roles as string[] | undefined;
-  const userRole =
-    realmRoles?.find((role) => !role.startsWith('default-roles-') && role !== 'offline_access' && role !== 'uma_authorization') ||
-    realmRoles?.[0] ||
-    'unknown';
+  // Canonical claim — configure the 'org_id' mapper in Keycloak (see KEYCLOAK_INTEGRATION.md §2.4)
   const userId = (keycloak.tokenParsed as any)?.sub as string | undefined;
-  const orgId =
-    (keycloak.tokenParsed as any)?.org_id ||
-    (keycloak.tokenParsed as any)?.organization ||
-    (keycloak.tokenParsed as any)?.tenant ||
-    (keycloak.tokenParsed as any)?.org;
-  const scheduleScopeLabel = orgId
-    ? `org:${orgId}`
-    : userId
-      ? `user:${userId}`
-      : 'app only';
+  const orgId  = (keycloak.tokenParsed as any)?.org_id as string | undefined;
+  // Derive a display role from the roles set
+  const userRole = ['system_admin', 'tenant_admin', 'scheduler_admin', 'scheduler_editor', 'scheduler_viewer']
+    .find(r => realmRolesSet.has(r)) ?? 'viewer';
+  const scheduleScopeLabel = tenant?.name
+    ? `${tenant.name} · ${tenant.plan}`
+    : orgId
+      ? `org:${orgId}`
+      : userId
+        ? `user:${userId.slice(0, 8)}…`
+        : 'app only';
 
   const loadPublishedSchedules = async () => {
     setIsLoadingSchedules(true);
@@ -193,14 +203,21 @@ const App: React.FC = () => {
     leagueIds: []
   });
 
-  // Persistence
+  // Persistence + tenant bootstrap
   useEffect(() => {
     let isActive = true;
     const hydrate = async () => {
-      // Check if user has any published schedules
-      const publishedSchedules = await storageApi.listPublishedSchedules({ userId, orgId }, { onlyActive: false });
+      // Load tenant record and published schedules in parallel
+      const [tenantRecord, publishedSchedules] = await Promise.all([
+        orgId ? storageApi.loadTenant(orgId) : Promise.resolve(null),
+        storageApi.listPublishedSchedules({ userId, orgId }, { onlyActive: false }),
+      ]);
+
+      if (!isActive) return;
+      setTenant(tenantRecord);
+
       const hasPublishedSchedules = publishedSchedules && publishedSchedules.length > 0;
-      
+
       // If no published schedules, clear local storage for teams, leagues, and schedule keys
       if (!hasPublishedSchedules) {
         localStorage.removeItem('dsa_leagues');
@@ -218,7 +235,7 @@ const App: React.FC = () => {
           setScheduleName(savedName);
         }
       }
-      
+
       // Always start with empty data by default
       const data = await storageApi.loadStorageData({
         leagues: [],
@@ -882,6 +899,35 @@ const App: React.FC = () => {
     );
   }
 
+  // ── Tenant suspension gate ─────────────────────────────────────────────────
+  // Shown only when the tenant record has been loaded and is explicitly inactive.
+  // System admins bypass this gate so they can always access for support purposes.
+  if (tenant && !tenant.active && !isSystemAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <div className="bg-white border border-red-200 rounded-xl shadow-lg p-8 text-center max-w-sm space-y-3">
+          <div className="text-4xl">⚠️</div>
+          <h1 className="text-lg font-semibold text-slate-800">Account suspended</h1>
+          <p className="text-sm text-slate-500">
+            Your organisation's account has been suspended. Please contact support to resolve this.
+          </p>
+          <p className="text-xs text-slate-400">Org: {tenant.orgId}</p>
+          <button
+            className="mt-2 text-sm text-indigo-600 underline hover:text-indigo-800"
+            onClick={() => keycloak.logout({ redirectUri: `${window.location.origin}/logged-out.html` })}
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Trial expiry warning (non-blocking) ────────────────────────────────────
+  const trialDaysLeft = tenant?.trialEndsAt
+    ? Math.ceil((new Date(tenant.trialEndsAt).getTime() - Date.now()) / 86_400_000)
+    : null;
+
   const toggleDarkMode = () => {
     setDarkMode(prev => {
       const next = !prev;
@@ -894,6 +940,20 @@ const App: React.FC = () => {
     <div className={`flex h-screen overflow-hidden ${darkMode ? 'dark bg-slate-900' : 'bg-slate-50'}`}>
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+        {/* Trial expiry warning banner */}
+        {trialDaysLeft !== null && trialDaysLeft <= 7 && trialDaysLeft >= 0 && (
+          <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-800 flex items-center justify-between shrink-0">
+            <span>
+              {trialDaysLeft === 0
+                ? 'Your free trial expires today.'
+                : `Your free trial expires in ${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'}.`}
+              {' '}Upgrade your plan to keep full access.
+            </span>
+            {isSystemAdmin && tenant && (
+              <span className="text-amber-500 font-medium ml-4">[system admin view]</span>
+            )}
+          </div>
+        )}
         {/* Header */}
         <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shrink-0">
             <div className="flex-1 flex justify-between items-center">

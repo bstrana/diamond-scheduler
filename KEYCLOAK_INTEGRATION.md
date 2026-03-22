@@ -418,3 +418,164 @@ environment variables (server-side only, never `VITE_` prefixed).
 - [ ] Add `redirectUri` to logout call (§6)
 - [ ] (Optional) Add Bearer auth to `/subscribe.ics` (§7)
 - [ ] Remove `unsafe-inline` from `script-src` CSP once Vite nonce support is configured
+
+---
+
+## 10. SaaS / Multi-Tenant Architecture
+
+### 10.1 Tenant model
+
+Each customer is a **tenant** identified by a UUID `org_id`. The `org_id` flows
+from Keycloak (via the `scheduler` client scope mapper) into every PocketBase
+API call, isolating all data at the database level.
+
+```
+Keycloak Realm "diamond"
+  └─ Group /tenants/acme          (org_id attribute = "acme-uuid")
+       ├─ /tenants/acme/admins    → role: tenant_admin
+       ├─ /tenants/acme/editors   → role: scheduler_editor
+       └─ /tenants/acme/viewers   → role: scheduler_viewer
+
+PocketBase
+  └─ tenants collection           (one record per org_id)
+  └─ app_state collection         (one record per org_id)
+  └─ published_schedules          (many records per org_id)
+  └─ score_links                  (many records per org_id)
+  └─ score_edits                  (public; token-validated only)
+```
+
+### 10.2 Role hierarchy
+
+```
+system_admin          Platform operator — manages all tenants, bypasses suspension gate
+  └─ tenant_admin     Manages one tenant's users, plan, and branding
+       └─ scheduler_admin   Publishes schedules, creates score links
+            └─ scheduler_editor   Edits games and scores
+                 └─ scheduler_viewer   Read-only calendar access
+```
+
+Roles are **composite** in Keycloak, so assigning `tenant_admin` automatically
+grants all lower permissions. This avoids the need for OR chains in PocketBase
+rules and application code.
+
+### 10.3 Tenant lifecycle
+
+#### Onboarding a new customer
+
+1. **Keycloak**: Create a group `/tenants/<slug>` with attribute `org_id = <uuid>`.
+   Add sub-groups `admins`, `editors`, `viewers` with the corresponding realm roles.
+2. **PocketBase**: Create a `tenants` record via `storageApi.createTenant(...)`:
+   ```ts
+   await storageApi.createTenant({
+     orgId:    'acme-uuid',
+     name:     'ACME Baseball League',
+     plan:     'starter',
+     limits:   PLAN_LIMITS['starter'],   // or custom overrides
+     active:   true,
+     trialEndsAt: new Date(Date.now() + 14 * 86_400_000).toISOString(),
+     branding: { orgName: 'ACME Baseball' },
+   });
+   ```
+3. **Keycloak**: Create the first `tenant_admin` user; assign to `/tenants/acme/admins`;
+   set `org_id` attribute. Send invite email with required-action `UPDATE_PASSWORD`.
+
+#### Upgrading a plan
+
+Update the `tenants` PocketBase record via `storageApi.updateTenant(id, { plan: 'pro', limits: PLAN_LIMITS['pro'] })`.
+The new limits take effect on the user's next page load (tenant is re-fetched
+at hydration time).
+
+#### Suspending a tenant
+
+```ts
+await storageApi.updateTenant(id, { active: false });
+```
+
+All tenant users will see the suspension screen on next load. `system_admin`
+users bypass the gate and can still access the account for support.
+
+#### Deleting a tenant
+
+1. Disable all users in the Keycloak group.
+2. Delete the Keycloak group `/tenants/<slug>`.
+3. Delete the PocketBase `tenants` record.
+4. PocketBase collection rules (scoped by `org_id`) prevent orphaned records
+   from being accessible.
+
+### 10.4 PocketBase `tenants` collection schema
+
+| Field | Type | Notes |
+|---|---|---|
+| `org_id` | Text (unique) | Keycloak `sub` or org UUID |
+| `name` | Text | Display name e.g. "ACME Baseball League" |
+| `plan` | Text | `free` \| `starter` \| `pro` \| `enterprise` |
+| `limits` | JSON | Overrides for `PLAN_LIMITS[plan]` |
+| `active` | Bool | `false` = suspended |
+| `trial_ends_at` | DateTime | Null = not on trial |
+| `branding` | JSON | `{ orgName, logoUrl, primaryColor }` |
+
+**Collection rules:**
+
+```
+List/View: @request.auth.org_id = record.org_id
+           || "system_admin" in @request.auth.realm_access.roles[*]
+
+Create:    "system_admin" in @request.auth.realm_access.roles[*]
+
+Update:    ("tenant_admin" in @request.auth.realm_access.roles[*]
+            && @request.auth.org_id = record.org_id)
+           || "system_admin" in @request.auth.realm_access.roles[*]
+
+Delete:    "system_admin" in @request.auth.realm_access.roles[*]
+```
+
+### 10.5 Keycloak Organizations (Keycloak 24+)
+
+Keycloak 24 introduced a native **Organizations** feature that maps directly to
+tenants. When enabled it replaces the group-based approach:
+
+- Each Organization = one tenant; members automatically receive the `org_id`
+  claim via the Organization's `id` field.
+- Organization admins can self-manage their members without needing realm admin
+  access.
+- The `scheduler` client scope mapper changes from `user.attribute` to
+  `organization.attribute` type.
+
+Enable via: `Realm settings → Organizations → Enable`.
+Then create one Organization per tenant and map its `id` to the `org_id` claim.
+
+The realm import JSON uses the group-based approach (compatible with all
+Keycloak versions ≥ 18) and can be migrated to Organizations later without
+changing any application code, as long as the `org_id` claim value stays the
+same.
+
+### 10.6 Plan enforcement summary
+
+| Feature | free | starter | pro | enterprise |
+|---|---|---|---|---|
+| Leagues | 2 | 5 | 20 | unlimited |
+| Teams | 20 | 50 | 200 | unlimited |
+| Score links | 5 | 20 | 100 | unlimited |
+| Published schedules | 1 | 3 | 10 | unlimited |
+| Trial | 14 days | — | — | — |
+
+Limits are enforced in the application layer (`App.tsx` reads `tenant.limits`).
+Add a second enforcement layer in PocketBase rules for defence-in-depth once
+Keycloak JWT auth is wired up (§4.3).
+
+### 10.7 Environment variable additions for SaaS
+
+Add to `.env`:
+
+```env
+VITE_PB_TENANTS_COLLECTION=tenants
+```
+
+Add to server environment (never `VITE_` prefix):
+
+```env
+KC_URL=https://keycloak.example.com
+KC_REALM=diamond
+KC_CLIENT_ID=diamond-scheduler-server
+KC_CLIENT_SECRET=<copy from Keycloak admin>
+```

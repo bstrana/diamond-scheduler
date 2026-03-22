@@ -76,6 +76,47 @@ export interface ScoreEdit {
   updated?: string;
 }
 
+// ── Multi-tenancy / SaaS ──────────────────────────────────────────────────────
+
+export type TenantPlan = 'free' | 'starter' | 'pro' | 'enterprise';
+
+export interface TenantLimits {
+  leagues: number;
+  teams: number;
+  scoreLinks: number;
+  publishedSchedules: number;
+}
+
+/** Hard limits enforced per plan. Override per-tenant in the `tenants` PocketBase record. */
+export const PLAN_LIMITS: Record<TenantPlan, TenantLimits> = {
+  free:       { leagues: 2,   teams: 20,  scoreLinks: 5,   publishedSchedules: 1 },
+  starter:    { leagues: 5,   teams: 50,  scoreLinks: 20,  publishedSchedules: 3 },
+  pro:        { leagues: 20,  teams: 200, scoreLinks: 100, publishedSchedules: 10 },
+  enterprise: { leagues: 999, teams: 9999, scoreLinks: 999, publishedSchedules: 999 },
+};
+
+export interface TenantBranding {
+  orgName?: string;
+  logoUrl?: string;
+  primaryColor?: string;
+}
+
+export interface Tenant {
+  id?: string;
+  orgId: string;
+  name: string;
+  plan: TenantPlan;
+  /** Per-tenant limit overrides; falls back to PLAN_LIMITS[plan] when absent. */
+  limits: TenantLimits;
+  active: boolean;
+  /** ISO date string — undefined means not on trial. */
+  trialEndsAt?: string;
+  branding?: TenantBranding;
+  created?: string;
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+
 export interface CalendarDay {
   date: Date;
   isCurrentMonth: boolean;
