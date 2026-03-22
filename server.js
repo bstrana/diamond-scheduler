@@ -152,6 +152,8 @@ app.get('/subscribe.ics', icsRateLimiter, async (req, res) => {
   }
 });
 
+app.get('/health', (_req, res) => res.sendStatus(200));
+
 app.use(express.static(distDir));
 app.get('*', (_req, res) => {
   res.sendFile(path.join(distDir, 'index.html'));
