@@ -1,172 +1,94 @@
 {
-  "id": "diamond",
   "realm": "diamond",
   "displayName": "Diamond Scheduler",
   "displayNameHtml": "<strong>Diamond Scheduler</strong>",
   "enabled": true,
-
-  "sslRequired": "all",
+  "sslRequired": "external",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": true,
   "editUsernameAllowed": false,
-
   "bruteForceProtected": true,
-  "permanentLockout": false,
-  "maxFailureWaitSeconds": 900,
-  "minimumQuickLoginWaitSeconds": 60,
-  "waitIncrementSeconds": 60,
-  "quickLoginCheckMilliSeconds": 1000,
-  "maxDeltaTimeSeconds": 43200,
-  "failureFactor": 5,
-
-  "accessTokenLifespan": 300,
-  "accessTokenLifespanForImplicitFlow": 900,
-  "ssoSessionIdleTimeout": 1800,
-  "ssoSessionMaxLifespan": 28800,
-  "offlineSessionIdleTimeout": 2592000,
-  "offlineSessionMaxLifespanEnabled": false,
-  "accessCodeLifespan": 60,
-  "accessCodeLifespanUserAction": 300,
-  "accessCodeLifespanLogin": 1800,
-  "actionTokenGeneratedByAdminLifespan": 43200,
-  "actionTokenGeneratedByUserLifespan": 300,
-  "defaultSignatureAlgorithm": "RS256",
-  "revokeRefreshToken": false,
-  "refreshTokenMaxReuse": 0,
-
-  "browserSecurityHeaders": {
-    "contentSecurityPolicyReportOnly": "",
-    "xContentTypeOptions": "nosniff",
-    "xRobotsTag": "none",
-    "xFrameOptions": "SAMEORIGIN",
-    "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
-    "xXSSProtection": "0",
-    "strictTransportSecurity": "max-age=31536000; includeSubDomains"
-  },
-
-  "eventsEnabled": true,
-  "eventsListeners": ["jboss-logging"],
-  "enabledEventTypes": [
-    "LOGIN", "LOGIN_ERROR",
-    "LOGOUT", "LOGOUT_ERROR",
-    "REGISTER", "REGISTER_ERROR",
-    "CODE_TO_TOKEN", "CODE_TO_TOKEN_ERROR",
-    "UPDATE_PASSWORD", "UPDATE_PASSWORD_ERROR",
-    "UPDATE_EMAIL", "UPDATE_EMAIL_ERROR",
-    "TOKEN_EXCHANGE",
-    "IMPERSONATE"
-  ],
-  "adminEventsEnabled": true,
-  "adminEventsDetailsEnabled": true,
-
-  "smtpServer": {},
-  "identityProviders": [],
-  "identityProviderMappers": [],
-  "internationalizationEnabled": false,
-  "supportedLocales": [],
 
   "roles": {
     "realm": [
       {
         "name": "system_admin",
-        "description": "Platform superadmin: manages all tenants, bypasses tenant suspension gate",
+        "description": "Platform superadmin — inherits tenant_admin",
         "composite": true,
         "composites": { "realm": ["tenant_admin"] },
         "clientRole": false,
-        "containerId": "diamond",
         "attributes": {}
       },
       {
         "name": "tenant_admin",
-        "description": "Manages a single tenant's users, plan, and settings",
+        "description": "Manages a single tenant — inherits scheduler_admin",
         "composite": true,
         "composites": { "realm": ["scheduler_admin"] },
         "clientRole": false,
-        "containerId": "diamond",
         "attributes": {}
       },
       {
         "name": "scheduler_admin",
-        "description": "Publish/delete schedules, manage score links, all app settings",
+        "description": "Publish/delete schedules, manage score links — inherits scheduler_editor",
         "composite": true,
         "composites": { "realm": ["scheduler_editor"] },
         "clientRole": false,
-        "containerId": "diamond",
         "attributes": {}
       },
       {
         "name": "scheduler_editor",
-        "description": "Edit games and enter scores via the main application",
+        "description": "Edit games and enter scores — inherits scheduler_viewer",
         "composite": true,
         "composites": { "realm": ["scheduler_viewer"] },
         "clientRole": false,
-        "containerId": "diamond",
         "attributes": {}
       },
       {
         "name": "scheduler_viewer",
-        "description": "Read-only access to the calendar; no write operations permitted",
+        "description": "Read-only access to the calendar",
         "composite": false,
         "clientRole": false,
-        "containerId": "diamond",
         "attributes": {}
       }
-    ],
-    "client": {}
+    ]
   },
 
   "groups": [
     {
       "name": "system",
-      "path": "/system",
       "realmRoles": ["system_admin"],
-      "clientRoles": {},
       "subGroups": [
         {
           "name": "admins",
-          "path": "/system/admins",
           "realmRoles": ["system_admin"],
-          "clientRoles": {},
           "subGroups": []
         }
       ]
     },
     {
       "name": "tenants",
-      "path": "/tenants",
       "realmRoles": [],
-      "clientRoles": {},
       "subGroups": [
         {
           "name": "acme",
-          "path": "/tenants/acme",
           "realmRoles": [],
-          "attributes": {
-            "org_id": ["acme-org-id-replace-me"]
-          },
-          "clientRoles": {},
+          "attributes": { "org_id": ["acme-org-id-replace-me"] },
           "subGroups": [
             {
               "name": "admins",
-              "path": "/tenants/acme/admins",
               "realmRoles": ["tenant_admin"],
-              "clientRoles": {},
               "subGroups": []
             },
             {
               "name": "editors",
-              "path": "/tenants/acme/editors",
               "realmRoles": ["scheduler_editor"],
-              "clientRoles": {},
               "subGroups": []
             },
             {
               "name": "viewers",
-              "path": "/tenants/acme/viewers",
               "realmRoles": ["scheduler_viewer"],
-              "clientRoles": {},
               "subGroups": []
             }
           ]
@@ -175,17 +97,14 @@
     }
   ],
 
-  "defaultGroups": [],
-
   "clientScopes": [
     {
       "name": "scheduler",
-      "description": "Diamond Scheduler custom claims: org_id, tenant metadata",
+      "description": "Diamond Scheduler claims: org_id + realm roles",
       "protocol": "openid-connect",
       "attributes": {
         "include.in.token.scope": "true",
-        "display.on.consent.screen": "true",
-        "consent.screen.text": "Access your Diamond Scheduler profile"
+        "display.on.consent.screen": "false"
       },
       "protocolMappers": [
         {
@@ -210,7 +129,6 @@
           "protocolMapper": "oidc-usermodel-realm-role-mapper",
           "consentRequired": false,
           "config": {
-            "user.attribute": "foo",
             "access.token.claim": "true",
             "claim.name": "realm_access.roles",
             "jsonType.label": "String",
@@ -221,146 +139,68 @@
     }
   ],
 
-  "defaultDefaultClientScopes": [
-    "roles",
-    "profile",
-    "email",
-    "scheduler"
-  ],
-  "defaultOptionalClientScopes": [
-    "offline_access",
-    "address",
-    "phone",
-    "microprofile-jwt"
-  ],
-
   "clients": [
     {
       "clientId": "diamond-scheduler",
       "name": "Diamond Scheduler (SPA)",
-      "description": "Public SPA client — uses PKCE S256. Replace redirect URIs with your real domain.",
+      "description": "Public SPA client — PKCE S256. Replace redirect URIs with your domain.",
       "enabled": true,
       "publicClient": true,
-      "bearerOnly": false,
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
-      "authorizationServicesEnabled": false,
       "redirectUris": [
         "https://your-app.example.com/*",
-        "http://localhost:3000/*",
         "http://localhost:5173/*"
       ],
       "webOrigins": [
         "https://your-app.example.com",
-        "http://localhost:3000",
         "http://localhost:5173"
       ],
-      "notBefore": 0,
-      "protocol": "openid-connect",
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "https://your-app.example.com/logged-out.html##http://localhost:3000/logged-out.html##http://localhost:5173/logged-out.html",
-        "backchannel.logout.session.required": "true",
-        "backchannel.logout.revoke.offline.tokens": "false",
-        "access.token.lifespan": "300"
+        "post.logout.redirect.uris": "https://your-app.example.com/*",
+        "backchannel.logout.session.required": "true"
       },
-      "fullScopeAllowed": false,
-      "defaultClientScopes": ["roles", "profile", "email", "scheduler"],
-      "optionalClientScopes": ["offline_access"],
-      "protocolMappers": [
-        {
-          "name": "audience",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-audience-mapper",
-          "consentRequired": false,
-          "config": {
-            "id.token.claim": "false",
-            "access.token.claim": "true",
-            "included.client.audience": "diamond-scheduler"
-          }
-        }
-      ]
+      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email", "scheduler"],
+      "optionalClientScopes": ["offline_access"]
     },
     {
       "clientId": "diamond-scheduler-server",
       "name": "Diamond Scheduler (Server)",
-      "description": "Confidential back-channel client for server-side ICS token introspection. Copy the generated secret to KC_CLIENT_SECRET in config.env.",
+      "description": "Confidential back-channel client for ICS token introspection. Copy the generated secret to KC_CLIENT_SECRET.",
       "enabled": true,
       "publicClient": false,
-      "bearerOnly": false,
       "standardFlowEnabled": false,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true,
-      "authorizationServicesEnabled": false,
       "redirectUris": [],
       "webOrigins": [],
-      "notBefore": 0,
-      "protocol": "openid-connect",
-      "attributes": {
-        "backchannel.logout.session.required": "true"
-      },
-      "fullScopeAllowed": false,
-      "defaultClientScopes": ["roles", "profile", "email"],
+      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email"],
       "optionalClientScopes": []
     },
     {
       "clientId": "diamond-scheduler-embed",
       "name": "Diamond Scheduler (Embed widget)",
-      "description": "Public client for the embeddable schedule widget. Uses check-sso so anonymous visitors are never redirected to Keycloak.",
+      "description": "Public client for the embeddable schedule widget — check-sso, no forced redirect.",
       "enabled": true,
       "publicClient": true,
-      "bearerOnly": false,
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "redirectUris": [
         "https://your-app.example.com/silent-check-sso.html",
-        "http://localhost:3000/silent-check-sso.html",
         "http://localhost:5173/silent-check-sso.html"
       ],
       "webOrigins": ["+"],
-      "notBefore": 0,
-      "protocol": "openid-connect",
       "attributes": {
         "pkce.code.challenge.method": "S256"
       },
-      "fullScopeAllowed": false,
-      "defaultClientScopes": ["roles", "profile", "email", "scheduler"],
+      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email", "scheduler"],
       "optionalClientScopes": []
-    }
-  ],
-
-  "requiredActions": [
-    {
-      "alias": "CONFIGURE_TOTP",
-      "name": "Configure OTP",
-      "providerId": "CONFIGURE_TOTP",
-      "enabled": true,
-      "defaultAction": false,
-      "priority": 10,
-      "config": {}
-    },
-    {
-      "alias": "UPDATE_PASSWORD",
-      "name": "Update Password",
-      "providerId": "UPDATE_PASSWORD",
-      "enabled": true,
-      "defaultAction": false,
-      "priority": 30,
-      "config": {}
-    },
-    {
-      "alias": "VERIFY_EMAIL",
-      "name": "Verify Email",
-      "providerId": "VERIFY_EMAIL",
-      "enabled": true,
-      "defaultAction": false,
-      "priority": 50,
-      "config": {}
     }
   ],
 
@@ -371,13 +211,11 @@
       "emailVerified": true,
       "firstName": "Platform",
       "lastName": "Admin",
-      "email": "platform-admin@your-domain.example.com",
-      "credentials": [],
+      "email": "platform-admin@example.com",
       "realmRoles": ["system_admin"],
       "groups": ["/system/admins"],
       "attributes": {},
-      "requiredActions": ["UPDATE_PASSWORD"],
-      "notBefore": 0
+      "requiredActions": ["UPDATE_PASSWORD"]
     },
     {
       "username": "acme-admin",
@@ -386,14 +224,9 @@
       "firstName": "Admin",
       "lastName": "Acme",
       "email": "admin@acme.example.com",
-      "credentials": [],
-      "realmRoles": [],
       "groups": ["/tenants/acme/admins"],
-      "attributes": {
-        "org_id": ["acme-org-id-replace-me"]
-      },
-      "requiredActions": ["UPDATE_PASSWORD"],
-      "notBefore": 0
+      "attributes": { "org_id": ["acme-org-id-replace-me"] },
+      "requiredActions": ["UPDATE_PASSWORD"]
     },
     {
       "username": "acme-viewer",
@@ -402,14 +235,9 @@
       "firstName": "Viewer",
       "lastName": "Acme",
       "email": "viewer@acme.example.com",
-      "credentials": [],
-      "realmRoles": [],
       "groups": ["/tenants/acme/viewers"],
-      "attributes": {
-        "org_id": ["acme-org-id-replace-me"]
-      },
-      "requiredActions": ["UPDATE_PASSWORD"],
-      "notBefore": 0
+      "attributes": { "org_id": ["acme-org-id-replace-me"] },
+      "requiredActions": ["UPDATE_PASSWORD"]
     }
   ]
 }
