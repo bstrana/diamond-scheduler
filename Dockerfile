@@ -6,7 +6,7 @@
 # URLs, etc.) into the bundle.  All source files are therefore shipped inside
 # the image and npm run build executes on first start.
 
-FROM cloudron/base:4.2.0
+FROM cloudron/base:5.0.0
 
 WORKDIR /app
 

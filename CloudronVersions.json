@@ -1,0 +1,7 @@
+[
+  {
+    "version": "1.0.0",
+    "manifestUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/claude/cloudron-packaging-F81iV/CloudronManifest.json",
+    "imageUrl": "ghcr.io/bstrana/diamond-scheduler:1.0.0"
+  }
+]
