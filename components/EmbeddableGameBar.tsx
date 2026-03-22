@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Team, Game, League } from '../types';
 import { MOCK_TEAMS, INITIAL_GAMES } from '../constants';
 import { formatDate } from '../utils';
@@ -14,6 +14,9 @@ interface EmbeddableGameBarProps {
   hideLeagueFilter?: boolean;
   hideCategoryFilter?: boolean;
   hideTeamFilter?: boolean;
+  hideStatusFilter?: boolean;
+  hideLeagueName?: boolean;
+  hideGameNumber?: boolean;
 }
 
 const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
@@ -24,16 +27,20 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
   dataOverride = null,
   hideLeagueFilter = false,
   hideCategoryFilter = false,
-  hideTeamFilter = false
+  hideTeamFilter = false,
+  hideStatusFilter = false,
+  hideLeagueName = false,
+  hideGameNumber = false
 }) => {
   // Load data from storage (local storage or PocketBase)
   const [leagues, setLeagues] = useState<League[]>([]);
-  const [teams, setTeams] = useState<Team[]>(MOCK_TEAMS);
-  const [games, setGames] = useState<Game[]>(INITIAL_GAMES);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [games, setGames] = useState<Game[]>([]);
 
   const [selectedTeamId, setSelectedTeamId] = useState<string>(initialTeamId || 'all');
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>(initialLeagueId || 'all');
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
   // Apply initial filters from URL params
   useEffect(() => {
@@ -77,24 +84,49 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
     };
   }, [dataOverride]);
 
-  const handleGameClick = (game: Game) => {
-    const home = teams.find(t => t.id === game.homeTeamId);
-    const away = teams.find(t => t.id === game.awayTeamId);
-    const seriesInfo = game.seriesName ? `\nSeries: ${game.seriesName}` : '';
-    alert(`${game.date} @ ${game.time}\n${away?.name || 'Unknown'} vs ${home?.name || 'Unknown'}\nLocation: ${game.location}${seriesInfo}`);
-  };
-
   // Hide filters if a single team is selected (for single team website embeds)
   const hideFilters = !!initialTeamId;
 
+  const [announcementDismissed, setAnnouncementDismissed] = useState(false);
+  const announcement = useMemo(() => {
+    const league = selectedLeagueId !== 'all'
+      ? leagues.find(l => l.id === selectedLeagueId)
+      : leagues[0];
+    return league?.announcement || null;
+  }, [leagues, selectedLeagueId]);
+
   return (
-    <div 
-      style={{ 
-        height, 
+    <div
+      style={{
+        height,
         width: '100%',
-        backgroundColor: 'var(--embed-bg, #f8fafc)'
+        backgroundColor: 'var(--embed-bg, #f8fafc)',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
+      {announcement && !announcementDismissed && (
+        <div style={{
+          background: 'var(--embed-announcement-bg, #fef3c7)',
+          borderBottom: '1px solid var(--embed-announcement-border, #fcd34d)',
+          padding: '6px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px',
+          fontSize: '0.82em',
+          color: 'var(--embed-announcement-text, #92400e)',
+          flexShrink: 0,
+        }}>
+          <span>📢 {announcement}</span>
+          <button
+            onClick={() => setAnnouncementDismissed(true)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--embed-announcement-text, #92400e)', fontWeight: 700, fontSize: '1em', lineHeight: 1, padding: '2px 4px' }}
+            title="Dismiss"
+          >×</button>
+        </div>
+      )}
+      <div style={{ flex: 1, minHeight: 0 }}>
       <GameBar
         games={games}
         teams={teams}
@@ -102,15 +134,21 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
         selectedTeamId={selectedTeamId}
         selectedLeagueId={selectedLeagueId}
         selectedCategory={selectedCategory}
-        onGameClick={handleGameClick}
         onTeamFilterChange={setSelectedTeamId}
         onLeagueFilterChange={setSelectedLeagueId}
         onCategoryFilterChange={setSelectedCategory}
+        selectedStatus={selectedStatus}
+        onStatusFilterChange={setSelectedStatus}
         hideFilters={hideFilters}
         hideLeagueFilter={hideLeagueFilter}
         hideCategoryFilter={hideCategoryFilter}
         hideTeamFilter={hideTeamFilter}
+        hideStatusFilter={hideStatusFilter}
+        hideLeagueName={hideLeagueName}
+        hideGameNumber={hideGameNumber}
+        includePastDays={30}
       />
+      </div>
     </div>
   );
 };

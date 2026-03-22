@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Team, League } from '../types';
-import { Plus, Trash2, Trophy, Save, Shield, Check, Settings2, FolderOpen, Pencil, X } from 'lucide-react';
+import { Plus, Trash2, Trophy, Save, Shield, Check, Settings2, FolderOpen, Pencil, X, MapPin, Upload, Link } from 'lucide-react';
 import { generateUUID, validateLeagueName, validateCategory, validateTeamName, validateAbbreviation, validateCity, sanitizeString } from '../utils';
+import { useTranslation } from 'react-i18next';
 
 interface LeagueBuilderProps {
   leagues: League[];
@@ -22,15 +23,23 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
   maxLeagues,
   maxTeams
 }) => {
+  const { t } = useTranslation();
   // Mode State
   const [editingLeagueId, setEditingLeagueId] = useState<string>('');
 
   // League Details State
   const [leagueName, setLeagueName] = useState('');
+  const [shortName, setShortName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState('');
   const [category, setCategory] = useState('');
+  const [announcement, setAnnouncement] = useState('');
+  const [leagueColor, setLeagueColor] = useState('#4f46e5');
   
+  // Fields State
+  const [fields, setFields] = useState<string[]>([]);
+  const [newFieldName, setNewFieldName] = useState('');
+
   // Teams State
   const [teams, setTeams] = useState<Team[]>([]);
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
@@ -42,43 +51,84 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
     country: 'USA'
   });
   const [rosterText, setRosterText] = useState('');
+  const [rosterImportUrl, setRosterImportUrl] = useState('');
+  const [rosterImportStatus, setRosterImportStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+  const [rosterImportMsg, setRosterImportMsg] = useState('');
+  const rosterFileRef = useRef<HTMLInputElement>(null);
 
   const countryOptions = [
     'USA',
     'Canada',
     'Mexico',
-    'United Kingdom',
-    'Ireland',
-    'France',
-    'Germany',
-    'Netherlands',
-    'Italy',
-    'Spain',
-    'Portugal',
-    'Sweden',
-    'Norway',
-    'Denmark',
-    'Finland',
-    'Poland',
-    'Czechia',
+    // Europe
+    'Albania',
+    'Andorra',
+    'Armenia',
     'Austria',
+    'Azerbaijan',
+    'Belarus',
+    'Belgium',
+    'Bosnia and Herzegovina',
+    'Bulgaria',
+    'Croatia',
+    'Cyprus',
+    'Czechia',
+    'Denmark',
+    'Estonia',
+    'Finland',
+    'France',
+    'Georgia',
+    'Germany',
+    'Greece',
+    'Hungary',
+    'Iceland',
+    'Ireland',
+    'Italy',
+    'Kosovo',
+    'Latvia',
+    'Liechtenstein',
+    'Lithuania',
+    'Luxembourg',
+    'Malta',
+    'Moldova',
+    'Monaco',
+    'Montenegro',
+    'Netherlands',
+    'North Macedonia',
+    'Norway',
+    'Poland',
+    'Portugal',
+    'Romania',
+    'Russia',
+    'San Marino',
+    'Serbia',
+    'Slovakia',
+    'Slovenia',
+    'Spain',
+    'Sweden',
     'Switzerland',
+    'Turkey',
+    'Ukraine',
+    'United Kingdom',
+    'Vatican City',
+    // Asia-Pacific
     'Australia',
     'New Zealand',
-    'Japan',
-    'South Korea',
     'China',
-    'Taiwan',
-    'Philippines',
     'India',
+    'Japan',
+    'Philippines',
+    'South Korea',
+    'Taiwan',
+    // Africa & Americas
     'South Africa',
-    'Brazil',
     'Argentina',
+    'Brazil',
     'Chile',
     'Colombia',
+    'Cuba',
     'Dominican Republic',
     'Venezuela',
-    'Cuba'
   ];
 
   const parseRosterText = (value: string): Team['roster'] => {
@@ -104,6 +154,90 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
     return roster.map(player => `${player.number}, ${player.name}, ${player.position}`).join('\n');
   };
 
+  // Convert parsed roster array to text lines and append/replace rosterText
+  const applyImportedRoster = (players: Team['roster'], append: boolean) => {
+    if (!players || players.length === 0) return 0;
+    const lines = players.map(p => `${p.number}, ${p.name}, ${p.position}`).join('\n');
+    setRosterText(prev => append && prev.trim() ? prev.trim() + '\n' + lines : lines);
+    return players.length;
+  };
+
+  // Parse a JSON value that may be an array of player objects or {players:[]}
+  const parseRosterJson = (raw: unknown): Team['roster'] => {
+    const arr: unknown[] = Array.isArray(raw) ? raw : Array.isArray((raw as any)?.players) ? (raw as any).players : [];
+    return arr
+      .map((item: any) => ({
+        number: Number.isFinite(Number(item?.number ?? item?.num ?? item?.jersey)) ? Number(item.number ?? item.num ?? item.jersey) : 0,
+        name: String(item?.name ?? item?.fullName ?? item?.playerName ?? '').trim().slice(0, 100),
+        position: String(item?.position ?? item?.pos ?? '').trim().slice(0, 50),
+      }))
+      .filter(p => p.name);
+  };
+
+  // Parse CSV text (with or without header row)
+  const parseRosterCsv = (text: string): Team['roster'] => {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    // Detect header: first row has non-numeric first cell
+    const firstCell = lines[0]?.split(',')[0]?.trim() ?? '';
+    const start = Number.isNaN(Number(firstCell)) && firstCell !== '' ? 1 : 0;
+    return lines.slice(start).map(line => {
+      const parts = line.split(',').map(p => p.trim());
+      const number = Number.parseInt(parts[0] ?? '', 10);
+      return {
+        number: Number.isFinite(number) && number >= 0 && number <= 999 ? number : 0,
+        name: (parts[1] ?? '').slice(0, 100),
+        position: (parts[2] ?? '').slice(0, 50),
+      };
+    }).filter(p => p.name);
+  };
+
+  const handleRosterUrlImport = async () => {
+    const url = rosterImportUrl.trim();
+    if (!url) return;
+    setRosterImportStatus('loading');
+    setRosterImportMsg('');
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const players = parseRosterJson(json);
+      if (players.length === 0) throw new Error(t('league.rosterImportNoPlayers'));
+      const count = applyImportedRoster(players, true);
+      setRosterImportStatus('ok');
+      setRosterImportMsg(t('league.rosterImportSuccess', { count }));
+    } catch (err: any) {
+      setRosterImportStatus('error');
+      setRosterImportMsg(err.message || t('league.rosterImportFailed'));
+    }
+  };
+
+  const handleRosterFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      try {
+        let players: Team['roster'];
+        if (file.name.endsWith('.csv')) {
+          players = parseRosterCsv(text);
+        } else {
+          players = parseRosterJson(JSON.parse(text));
+        }
+        if (!players || players.length === 0) throw new Error(t('league.rosterImportNoPlayers'));
+        const count = applyImportedRoster(players, true);
+        setRosterImportStatus('ok');
+        setRosterImportMsg(t('league.rosterImportSuccess', { count }));
+      } catch (err: any) {
+        setRosterImportStatus('error');
+        setRosterImportMsg(err.message || t('league.rosterImportFailed'));
+      }
+      // Reset file input so same file can be re-selected
+      if (rosterFileRef.current) rosterFileRef.current.value = '';
+    };
+    reader.readAsText(file);
+  };
+
   // Handle switching between Create New and Edit Existing
   const handleModeChange = (id: string) => {
     setEditingLeagueId(id);
@@ -111,19 +245,26 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
     if (id === '') {
         // Create Mode - Reset
         setLeagueName('');
+        setShortName('');
         setLogoUrl('');
         setCoverImageUrl('');
         setCategory('');
+        setLeagueColor('#4f46e5');
         setTeams([]);
+        setFields([]);
     } else {
         // Edit Mode - Load Data
         const league = leagues.find(l => l.id === id);
         if (league) {
             setLeagueName(league.name);
+            setShortName(league.shortName || '');
             setLogoUrl(league.logoUrl || '');
             setCoverImageUrl(league.coverImageUrl || '');
             setCategory(league.category);
+            setAnnouncement(league.announcement || '');
+            setLeagueColor(league.color || '#4f46e5');
             setTeams([...league.teams]);
+            setFields([...(league.fields || [])]);
         }
     }
   };
@@ -149,18 +290,18 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
       alert(abbrValidation.error);
       return;
     }
-    
+
     if (!editingTeamId && maxTeams && teams.length >= maxTeams) {
-      alert(`Team limit reached (${maxTeams}).`);
+      alert(t('league.teamLimitReached', { limit: maxTeams }));
       return;
     }
-    
+
     // Sanitize inputs
     const sanitizedName = sanitizeString(newTeam.name);
     const sanitizedCity = sanitizeString(newTeam.city);
     const sanitizedAbbr = sanitizeString(newTeam.abbreviation)?.toUpperCase();
     const sanitizedLogoUrl = newTeam.logoUrl ? sanitizeString(newTeam.logoUrl, 500) : undefined;
-    
+
     const team: Team = {
       id: editingTeamId || generateUUID(),
       name: sanitizedName,
@@ -169,6 +310,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
       country: newTeam.country,
       roster: parseRosterText(rosterText),
       primaryColor: newTeam.primaryColor || '#000000',
+      secondaryColor: newTeam.secondaryColor,
       logoUrl: sanitizedLogoUrl
     };
     if (editingTeamId) {
@@ -192,7 +334,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
     // Avoid duplicates
     if (!teams.some(t => t.id === team.id)) {
         if (maxTeams && teams.length >= maxTeams) {
-          alert(`Team limit reached (${maxTeams}).`);
+          alert(t('league.teamLimitReached', { limit: maxTeams }));
           return;
         }
         setTeams([...teams, team]);
@@ -242,29 +384,35 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
     }
     
     if (teams.length < 2) {
-      alert("Please add at least 2 teams to the league.");
+      alert(t('league.needTwoTeamsAlert'));
       return;
     }
     if (!editingLeagueId && maxLeagues && leagues.length >= maxLeagues) {
-      alert(`League limit reached (${maxLeagues}).`);
+      alert(t('league.leagueLimitReached', { limit: maxLeagues }));
       return;
     }
 
     // Sanitize inputs
     const sanitizedName = sanitizeString(leagueName);
+    const sanitizedShortName = shortName ? sanitizeString(shortName, 20) : undefined;
     const sanitizedCategory = category ? sanitizeString(category) : 'General';
     const sanitizedLogoUrl = logoUrl ? sanitizeString(logoUrl, 500) : undefined;
     const sanitizedCoverImageUrl = coverImageUrl ? sanitizeString(coverImageUrl, 500) : undefined;
+    const sanitizedAnnouncement = announcement ? sanitizeString(announcement, 500) : undefined;
 
     if (editingLeagueId) {
         // Update
         const updatedLeague: League = {
             id: editingLeagueId,
             name: sanitizedName,
+            shortName: sanitizedShortName,
             logoUrl: sanitizedLogoUrl,
             coverImageUrl: sanitizedCoverImageUrl,
             category: sanitizedCategory,
-            teams: teams
+            color: leagueColor || undefined,
+            teams: teams,
+            fields: fields,
+            announcement: sanitizedAnnouncement,
         };
         onLeagueUpdated(updatedLeague);
     } else {
@@ -272,18 +420,26 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
         const newLeague: League = {
             id: generateUUID(),
             name: sanitizedName,
+            shortName: sanitizedShortName,
             logoUrl: sanitizedLogoUrl,
             coverImageUrl: sanitizedCoverImageUrl,
             category: sanitizedCategory,
-            teams: teams
+            color: leagueColor || undefined,
+            teams: teams,
+            fields: fields,
+            announcement: sanitizedAnnouncement,
         };
         onLeagueCreated(newLeague);
         // Reset form after create
         setLeagueName('');
+        setShortName('');
         setLogoUrl('');
         setCoverImageUrl('');
         setCategory('');
+        setAnnouncement('');
+        setLeagueColor('#4f46e5');
         setTeams([]);
+        setFields([]);
     }
   };
 
@@ -291,7 +447,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
     if (!editingLeagueId) return;
     const league = leagues.find(l => l.id === editingLeagueId);
     const leagueLabel = league ? `${league.name}${league.category ? ` - ${league.category}` : ''}` : 'this league';
-    if (window.confirm(`Delete ${leagueLabel}? This cannot be undone.`)) {
+    if (window.confirm(t('league.deleteLeagueConfirm', { label: leagueLabel }))) {
       onLeagueDeleted(editingLeagueId);
       handleModeChange('');
     }
@@ -309,28 +465,28 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
             <div>
                 <div className="flex items-center space-x-4 mb-2">
                     {editingLeagueId ? <Settings2 className="w-8 h-8" /> : <Trophy className="w-8 h-8" />}
-                    <h2 className="text-3xl font-bold">{editingLeagueId ? 'Edit League' : 'League Creator'}</h2>
+                    <h2 className="text-3xl font-bold">{editingLeagueId ? `${t('common.edit')} League` : t('league.leagueCreatorTitle')}</h2>
                 </div>
                 <p className="opacity-90 max-w-xl">
-                    {editingLeagueId 
-                        ? 'Update branding, settings, and modify the team roster for this league.' 
-                        : 'Set up your league details, configure branding, and manage your roster of teams manually.'}
+                    {editingLeagueId
+                        ? t('league.editSubtitle')
+                        : t('league.createSubtitle')}
                 </p>
             </div>
 
             {/* League Selector */}
             <div className="bg-white/10 p-1.5 rounded-xl backdrop-blur-sm border border-white/20 min-w-[250px]">
-                <label className="block text-xs font-semibold text-blue-100 uppercase tracking-wider mb-1 px-2">Select Action</label>
+                <label className="block text-xs font-semibold text-blue-100 uppercase tracking-wider mb-1 px-2">{t('league.selectAction')}</label>
                 <div className="relative">
                     <select 
                         value={editingLeagueId} 
                         onChange={(e) => handleModeChange(e.target.value)}
                         className="w-full bg-white text-slate-800 rounded-lg p-2.5 pr-8 focus:outline-none focus:ring-2 focus:ring-white font-medium cursor-pointer"
                     >
-                        <option value="">+ Create New League</option>
+                        <option value="">{t('league.createNew')}</option>
                         {leagues.length > 0 && <option disabled>──────────</option>}
                         {leagues.map(l => (
-                            <option key={l.id} value={l.id}>Edit: {l.name}</option>
+                            <option key={l.id} value={l.id}>{t('league.editLeagueName', { name: l.name })}</option>
                         ))}
                     </select>
                     <FolderOpen size={16} className="absolute right-3 top-3 text-slate-400 pointer-events-none" />
@@ -346,41 +502,55 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center">
               <Shield size={20} className="mr-2 text-indigo-600" />
-              League Details
+              {t('league.leagueDetails')}
             </h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">League Name</label>
-                <input 
-                  type="text" 
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('league.leagueName')}</label>
+                <input
+                  type="text"
                   value={leagueName}
                   onChange={(e) => setLeagueName(e.target.value)}
                   className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  placeholder="e.g. Major League Baseball"
+                  placeholder={t('league.leagueNamePlaceholder')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
-                <input 
-                  type="text" 
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('league.shortName')} <span className="text-slate-400 font-normal">{t('league.shortNameOptional')}</span></label>
+                <input
+                  type="text"
+                  value={shortName}
+                  onChange={(e) => setShortName(e.target.value)}
+                  maxLength={20}
+                  className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  placeholder={t('league.shortNamePlaceholder')}
+                />
+                <p className="text-xs text-slate-500 mt-1">{t('league.shortNameHelp')}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('league.category')}</label>
+                <input
+                  type="text"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  placeholder="e.g. Majors, AAA, High School"
+                  placeholder={t('league.categoryPlaceholder')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Logo URL</label>
-                <input 
-                  type="url" 
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('league.logoUrl')}</label>
+                <input
+                  type="url"
                   value={logoUrl}
                   onChange={(e) => setLogoUrl(e.target.value)}
                   className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  placeholder="https://..."
+                  placeholder={t('league.logoUrlPlaceholder')}
                 />
+                <p className="text-xs text-slate-500 mt-1">{t('league.logoUrlHelp')}</p>
                 {logoUrl && (
                   <div className="mt-2 p-2 border border-slate-100 rounded bg-slate-50 flex justify-center">
                     <img src={logoUrl} alt="Preview" className="h-16 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
@@ -389,15 +559,15 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Cover Image URL</label>
-                <input 
-                  type="url" 
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('league.coverImageUrl')}</label>
+                <input
+                  type="url"
                   value={coverImageUrl}
                   onChange={(e) => setCoverImageUrl(e.target.value)}
                   className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  placeholder="https://..."
+                  placeholder={t('league.coverImagePlaceholder')}
                 />
-                <p className="text-xs text-slate-500 mt-1">Used as background for game cards in list view</p>
+                <p className="text-xs text-slate-500 mt-1">{t('league.coverImageHelp')}</p>
                 {coverImageUrl && (
                   <div className="mt-2 p-2 border border-slate-100 rounded bg-slate-50 flex justify-center">
                     <img src={coverImageUrl} alt="Cover Preview" className="h-24 w-full object-cover rounded" onError={(e) => (e.currentTarget.style.display = 'none')} />
@@ -405,6 +575,85 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                 )}
               </div>
             </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('league.leagueColor')}</label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="color"
+                    value={leagueColor}
+                    onChange={(e) => setLeagueColor(e.target.value)}
+                    className="h-9 w-14 rounded border border-slate-300 cursor-pointer p-0.5"
+                  />
+                  <input
+                    type="text"
+                    value={leagueColor}
+                    onChange={(e) => setLeagueColor(e.target.value)}
+                    className="flex-1 border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none font-mono text-sm"
+                    placeholder="#4f46e5"
+                    maxLength={7}
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-1">{t('league.leagueColorHelp')}</p>
+              </div>
+            {/* Announcement */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t('league.announcement')}</label>
+              <textarea
+                rows={2}
+                className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm resize-none"
+                placeholder={t('league.announcementPlaceholder')}
+                value={announcement}
+                onChange={(e) => setAnnouncement(e.target.value)}
+                maxLength={500}
+              />
+              <p className="text-xs text-slate-500 mt-1">{t('league.announcementHelp')}</p>
+            </div>
+
+            {/* Playing Fields */}
+            <div className="pt-4 mt-4 border-t border-slate-200">
+              <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center">
+                <MapPin size={14} className="mr-1.5 text-indigo-500" />
+                {t('league.playingFields')}
+              </label>
+              <div className="space-y-2">
+                {fields.map((field, idx) => (
+                  <div key={idx} className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-md px-3 py-2">
+                    <span className="text-sm text-slate-700 truncate">{field}</span>
+                    <button type="button" onClick={() => setFields(fields.filter((_, i) => i !== idx))} className="ml-2 shrink-0 text-slate-300 hover:text-red-500 transition-colors">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder={t('league.fieldPlaceholder')}
+                    className="flex-1 border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    value={newFieldName}
+                    onChange={e => setNewFieldName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const trimmed = newFieldName.trim();
+                        if (trimmed && !fields.includes(trimmed)) { setFields([...fields, trimmed]); setNewFieldName(''); }
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const trimmed = newFieldName.trim();
+                      if (trimmed && !fields.includes(trimmed)) { setFields([...fields, trimmed]); setNewFieldName(''); }
+                    }}
+                    className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 text-sm font-medium"
+                  >
+                    {t('league.addField')}
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {editingLeagueId && (
               <div className="pt-4 mt-4 border-t border-slate-200">
                 <button
@@ -413,7 +662,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                   className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors"
                 >
                   <Trash2 size={16} />
-                  <span>Delete League</span>
+                  <span>{t('league.deleteLeague')}</span>
                 </button>
               </div>
             )}
@@ -429,7 +678,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
               }`}
           >
             <Save className="mr-2" size={20} />
-            {editingLeagueId ? 'Update League' : 'Save League'}
+            {editingLeagueId ? t('league.updateLeague') : t('league.saveLeague')}
           </button>
         </div>
 
@@ -441,19 +690,19 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
               <div className="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center">
                     <Plus size={20} className="mr-2 text-indigo-600" />
-                    {editingTeamId ? 'Edit Team' : 'Create New Team'}
+                    {editingTeamId ? t('league.editTeam') : t('league.createNewTeam')}
                 </h3>
                 <form onSubmit={handleAddTeam} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                     <div className="md:col-span-3">
-                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">City</label>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">{t('league.teamCity')}</label>
                         <input required placeholder="City" className="w-full border p-2 rounded text-sm" value={newTeam.city || ''} onChange={e => setNewTeam({...newTeam, city: e.target.value})} />
                     </div>
                     <div className="md:col-span-3">
-                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Name</label>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">{t('league.teamName')}</label>
                         <input required placeholder="Name" className="w-full border p-2 rounded text-sm" value={newTeam.name || ''} onChange={e => setNewTeam({...newTeam, name: e.target.value})} />
                     </div>
                     <div className="md:col-span-2">
-                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Country</label>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">{t('league.teamCountry')}</label>
                         <select
                             className="w-full border p-2 rounded text-sm"
                             value={newTeam.country || 'USA'}
@@ -467,22 +716,27 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                         </select>
                     </div>
                     <div className="md:col-span-2">
-                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Abbr</label>
-                        <input required maxLength={3} placeholder="ABC" className="w-full border p-2 rounded uppercase text-sm" value={newTeam.abbreviation || ''} onChange={e => setNewTeam({...newTeam, abbreviation: e.target.value.toUpperCase()})} />
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">{t('league.teamAbbr')}</label>
+                        <input required maxLength={3} placeholder={t('league.teamAbbrPlaceholder')} className="w-full border p-2 rounded uppercase text-sm" value={newTeam.abbreviation || ''} onChange={e => setNewTeam({...newTeam, abbreviation: e.target.value.toUpperCase()})} />
                     </div>
                     <div className="md:col-span-1">
-                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Color</label>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">{t('league.primaryColor')}</label>
                         <input type="color" className="w-full h-9 border p-0.5 rounded cursor-pointer" value={newTeam.primaryColor} onChange={e => setNewTeam({...newTeam, primaryColor: e.target.value})} />
                     </div>
-                    <div className="md:col-span-3">
-                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Logo URL</label>
-                        <input 
-                            type="url" 
-                            placeholder="https://..." 
-                            className="w-full border p-2 rounded text-sm" 
-                            value={newTeam.logoUrl || ''} 
-                            onChange={e => setNewTeam({...newTeam, logoUrl: e.target.value})} 
+                    <div className="md:col-span-1">
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">{t('league.secondaryColor')}</label>
+                        <input type="color" className="w-full h-9 border p-0.5 rounded cursor-pointer" value={newTeam.secondaryColor || '#ffffff'} onChange={e => setNewTeam({...newTeam, secondaryColor: e.target.value})} />
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">{t('league.logoUrlShort')}</label>
+                        <input
+                            type="url"
+                            placeholder={t('league.logoUrlPlaceholder')}
+                            className="w-full border p-2 rounded text-sm"
+                            value={newTeam.logoUrl || ''}
+                            onChange={e => setNewTeam({...newTeam, logoUrl: e.target.value})}
                         />
+                        <p className="text-xs text-slate-500 mt-1">{t('league.logoUrlHelpShort')}</p>
                         {newTeam.logoUrl && (
                             <div className="mt-1 p-1 border border-slate-100 rounded bg-slate-50 flex justify-center">
                                 <img src={newTeam.logoUrl} alt="Logo preview" className="h-8 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
@@ -490,19 +744,67 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                         )}
                     </div>
                     <div className="md:col-span-12">
-                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Roster (Number, Name, Position)</label>
+                        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">{t('league.roster')}</label>
                         <textarea
                           rows={4}
                           className="w-full border p-2 rounded text-sm"
-                          placeholder="12, Alex Smith, 1B"
+                          placeholder={t('league.rosterPlaceholder')}
                           value={rosterText}
                           onChange={e => setRosterText(e.target.value)}
                         />
-                        <p className="text-xs text-slate-500 mt-1">One player per line.</p>
+                        <p className="text-xs text-slate-500 mt-1">{t('league.rosterHelp')}</p>
+
+                        {/* Roster Import */}
+                        <div className="mt-3 border border-slate-200 rounded-lg p-3 bg-slate-50 space-y-2">
+                          <p className="text-xs font-semibold text-slate-500 uppercase">{t('league.rosterImportTitle')}</p>
+
+                          {/* URL import */}
+                          <div className="flex gap-2">
+                            <div className="flex items-center text-slate-400 shrink-0"><Link size={14} /></div>
+                            <input
+                              type="url"
+                              className="flex-1 border border-slate-200 rounded px-2 py-1.5 text-sm bg-white"
+                              placeholder={t('league.rosterImportUrlPlaceholder')}
+                              value={rosterImportUrl}
+                              onChange={e => { setRosterImportUrl(e.target.value); setRosterImportStatus('idle'); }}
+                            />
+                            <button
+                              type="button"
+                              disabled={!rosterImportUrl.trim() || rosterImportStatus === 'loading'}
+                              onClick={handleRosterUrlImport}
+                              className="px-3 py-1.5 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 disabled:opacity-50 shrink-0"
+                            >
+                              {rosterImportStatus === 'loading' ? t('common.loading') : t('league.rosterImportFetch')}
+                            </button>
+                          </div>
+
+                          {/* File import */}
+                          <div className="flex gap-2 items-center">
+                            <div className="flex items-center text-slate-400 shrink-0"><Upload size={14} /></div>
+                            <label className="flex-1 cursor-pointer flex items-center gap-2 border border-dashed border-slate-300 rounded px-2 py-1.5 bg-white hover:border-indigo-400 transition-colors">
+                              <span className="text-xs text-slate-500">{t('league.rosterImportFileLabel')}</span>
+                              <input
+                                ref={rosterFileRef}
+                                type="file"
+                                accept=".json,.csv"
+                                className="hidden"
+                                onChange={handleRosterFileImport}
+                              />
+                            </label>
+                          </div>
+
+                          {/* Status message */}
+                          {rosterImportStatus !== 'idle' && (
+                            <p className={`text-xs font-medium ${rosterImportStatus === 'ok' ? 'text-emerald-600' : rosterImportStatus === 'error' ? 'text-red-600' : 'text-slate-500'}`}>
+                              {rosterImportMsg}
+                            </p>
+                          )}
+                          <p className="text-xs text-slate-400">{t('league.rosterImportHint')}</p>
+                        </div>
                     </div>
                     <div className="md:col-span-2 space-y-2">
                         <button type="submit" className="w-full h-9 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-sm font-medium">
-                          {editingTeamId ? 'Update' : 'Add'}
+                          {editingTeamId ? t('common.update') : t('common.add')}
                         </button>
                         {editingTeamId && (
                           <button

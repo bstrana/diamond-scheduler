@@ -20,7 +20,9 @@ const icsRateLimiter = rateLimit({
 
 const pbUrl = process.env.PB_URL || process.env.VITE_PB_URL;
 const scheduleCollection = process.env.PB_SCHEDULE_COLLECTION || process.env.VITE_PB_SCHEDULE_COLLECTION;
-const appId = process.env.PB_APP_ID || process.env.VITE_APP_ID || 'scheduler';
+const rawAppId = process.env.PB_APP_ID || process.env.VITE_APP_ID || 'scheduler';
+// Sanitize appId so it is safe to embed in PocketBase filter strings
+const appId = rawAppId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 100) || 'scheduler';
 const defaultDurationMinutes = Number.parseInt(process.env.SCHEDULE_EVENT_DURATION_MINUTES || '120', 10);
 
 const pad = (value) => String(value).padStart(2, '0');
@@ -44,7 +46,7 @@ const buildIcs = (data) => {
   const events = games.map((game) => {
     const home = teamsById.get(game.homeTeamId);
     const away = teamsById.get(game.awayTeamId);
-    const start = new Date(`${game.date}T${game.time || '19:00'}:00`);
+    const start = new Date(`${game.date}T${game.time || '15:00'}:00`);
     const end = new Date(start.getTime() + defaultDurationMinutes * 60000);
     const summary = `${away?.name || 'Away'} @ ${home?.name || 'Home'}`;
     return [
@@ -64,10 +66,29 @@ const buildIcs = (data) => {
     'VERSION:2.0',
     'PRODID:-//Diamond Manager//Scheduler//EN',
     'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'X-WR-CALNAME:Diamond Schedule',
     ...events,
-    'END:VCALENDAR'
+    'END:VCALENDAR',
+    ''
   ].join('\r\n');
 };
+
+// Security headers middleware
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  // X-XSS-Protection removed: deprecated and harmful in some older browsers; rely on CSP instead.
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https:; frame-ancestors 'self';"
+  );
+  // HSTS: instruct browsers to always use HTTPS for this origin (1 year)
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
 
 app.get('/subscribe.ics', icsRateLimiter, async (req, res) => {
   // Require schedule_key parameter
@@ -123,6 +144,7 @@ app.get('/subscribe.ics', icsRateLimiter, async (req, res) => {
     
     const ics = buildIcs(record.data);
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="schedule.ics"');
     res.setHeader('Cache-Control', 'public, max-age=300');
     res.send(ics);
   } catch (error) {

@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useKeycloak } from '@react-keycloak/web';
-import { Team, Game, ViewMode, League } from './types';
+import { useTranslation } from 'react-i18next';
+import { Team, Game, ViewMode, League, Tenant, PLAN_LIMITS } from './types';
 import { getMonthDays, formatDate, generateUUID } from './utils';
 import * as storageApi from './services/storage';
 import Calendar from './components/Calendar';
 import GameHoldingArea from './components/GameHoldingArea';
 import TeamList from './components/TeamList';
-import { 
-  Calendar as CalendarIcon, 
-  Users, 
-  Trophy, 
-  PlusCircle, 
+import {
+  Calendar as CalendarIcon,
+  Users,
+  Trophy,
+  PlusCircle,
   Code,
   Trash2,
   UserCircle,
@@ -20,13 +21,27 @@ import {
   X,
   Copy,
   Check,
-  Clock
+  Clock,
+  HelpCircle,
+  Moon,
+  Sun,
+  GitBranch,
+  Menu,
+  Link2,
+  Download,
+  Building2,
 } from 'lucide-react';
 import LeagueBuilder from './components/LeagueBuilder';
 import ScheduleGenerator from './components/ScheduleGenerator';
 import EmbedCodeGenerator from './components/EmbedCodeGenerator';
+import HelpPage from './components/HelpPage';
+import PlayoffBracket from './components/PlayoffBracket';
+import LanguageSwitcher from './components/LanguageSwitcher';
+import ScoreLinksManager from './components/ScoreLinksManager';
+import TenantLimitsTable from './components/TenantLimitsTable';
 
 const App: React.FC = () => {
+  const { t } = useTranslation();
   const { keycloak, initialized } = useKeycloak();
   const [authTimeout, setAuthTimeout] = useState(false);
   const [showNavMenu, setShowNavMenu] = useState(false);
@@ -39,14 +54,32 @@ const App: React.FC = () => {
   const [scheduleLeagueId, setScheduleLeagueId] = useState<string>('');
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>('');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [publishKeyDraft, setPublishKeyDraft] = useState('');
+  const [publishNameDraft, setPublishNameDraft] = useState('');
+  const [isPublishing, setIsPublishing] = useState(false);
   const [copiedSubscribeUrl, setCopiedSubscribeUrl] = useState(false);
 
-  const maxLeagues = Number.parseInt(import.meta.env.VITE_LEAGUE_LIMIT || '', 10);
-  const maxTeams = Number.parseInt(import.meta.env.VITE_TEAM_LIMT || '', 10);
-  const leagueLimit = Number.isFinite(maxLeagues) ? maxLeagues : undefined;
-  const teamLimit = Number.isFinite(maxTeams) ? maxTeams : undefined;
+  const [tenant, setTenant] = useState<Tenant | null>(null);
+
+  // ── Role helpers (populated once Keycloak token is available) ──────────────
+  const realmRolesSet = new Set((keycloak.tokenParsed as any)?.realm_access?.roles as string[] ?? []);
+  const isSystemAdmin  = realmRolesSet.has('system_admin');
+  const isTenantAdmin  = realmRolesSet.has('tenant_admin') || isSystemAdmin;
+  const isEditor       = realmRolesSet.has('scheduler_editor') || realmRolesSet.has('scheduler_admin') || isTenantAdmin;
+  const isAdminRole    = realmRolesSet.has('scheduler_admin')  || isTenantAdmin;
+
+  // ── Plan-based limits (tenant record overrides env vars) ──────────────────
+  const planLimits     = tenant ? tenant.limits : PLAN_LIMITS['enterprise'];
+  // Env-var values act as a secondary override for single-tenant deployments
+  const maxLeaguesEnv  = Number.parseInt(import.meta.env.VITE_LEAGUE_LIMIT || '', 10);
+  const maxTeamsEnv    = Number.parseInt(import.meta.env.VITE_TEAM_LIMT    || '', 10);
+  const leagueLimit    = Number.isFinite(maxLeaguesEnv) ? maxLeaguesEnv : planLimits.leagues;
+  const teamLimit      = Number.isFinite(maxTeamsEnv)   ? maxTeamsEnv   : planLimits.teams;
+
   const navMenuRef = useRef<HTMLDivElement | null>(null);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const gamesRef = useRef<Game[]>([]);
 
   const keycloakEnv = {
     url: import.meta.env.VITE_KEYCLOAK_URL,
@@ -61,24 +94,21 @@ const App: React.FC = () => {
     keycloak.tokenParsed?.preferred_username ||
     keycloak.tokenParsed?.email ||
     'Signed in';
-  const userEmail = keycloak.tokenParsed?.email as string | undefined;
+  const userEmail  = keycloak.tokenParsed?.email as string | undefined;
   const userDomain = window.location.hostname;
-  const realmRoles = (keycloak.tokenParsed as any)?.realm_access?.roles as string[] | undefined;
-  const userRole =
-    realmRoles?.find((role) => !role.startsWith('default-roles-') && role !== 'offline_access' && role !== 'uma_authorization') ||
-    realmRoles?.[0] ||
-    'unknown';
+  // Canonical claim — configure the 'org_id' mapper in Keycloak (see KEYCLOAK_INTEGRATION.md §2.4)
   const userId = (keycloak.tokenParsed as any)?.sub as string | undefined;
-  const orgId =
-    (keycloak.tokenParsed as any)?.org_id ||
-    (keycloak.tokenParsed as any)?.organization ||
-    (keycloak.tokenParsed as any)?.tenant ||
-    (keycloak.tokenParsed as any)?.org;
-  const scheduleScopeLabel = orgId
-    ? `org:${orgId}`
-    : userId
-      ? `user:${userId}`
-      : 'app only';
+  const orgId  = (keycloak.tokenParsed as any)?.org_id as string | undefined;
+  // Derive a display role from the roles set
+  const userRole = ['system_admin', 'tenant_admin', 'scheduler_admin', 'scheduler_editor', 'scheduler_viewer']
+    .find(r => realmRolesSet.has(r)) ?? 'viewer';
+  const scheduleScopeLabel = tenant?.name
+    ? `${tenant.name} · ${tenant.plan}`
+    : orgId
+      ? `org:${orgId}`
+      : userId
+        ? `user:${userId.slice(0, 8)}…`
+        : 'app only';
 
   const loadPublishedSchedules = async () => {
     setIsLoadingSchedules(true);
@@ -96,22 +126,22 @@ const App: React.FC = () => {
 
   const handleLoadSchedule = async () => {
     if (!selectedScheduleId) {
-      alert('Select a schedule to load.');
+      alert(t('schedule.selectLeagueToLoad'));
       return;
     }
     const selectedSchedule = publishedSchedules.find((item) => item.id === selectedScheduleId);
     if (!selectedSchedule) {
-      alert('Selected schedule not found.');
+      alert(t('schedule.scheduleNotFound'));
       return;
     }
     if (!selectedSchedule.active) {
-      alert('Only active schedules can be loaded.');
+      alert(t('schedule.onlyActiveSchedules'));
       return;
     }
     if (!storageApi.loadPublishedScheduleById) return;
     const data = await storageApi.loadPublishedScheduleById(selectedScheduleId, { userId, orgId });
     if (!data) {
-      alert('Schedule not found or access denied.');
+      alert(t('schedule.accessDenied'));
       return;
     }
     setLeagues(data.leagues);
@@ -128,10 +158,11 @@ const App: React.FC = () => {
   };
 
   const navItems: { mode: ViewMode; label: string; icon: any }[] = [
-    { mode: 'league_builder', label: 'League Creator', icon: Trophy },
-    { mode: 'scheduler', label: 'Scheduler', icon: Clock },
-    { mode: 'calendar', label: 'Calendar', icon: CalendarIcon },
-    { mode: 'embed', label: 'Embed Code', icon: Code }
+    { mode: 'league_builder', label: t('nav.leagueCreator'), icon: Trophy },
+    { mode: 'scheduler', label: t('nav.scheduler'), icon: Clock },
+    { mode: 'calendar', label: t('nav.calendar'), icon: CalendarIcon },
+    { mode: 'bracket', label: t('nav.playoffBracket'), icon: GitBranch },
+    { mode: 'embed', label: t('nav.embedCode'), icon: Code }
   ];
 
   // State
@@ -144,6 +175,7 @@ const App: React.FC = () => {
   const [teams, setTeams] = useState<Team[]>([]);
 
   const [games, setGames] = useState<Game[]>([]);
+  useEffect(() => { gamesRef.current = games; }, [games]);
 
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -155,27 +187,39 @@ const App: React.FC = () => {
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [calendarView, setCalendarView] = useState<'grid' | 'list'>('grid');
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('dsa_dark_mode') === '1');
   
   // Game Holding Area State (for games in edit mode)
   const [gamesInHoldingArea, setGamesInHoldingArea] = useState<Game[]>([]);
+  const [remoteEditCount, setRemoteEditCount] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [generatingLinkFor, setGeneratingLinkFor] = useState<string | null>(null);
+  const [generatedLinkUrl, setGeneratedLinkUrl] = useState<string | null>(null);
 
   // New Game Form State
   const [newGameForm, setNewGameForm] = useState<Partial<Game> & { leagueIds?: string[] }>({
     date: formatDate(new Date()),
-    time: '19:00',
+    time: '15:00',
     location: 'Main Stadium',
-    gameNumber: 1,
+    gameNumber: '',
     leagueIds: []
   });
 
-  // Persistence
+  // Persistence + tenant bootstrap
   useEffect(() => {
     let isActive = true;
     const hydrate = async () => {
-      // Check if user has any published schedules
-      const publishedSchedules = await storageApi.listPublishedSchedules({ userId, orgId }, { onlyActive: false });
+      // Load tenant record and published schedules in parallel
+      const [tenantRecord, publishedSchedules] = await Promise.all([
+        orgId ? storageApi.loadTenant(orgId) : Promise.resolve(null),
+        storageApi.listPublishedSchedules({ userId, orgId }, { onlyActive: false }),
+      ]);
+
+      if (!isActive) return;
+      setTenant(tenantRecord);
+
       const hasPublishedSchedules = publishedSchedules && publishedSchedules.length > 0;
-      
+
       // If no published schedules, clear local storage for teams, leagues, and schedule keys
       if (!hasPublishedSchedules) {
         localStorage.removeItem('dsa_leagues');
@@ -184,8 +228,16 @@ const App: React.FC = () => {
         localStorage.removeItem('dsa_games_holding');
         localStorage.removeItem('dsa_schedule_publish_key');
         localStorage.removeItem('dsa_schedule_publish_name');
+      } else {
+        // Restore schedule key from localStorage so the Publish button stays enabled after reload
+        const savedKey = localStorage.getItem('dsa_schedule_publish_key') || '';
+        const savedName = localStorage.getItem('dsa_schedule_publish_name') || '';
+        if (savedKey) {
+          setScheduleKey(savedKey);
+          setScheduleName(savedName);
+        }
       }
-      
+
       // Always start with empty data by default
       const data = await storageApi.loadStorageData({
         leagues: [],
@@ -255,7 +307,9 @@ const App: React.FC = () => {
           games,
           gamesInHoldingArea
         },
-        { userId, orgId }
+        { userId, orgId },
+        scheduleKey || undefined,
+        scheduleName || undefined
       );
     }, 300);
     return () => window.clearTimeout(timeoutId);
@@ -363,7 +417,7 @@ const App: React.FC = () => {
 
   // Delete game from holding area
   const handleDeleteFromHoldingArea = (gameId: string) => {
-    if (window.confirm("Are you sure you want to delete this game?")) {
+    if (window.confirm(t('gameForm.validationDeleteGame'))) {
       setGamesInHoldingArea(gamesInHoldingArea.filter(g => g.id !== gameId));
     }
   };
@@ -373,14 +427,14 @@ const App: React.FC = () => {
     const newGame: Game = {
         ...game,
         id: generateUUID(),
-        gameNumber: (game.gameNumber || 0) + 1 // Increment game number on copy
+        gameNumber: game.gameNumber
     };
     setGames([...games, newGame]);
   };
 
   // Game Delete Logic
   const handleDeleteGame = (gameId: string) => {
-    if (window.confirm("Are you sure you want to delete this game?")) {
+    if (window.confirm(t('gameForm.validationDeleteGame'))) {
         setGames(games.filter(g => g.id !== gameId));
     }
   };
@@ -388,23 +442,23 @@ const App: React.FC = () => {
   // Remove All Games Logic
   const handleRemoveAllGames = () => {
     if (games.length === 0) {
-      alert("There are no games to remove.");
+      alert(t('schedule.noGamesToRemove'));
       return;
     }
-    
+
     const confirmed = window.confirm(
-      `Are you sure you want to delete ALL ${games.length} game(s)?\n\nThis action cannot be undone.`
+      t('schedule.removeAllConfirm', { count: games.length })
     );
-    
+
     if (confirmed) {
       setGames([]);
-      alert("All games have been removed.");
+      alert(t('schedule.allGamesRemoved'));
     }
   };
 
   const handleGameClick = (game: Game) => {
     setEditingGame(game);
-    // Initialize form with game's current values
+    // Initialize form with all game's current values so nothing is lost on save
     const gameLeagueIds = getGameLeagueIds(game);
     setNewGameForm({
       date: game.date,
@@ -414,7 +468,13 @@ const App: React.FC = () => {
       awayTeamId: game.awayTeamId,
       leagueIds: gameLeagueIds,
       gameNumber: game.gameNumber,
-      seriesName: game.seriesName
+      seriesName: game.seriesName,
+      status: game.status,
+      scores: game.scores,
+      recap: game.recap,
+      streamUrl: game.streamUrl,
+      currentInning: game.currentInning,
+      inningHalf: game.inningHalf,
     });
     setShowEditModal(true);
   };
@@ -424,10 +484,10 @@ const App: React.FC = () => {
     if (!editingGame) return;
     
     if (!newGameForm.leagueIds || newGameForm.leagueIds.length === 0) {
-      alert("Please select at least one league.");
+      alert(t('gameForm.validationAtLeastOneLeague'));
       return;
     }
-    
+
     const updatedGame: Game = {
       ...editingGame,
       date: newGameForm.date || editingGame.date,
@@ -437,11 +497,17 @@ const App: React.FC = () => {
       awayTeamId: newGameForm.awayTeamId || editingGame.awayTeamId,
       leagueIds: newGameForm.leagueIds || getGameLeagueIds(editingGame),
       gameNumber: newGameForm.gameNumber || editingGame.gameNumber,
-      seriesName: newGameForm.seriesName !== undefined ? newGameForm.seriesName : editingGame.seriesName
+      seriesName: newGameForm.seriesName !== undefined ? newGameForm.seriesName : editingGame.seriesName,
+      status: (newGameForm.status || editingGame.status) as Game['status'],
+      scores: newGameForm.scores !== undefined ? newGameForm.scores : editingGame.scores,
+      recap: newGameForm.recap !== undefined ? newGameForm.recap : editingGame.recap,
+      streamUrl: newGameForm.streamUrl !== undefined ? newGameForm.streamUrl : editingGame.streamUrl,
+      currentInning: newGameForm.currentInning !== undefined ? newGameForm.currentInning : editingGame.currentInning,
+      inningHalf: newGameForm.inningHalf !== undefined ? newGameForm.inningHalf : editingGame.inningHalf,
     };
 
     if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
-      alert("Home and Away teams must be different.");
+      alert(t('gameForm.validationDifferentTeams'));
       return;
     }
 
@@ -451,66 +517,249 @@ const App: React.FC = () => {
     // Reset form
     setNewGameForm({
       date: formatDate(new Date()),
-      time: '19:00',
+      time: '15:00',
       location: 'Main Stadium',
-      gameNumber: 1,
+      gameNumber: '',
       leagueIds: []
     });
   };
 
+  const handleGameUpdateAndPublish = async () => {
+    if (!editingGame) return;
+
+    if (!newGameForm.leagueIds || newGameForm.leagueIds.length === 0) {
+      alert(t('gameForm.validationAtLeastOneLeague'));
+      return;
+    }
+
+    const updatedGame: Game = {
+      ...editingGame,
+      date: newGameForm.date || editingGame.date,
+      time: newGameForm.time || editingGame.time,
+      location: newGameForm.location || editingGame.location,
+      homeTeamId: newGameForm.homeTeamId || editingGame.homeTeamId,
+      awayTeamId: newGameForm.awayTeamId || editingGame.awayTeamId,
+      leagueIds: newGameForm.leagueIds || getGameLeagueIds(editingGame),
+      gameNumber: newGameForm.gameNumber || editingGame.gameNumber,
+      seriesName: newGameForm.seriesName !== undefined ? newGameForm.seriesName : editingGame.seriesName,
+      status: (newGameForm.status || editingGame.status) as Game['status'],
+      scores: newGameForm.scores !== undefined ? newGameForm.scores : editingGame.scores,
+      recap: newGameForm.recap !== undefined ? newGameForm.recap : editingGame.recap,
+      streamUrl: newGameForm.streamUrl !== undefined ? newGameForm.streamUrl : editingGame.streamUrl,
+      currentInning: newGameForm.currentInning !== undefined ? newGameForm.currentInning : editingGame.currentInning,
+      inningHalf: newGameForm.inningHalf !== undefined ? newGameForm.inningHalf : editingGame.inningHalf,
+    };
+
+    if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
+      alert(t('gameForm.validationDifferentTeams'));
+      return;
+    }
+
+    if (!scheduleKey) {
+      alert(t('schedule.noPublishedSchedule'));
+      return;
+    }
+
+    const updatedGames = games.map(g => g.id === editingGame.id ? updatedGame : g);
+    setGames(updatedGames);
+    setShowEditModal(false);
+    setEditingGame(null);
+    setNewGameForm({ date: formatDate(new Date()), time: '15:00', location: 'Main Stadium', gameNumber: '', leagueIds: [] });
+
+    setIsPublishing(true);
+    const result = await storageApi.publishScheduleNow(
+      { leagues, teams, games: updatedGames, gamesInHoldingArea },
+      { userId, orgId },
+      scheduleKey,
+      scheduleName
+    );
+    setIsPublishing(false);
+    if (!result.ok) {
+      alert(t('schedule.publishFailed', { reason: result.reason || 'Check PocketBase URL and rules.' }));
+    }
+  };
+
+  // ── Score links ───────────────────────────────────────────────────────────────
+
+  const handleGenerateScoreLink = async (gameId: string) => {
+    if (!scheduleKey) {
+      alert('Publish a schedule first to generate score links.');
+      return;
+    }
+    setGeneratingLinkFor(gameId);
+    setGeneratedLinkUrl(null);
+    const expiresAt = new Date(Date.now() + 48 * 3_600_000).toISOString();
+    const link = await storageApi.createScoreLink({
+      token: generateUUID(),
+      gameId,
+      scheduleKey,
+      orgId,
+      userId,
+      disabled: false,
+      expiresAt,
+    });
+    setGeneratingLinkFor(null);
+    if (link) {
+      const url = `${window.location.origin}/score-edit.html?token=${link.token}`;
+      setGeneratedLinkUrl(url);
+      try { await navigator.clipboard.writeText(url); } catch { /* ignore */ }
+    } else {
+      alert('Could not create score link. Make sure the score_links collection is configured in PocketBase.');
+    }
+  };
+
+  const handleGenerateScoreLinksForGames = async (gameIds: string[]) => {
+    if (!scheduleKey) {
+      alert('Publish a schedule first to generate score links.');
+      return;
+    }
+    const expiresAt = new Date(Date.now() + 48 * 3_600_000).toISOString();
+    const created: string[] = [];
+    for (const gameId of gameIds) {
+      const link = await storageApi.createScoreLink({
+        token: generateUUID(),
+        gameId,
+        scheduleKey,
+        orgId,
+        userId,
+        disabled: false,
+        expiresAt,
+      });
+      if (link) created.push(link.token);
+    }
+    alert(`Generated ${created.length} score link(s). View and copy them from Score Links in the user menu.`);
+  };
+
+  const handleSyncRemoteScores = async () => {
+    if (!scheduleKey) return;
+    setIsSyncing(true);
+    const edits = await storageApi.listScoreEditsByScheduleKey(scheduleKey);
+    if (edits.length === 0) {
+      setRemoteEditCount(0);
+      setIsSyncing(false);
+      return;
+    }
+    const editMap = new Map(edits.map(e => [e.gameId, e]));
+    setGames(prev => prev.map(g => {
+      const edit = editMap.get(g.id);
+      if (!edit) return g;
+      return { ...g, status: edit.status, scores: edit.scores ?? g.scores };
+    }));
+    setRemoteEditCount(0);
+    setIsSyncing(false);
+  };
+
+  // Returns true if now is within 1 hour before → 4 hours after the game's scheduled time
+  const isWithinAutoSyncWindow = (game: Game): boolean => {
+    if (!game.date || !game.time) return false;
+    const gameMs = new Date(`${game.date}T${game.time}`).getTime();
+    if (Number.isNaN(gameMs)) return false;
+    const now = Date.now();
+    return now >= gameMs - 60 * 60_000 && now <= gameMs + 4 * 60 * 60_000;
+  };
+
+  // Poll remote edit count when a scheduleKey is loaded; auto-apply edits from autoSync links
+  useEffect(() => {
+    if (!scheduleKey) return;
+    const check = async () => {
+      const [edits, scoreLinks] = await Promise.all([
+        storageApi.listScoreEditsByScheduleKey(scheduleKey),
+        storageApi.listScoreLinks({ userId, orgId }, scheduleKey),
+      ]);
+      // Build a map of token → gameId for auto-sync links that are within their game window
+      const autoSyncTokens = new Set<string>();
+      const currentGames = gamesRef.current;
+      for (const link of scoreLinks) {
+        if (!link.autoSync || link.disabled) continue;
+        const game = currentGames.find(g => g.id === link.gameId);
+        if (game && isWithinAutoSyncWindow(game)) {
+          autoSyncTokens.add(link.token);
+        }
+      }
+      if (autoSyncTokens.size > 0) {
+        const autoSyncEdits = edits.filter(e => autoSyncTokens.has(e.token));
+        if (autoSyncEdits.length > 0) {
+          const autoSyncMap = new Map(autoSyncEdits.map(e => [e.gameId, e]));
+          setGames(prev => prev.map(g => {
+            const edit = autoSyncMap.get(g.id);
+            if (!edit) return g;
+            return { ...g, status: edit.status, scores: edit.scores ?? g.scores };
+          }));
+        }
+      }
+      const manualEdits = edits.filter(e => !autoSyncTokens.has(e.token));
+      setRemoteEditCount(manualEdits.length);
+    };
+    check();
+    const id = setInterval(check, 60_000);
+    return () => clearInterval(id);
+  }, [scheduleKey, userId, orgId]);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
   const handleDateClick = (date: Date) => {
     if (leagues.length === 0) {
-      alert("Please create a league first before scheduling games.");
+      alert(t('schedule.selectLeagueFirst'));
       return;
     }
     const defaultLeague = leagues.find(l => l.teams.some(t => t.id === teams[0]?.id)) || leagues[0];
-    setNewGameForm({ 
-        date: formatDate(date), 
-        time: '19:00',
+    setNewGameForm({
+        date: formatDate(date),
+        time: '15:00',
         location: 'Main Stadium',
         leagueIds: defaultLeague ? [defaultLeague.id] : [],
-        gameNumber: 1
+        gameNumber: ''
     });
     setShowAddModal(true);
   };
 
   const handleAddGameClick = () => {
     if (leagues.length === 0) {
-        alert("Please create a league first before adding games.");
+        alert(t('schedule.createLeagueFirst'));
         return;
     }
     const defaultLeague = leagues.find(l => l.teams.some(t => t.id === teams[0]?.id)) || leagues[0];
     setNewGameForm({
         date: formatDate(new Date()),
-        time: '19:00',
+        time: '15:00',
         location: 'Main Stadium',
         leagueIds: defaultLeague ? [defaultLeague.id] : [],
-        gameNumber: 1
+        gameNumber: ''
     });
     setShowAddModal(true);
   };
 
   const handleAddGame = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newGameForm.homeTeamId && newGameForm.awayTeamId && newGameForm.date && newGameForm.leagueIds && newGameForm.leagueIds.length > 0) {
-        if(newGameForm.homeTeamId === newGameForm.awayTeamId) {
-            alert("Home and Away teams must be different.");
-            return;
-        }
-        const game: Game = {
-            id: generateUUID(),
-            homeTeamId: newGameForm.homeTeamId,
-            awayTeamId: newGameForm.awayTeamId,
-            date: newGameForm.date,
-            time: newGameForm.time || '19:00',
-            location: newGameForm.location || 'Stadium',
-            status: 'scheduled',
-            leagueIds: newGameForm.leagueIds,
-            gameNumber: newGameForm.gameNumber
-        };
-        setGames([...games, game]);
-        setShowAddModal(false);
+    if (!newGameForm.leagueIds || newGameForm.leagueIds.length === 0) {
+        alert(t('gameForm.validationAtLeastOneLeague'));
+        return;
     }
+    if (!newGameForm.homeTeamId || !newGameForm.awayTeamId) {
+        alert(t('gameForm.validationSelectBothTeams'));
+        return;
+    }
+    if (!newGameForm.date) {
+        alert(t('gameForm.validationSelectDate'));
+        return;
+    }
+    if(newGameForm.homeTeamId === newGameForm.awayTeamId) {
+        alert(t('gameForm.validationDifferentTeams'));
+        return;
+    }
+    const game: Game = {
+        id: generateUUID(),
+        homeTeamId: newGameForm.homeTeamId,
+        awayTeamId: newGameForm.awayTeamId,
+        date: newGameForm.date,
+        time: newGameForm.time || '15:00',
+        location: newGameForm.location || 'Stadium',
+        status: 'scheduled',
+        leagueIds: newGameForm.leagueIds,
+        gameNumber: newGameForm.gameNumber
+    };
+    setGames([...games, game]);
+    setShowAddModal(false);
   };
 
   // Team Logic
@@ -521,14 +770,14 @@ const App: React.FC = () => {
   // League Handlers
   const handleLeagueCreated = (league: League) => {
       if (leagueLimit && leagues.length >= leagueLimit) {
-        alert(`League limit reached (${leagueLimit}).`);
+        alert(t('league.leagueLimitReached', { limit: leagueLimit }));
         return;
       }
       setLeagues([...leagues, league]);
       // Automatically switch to this league's teams
       setTeams(league.teams);
       setGames([]); // Clear games when switching to a fresh league context
-      alert(`League "${league.name}" created! You can now generate a schedule for it.`);
+      alert(t('league.leagueCreated', { name: league.name }));
       setViewMode('scheduler');
   };
 
@@ -539,7 +788,7 @@ const App: React.FC = () => {
     if (isActiveLeague) {
         setTeams(updatedLeague.teams);
     }
-    alert(`League "${updatedLeague.name}" updated successfully.`);
+    alert(t('league.leagueUpdated', { name: updatedLeague.name }));
   };
 
   const handleLeagueDeleted = (leagueId: string) => {
@@ -572,7 +821,7 @@ const App: React.FC = () => {
     }
 
     if (leagueToDelete) {
-      alert(`League "${leagueToDelete.name}" deleted.`);
+      alert(t('league.leagueDeleted', { name: leagueToDelete.name }));
     }
   };
 
@@ -585,20 +834,28 @@ const App: React.FC = () => {
   };
 
   // Filter teams for manual add modal based on selected leagues
-  const formLeagues = newGameForm.leagueIds 
+  const formLeagues = newGameForm.leagueIds
     ? leagues.filter(l => newGameForm.leagueIds!.includes(l.id))
     : [];
   const formTeams = formLeagues.length > 0
     ? Array.from(new Map(formLeagues.flatMap(l => l.teams).map(t => [t.id, t])).values())
     : [];
+  const formFields = Array.from(new Set(formLeagues.flatMap(l => l.fields || [])));
+
+  // All teams across all leagues (used by Calendar so games from any league render correctly)
+  const allTeams = React.useMemo(() => {
+    const leagueTeams = leagues.flatMap(l => l.teams || []);
+    const merged = [...teams, ...leagueTeams];
+    return Array.from(new Map(merged.map(t => [t.id, t])).values());
+  }, [teams, leagues]);
 
   if (missingKeycloakEnv.length > 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-8 text-center max-w-md">
-          <h1 className="text-xl font-semibold text-slate-800">Keycloak config missing</h1>
+          <h1 className="text-xl font-semibold text-slate-800">{t('auth.keycloakConfigMissing')}</h1>
           <p className="text-sm text-slate-600 mt-2">
-            Set the missing environment variables in `.env.local`, then restart the dev server.
+            {t('auth.setMissingEnvVars')}
           </p>
           <div className="mt-4 text-left text-sm text-slate-700 space-y-1">
             {missingKeycloakEnv.map((envKey) => (
@@ -614,11 +871,10 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-700">
         <div className="text-center">
-          <div>Loading authentication...</div>
+          <div>{t('auth.loadingAuthentication')}</div>
           {authTimeout && (
             <div className="mt-3 text-sm text-slate-500">
-              Taking longer than expected. Check that the Keycloak URL is reachable and
-              the realm/client are correct, then refresh the page.
+              {t('auth.takingLonger')}
             </div>
           )}
         </div>
@@ -630,25 +886,76 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="bg-white border border-slate-200 rounded-xl shadow-lg p-8 text-center max-w-sm">
-          <h1 className="text-xl font-semibold text-slate-800">Sign in required</h1>
+          <h1 className="text-xl font-semibold text-slate-800">{t('auth.signInRequired')}</h1>
           <p className="text-sm text-slate-600 mt-2">
-            Please sign in with your Keycloak account to continue.
+            {t('auth.signInWithKeycloak')}
           </p>
           <button
             className="mt-6 bg-indigo-600 text-white px-4 py-2 rounded-md shadow hover:bg-indigo-700 text-sm font-medium"
             onClick={() => keycloak.login()}
           >
-            Sign in
+            {t('auth.signIn')}
           </button>
         </div>
       </div>
     );
   }
 
+  // ── Tenant suspension gate ─────────────────────────────────────────────────
+  // Shown only when the tenant record has been loaded and is explicitly inactive.
+  // System admins bypass this gate so they can always access for support purposes.
+  if (tenant && !tenant.active && !isSystemAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <div className="bg-white border border-red-200 rounded-xl shadow-lg p-8 text-center max-w-sm space-y-3">
+          <div className="text-4xl">⚠️</div>
+          <h1 className="text-lg font-semibold text-slate-800">Account suspended</h1>
+          <p className="text-sm text-slate-500">
+            Your organisation's account has been suspended. Please contact support to resolve this.
+          </p>
+          <p className="text-xs text-slate-400">Org: {tenant.orgId}</p>
+          <button
+            className="mt-2 text-sm text-indigo-600 underline hover:text-indigo-800"
+            onClick={() => keycloak.logout({ redirectUri: `${window.location.origin}/logged-out.html` })}
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Trial expiry warning (non-blocking) ────────────────────────────────────
+  const trialDaysLeft = tenant?.trialEndsAt
+    ? Math.ceil((new Date(tenant.trialEndsAt).getTime() - Date.now()) / 86_400_000)
+    : null;
+
+  const toggleDarkMode = () => {
+    setDarkMode(prev => {
+      const next = !prev;
+      localStorage.setItem('dsa_dark_mode', next ? '1' : '0');
+      return next;
+    });
+  };
+
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className={`flex h-screen overflow-hidden ${darkMode ? 'dark bg-slate-900' : 'bg-slate-50'}`}>
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+        {/* Trial expiry warning banner */}
+        {trialDaysLeft !== null && trialDaysLeft <= 7 && trialDaysLeft >= 0 && (
+          <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-800 flex items-center justify-between shrink-0">
+            <span>
+              {trialDaysLeft === 0
+                ? 'Your free trial expires today.'
+                : `Your free trial expires in ${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'}.`}
+              {' '}Upgrade your plan to keep full access.
+            </span>
+            {isSystemAdmin && tenant && (
+              <span className="text-amber-500 font-medium ml-4">[system admin view]</span>
+            )}
+          </div>
+        )}
         {/* Header */}
         <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shrink-0">
             <div className="flex-1 flex justify-between items-center">
@@ -656,23 +963,31 @@ const App: React.FC = () => {
                   <div className="relative" ref={navMenuRef}>
                     <button
                       onClick={() => setShowNavMenu((prev) => !prev)}
-                      className="flex items-center space-x-3 px-2 py-1 rounded-md hover:bg-slate-100"
+                      className="flex items-center space-x-2 px-2 py-1 rounded-md hover:bg-slate-100"
                     >
                       <img
                         src="/logo.png"
-                        alt="Diamond Manager logo"
-                        className="h-8 w-8 rounded-lg object-contain bg-slate-100 p-1"
+                        alt="Diamond Manager Scheduler logo"
+                        className="h-8 w-8 rounded-lg object-contain bg-slate-100 p-1 flex-shrink-0"
                       />
-                      <div className="text-left">
+                      {/* Mobile: menu icon + current section */}
+                      <div className="flex items-center space-x-1 md:hidden">
+                        <span className="text-sm font-semibold text-slate-700 truncate max-w-[110px]">
+                          {viewMode === 'league_builder' ? t('nav.leagueManagement') : viewMode === 'scheduler' ? t('nav.scheduler') : viewMode === 'teams' ? t('nav.teams') : viewMode === 'embed' ? t('nav.embedCode') : viewMode === 'help' ? t('nav.helpGuide') : viewMode === 'bracket' ? t('nav.playoffBracket') : viewMode === 'tenant_settings' ? 'Plan & Limits' : t('nav.calendar')}
+                        </span>
+                        <ChevronDown size={14} className="text-slate-500 flex-shrink-0" />
+                      </div>
+                      {/* Desktop: full title + subtitle */}
+                      <div className="hidden md:block text-left">
                         <div className="text-lg font-bold tracking-tight text-slate-900 flex items-center">
-                          <span>Diamond Manager</span>
+                          <span>{t('app.title')}</span>
                           <ChevronDown size={16} className="ml-2 text-slate-500" />
                         </div>
-                        <div className="text-xs text-indigo-500 uppercase tracking-wider">Scheduler</div>
+                        <div className="text-xs text-indigo-500 uppercase tracking-wider">{t('app.subtitle')}</div>
                       </div>
                     </button>
                     {showNavMenu && (
-                      <div className="absolute left-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
+                      <div className="absolute left-0 top-full mt-2 w-56 max-w-[calc(100vw-1.5rem)] bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
                         <div className="py-2">
                           {navItems.map(({ mode, label, icon: Icon }) => (
                             <button
@@ -681,8 +996,8 @@ const App: React.FC = () => {
                                 setViewMode(mode);
                                 setShowNavMenu(false);
                               }}
-                              className={`w-full flex items-center space-x-3 px-4 py-2 text-sm transition-colors ${
-                                viewMode === mode ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700 hover:bg-slate-100'
+                              className={`w-full flex items-center space-x-3 px-4 py-2.5 text-sm transition-colors ${
+                                viewMode === mode ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-700 hover:bg-slate-100'
                               }`}
                             >
                               <Icon size={18} />
@@ -711,11 +1026,19 @@ const App: React.FC = () => {
                     ))}
                   </div>
                   <h2 className="text-lg font-semibold text-slate-800 capitalize hidden md:block">
-                      {viewMode === 'league_builder' ? 'League Management' : viewMode === 'scheduler' ? 'Scheduler' : viewMode === 'teams' ? 'Teams' : viewMode === 'embed' ? 'Embed Code' : 'Calendar'}
+                      {viewMode === 'league_builder' ? t('nav.leagueManagement') : viewMode === 'scheduler' ? t('nav.scheduler') : viewMode === 'teams' ? t('nav.teams') : viewMode === 'embed' ? t('nav.embedCode') : viewMode === 'help' ? t('nav.helpGuide') : viewMode === 'bracket' ? t('nav.playoffBracket') : viewMode === 'tenant_settings' ? 'Plan & Limits' : t('nav.calendar')}
                   </h2>
                 </div>
 
                 <div className="flex items-center space-x-3 relative" ref={userMenuRef}>
+                  <LanguageSwitcher />
+                  <button
+                    onClick={toggleDarkMode}
+                    className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                    title={darkMode ? t('nav.switchToLight') : t('nav.switchToDark')}
+                  >
+                    {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+                  </button>
                   <button
                     onClick={() => setShowUserMenu((prev) => !prev)}
                     className="flex items-center space-x-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-md text-sm font-medium text-slate-700"
@@ -729,7 +1052,7 @@ const App: React.FC = () => {
                       <div className="px-3 py-2 border-b border-slate-100">
                         <div className="text-sm font-semibold text-slate-800">{userName}</div>
                         <div className="text-[11px] text-slate-400 mt-1">
-                          Org: {orgId || 'none'}
+                          {t('app.orgLabel')}{orgId || 'none'}
                         </div>
                       </div>
                       <div className="py-2">
@@ -740,11 +1063,11 @@ const App: React.FC = () => {
                           }}
                           className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
                         >
-                          <span>Teams</span>
+                          <span>{t('nav.teams')}</span>
                           <Users size={16} />
                         </button>
                         <div className="px-3 pb-2 space-y-2">
-                          <div className="text-xs font-semibold text-slate-500 uppercase">Schedule</div>
+                          <div className="text-xs font-semibold text-slate-500 uppercase">{t('app.schedule')}</div>
                           <button
                             onClick={async () => {
                               setShowUserMenu(false);
@@ -753,75 +1076,57 @@ const App: React.FC = () => {
                             }}
                             className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
                           >
-                            <span>Load Published Schedule</span>
+                            <span>{t('app.loadPublishedSchedule')}</span>
                             <Send size={16} />
                           </button>
                           <button
-                            onClick={async () => {
-                              // Prevent publishing if there are games in edit mode (holding area)
-                              if (gamesInHoldingArea.length > 0) {
-                                alert(`Cannot publish schedule. ${gamesInHoldingArea.length} game(s) are in edit mode. Please move them to calendar slots or delete them before publishing.`);
-                                return;
-                              }
-                              const trimmedKey = scheduleKey.trim();
-                              const trimmedName = scheduleName.trim();
-                              const baseName = trimmedName || trimmedKey;
-                              const leagueForName = scheduleLeagueId
-                                ? leagues.find((league) => league.id === scheduleLeagueId)
-                                : leagues[0];
-                              const leagueSuffix = leagueForName
-                                ? `${leagueForName.name}${leagueForName.category ? ` ${leagueForName.category}` : ''}`
-                                : '';
-                              const finalName = leagueSuffix ? `${baseName} - ${leagueSuffix}` : baseName;
-                              localStorage.setItem('dsa_schedule_publish_key', trimmedKey);
-                              localStorage.setItem('dsa_schedule_publish_name', finalName);
-                              const result = await storageApi.publishScheduleNow(
-                                {
-                                  leagues,
-                                  teams,
-                                  games,
-                                  gamesInHoldingArea
-                                },
-                                { userId, orgId },
-                                trimmedKey,
-                                finalName
-                              );
-                              if (!result.ok) {
-                                alert(`Publish failed. ${result.reason || 'Check PocketBase URL and rules.'}`);
-                                return;
-                              }
-                              setLeagues([]);
-                              setTeams([]);
-                              setGames([]);
-                              setGamesInHoldingArea([]);
-                              setSelectedLeagueId('all');
-                              setSelectedCategory('all');
-                              setSelectedTeamId('all');
-                              setScheduleLeagueId('');
-                              setScheduleKey('');
-                              setScheduleName('');
-                              setSelectedScheduleId('');
-                              setViewMode('calendar');
-                              alert('Schedule published and unloaded.');
+                            onClick={() => {
+                              setShowUserMenu(false);
+                              setPublishKeyDraft(scheduleKey);
+                              setPublishNameDraft(scheduleName);
+                              setShowPublishModal(true);
                             }}
-                            disabled={!scheduleKey.trim() || gamesInHoldingArea.length > 0}
+                            disabled={gamesInHoldingArea.length > 0}
                             className={`w-full flex items-center justify-between px-3 py-2 text-sm text-white rounded ${
-                              scheduleKey.trim() && gamesInHoldingArea.length === 0
+                              gamesInHoldingArea.length === 0
                                 ? 'bg-emerald-600 hover:bg-emerald-700'
                                 : 'bg-emerald-300 cursor-not-allowed'
                             }`}
                           >
-                            <span>Publish Current Schedule</span>
+                            <span>{t('app.publishCurrentSchedule')}</span>
                             <Send size={16} />
                           </button>
                         </div>
                       </div>
                       <div className="border-t border-slate-100">
+                        {isTenantAdmin && (
+                          <button
+                            onClick={() => { setShowUserMenu(false); setViewMode('tenant_settings'); }}
+                            className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                          >
+                            <span>Plan &amp; Limits</span>
+                            <Building2 size={16} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => { setShowUserMenu(false); setViewMode('score_links'); }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                          <span>Score Links</span>
+                          <Link2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => { setShowUserMenu(false); setViewMode('help'); }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                        >
+                          <span>{t('nav.helpGuide')}</span>
+                          <HelpCircle size={16} />
+                        </button>
                         <button
                           onClick={() => keycloak.logout()}
                           className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
                         >
-                          <span>Sign out</span>
+                          <span>{t('nav.signOut')}</span>
                           <LogOut size={16} />
                         </button>
                       </div>
@@ -835,24 +1140,42 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-auto p-6 relative">
           {viewMode === 'calendar' && (
             <>
-              <GameHoldingArea
-                games={gamesInHoldingArea}
-                teams={teams}
-                leagues={leagues}
-                onGameMove={handleGameMove}
-                onGameRemove={handleRemoveFromHoldingArea}
-                onGameClick={handleGameClick}
-              />
-              <Calendar 
+              <div className="hidden md:block sticky top-0 z-20 -mx-6 px-6 pb-1 bg-slate-50 dark:bg-slate-900">
+                <GameHoldingArea
+                  games={gamesInHoldingArea}
+                  teams={teams}
+                  leagues={leagues}
+                  onGameMove={handleGameMove}
+                  onGameRemove={handleRemoveFromHoldingArea}
+                  onGameClick={handleGameClick}
+                />
+              </div>
+              {remoteEditCount > 0 && (
+                <div className="mb-3 flex items-center justify-between gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 text-sm">
+                  <div className="flex items-center gap-2 text-indigo-800">
+                    <Download size={15} className="text-indigo-500 flex-shrink-0" />
+                    <span><strong>{remoteEditCount}</strong> remote score update{remoteEditCount !== 1 ? 's' : ''} waiting — submitted via score links.</span>
+                  </div>
+                  <button
+                    onClick={handleSyncRemoteScores}
+                    disabled={isSyncing}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60 flex-shrink-0"
+                  >
+                    {isSyncing ? 'Syncing…' : 'Sync Remote Scores'}
+                  </button>
+                </div>
+              )}
+              <Calendar
                 currentDate={currentDate}
                 days={days} // Contains filtered games for Grid
                 filteredGames={filteredGames} // Contains filtered games for List
-                teams={teams}
+                teams={allTeams}
                 leagues={leagues}
                 onPrevMonth={handlePrevMonth}
                 onNextMonth={handleNextMonth}
                 onGameClick={handleGameClick}
                 onDateClick={handleDateClick}
+                onAddGame={handleAddGameClick}
                 onGameMove={handleGameMove}
                 onGameCopy={handleGameCopy}
                 onDeleteGame={handleDeleteGame}
@@ -867,6 +1190,7 @@ const App: React.FC = () => {
                 onLeagueFilterChange={setSelectedLeagueId}
                 selectedCategory={selectedCategory}
                 onCategoryFilterChange={setSelectedCategory}
+                onGenerateScoreLinks={scheduleKey ? handleGenerateScoreLinksForGames : undefined}
               />
             </>
           )}
@@ -874,12 +1198,12 @@ const App: React.FC = () => {
           {viewMode === 'teams' && (
             <TeamList 
               teams={teams}
-              onAddTeam={(t) => {
+              onAddTeam={(newTeam) => {
                 if (teamLimit && teams.length >= teamLimit) {
-                  alert(`Team limit reached (${teamLimit}).`);
+                  alert(t('teams.teamLimitReached', { limit: teamLimit }));
                   return;
                 }
-                setTeams([...teams, t]);
+                setTeams([...teams, newTeam]);
               }}
               onUpdateTeam={handleUpdateTeam}
               onDeleteTeam={(id) => {
@@ -905,11 +1229,19 @@ const App: React.FC = () => {
           {viewMode === 'scheduler' && (
             <ScheduleGenerator
                 leagues={leagues}
+                games={games}
                 onLeagueSelected={handleLeagueSelectedForSchedule}
-                onScheduleGenerated={(g) => {
-                    if(confirm("This will replace the current schedule for this view. Continue?")) {
-                        setGames(g);
-                        setViewMode('calendar');
+                onScheduleGenerated={(g, mode) => {
+                    if (mode === 'append') {
+                        if (confirm(t('schedule.appendScheduleConfirm'))) {
+                            setGames(prev => [...prev, ...g]);
+                            setViewMode('calendar');
+                        }
+                    } else {
+                        if (confirm(t('schedule.replaceScheduleConfirm'))) {
+                            setGames(g);
+                            setViewMode('calendar');
+                        }
                     }
                 }}
             />
@@ -919,11 +1251,42 @@ const App: React.FC = () => {
             <EmbedCodeGenerator
                 leagues={leagues}
                 teams={teams}
+                games={games}
                 currentUrl={window.location.href}
                 loadedScheduleKey={scheduleKey}
                 isPublishedScheduleLoaded={!!scheduleKey && scheduleKey.trim() !== ''}
                 userId={userId}
                 orgId={orgId}
+            />
+          )}
+
+          {viewMode === 'bracket' && (
+            <PlayoffBracket games={games} teams={teams} />
+          )}
+
+          {viewMode === 'help' && <HelpPage />}
+
+          {viewMode === 'score_links' && (
+            <ScoreLinksManager
+              scheduleKey={scheduleKey}
+              games={games}
+              teams={teams}
+              leagues={leagues}
+              userId={userId}
+              orgId={orgId}
+            />
+          )}
+
+          {viewMode === 'tenant_settings' && (
+            <TenantLimitsTable
+              tenant={tenant}
+              usage={{
+                leagues:            leagues.length,
+                teams:              teams.length,
+                scoreLinks:         0,
+                publishedSchedules: publishedSchedules.length,
+              }}
+              isSystemAdmin={isSystemAdmin}
             />
           )}
 
@@ -934,17 +1297,17 @@ const App: React.FC = () => {
             <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                     <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                        <h3 className="font-bold text-slate-800">Schedule Game</h3>
+                        <h3 className="font-bold text-slate-800">{t('app.scheduleGameTitle')}</h3>
                         <button onClick={() => setShowAddModal(false)}><X size={20} className="text-slate-400 hover:text-slate-600" /></button>
                     </div>
                     <form onSubmit={handleAddGame} className="p-6 space-y-4">
-                        
+
                         {/* League Selection - Multi-select */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Leagues (select one or more)</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">{t('gameForm.leaguesSelect')}</label>
                             <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
                                 {leagues.length === 0 ? (
-                                    <p className="text-sm text-slate-400">No leagues available. Create a league first.</p>
+                                    <p className="text-sm text-slate-400">{t('gameForm.noLeagues')}</p>
                                 ) : (
                                     leagues.map(l => (
                                         <label key={l.id} className="flex items-center space-x-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
@@ -970,51 +1333,59 @@ const App: React.FC = () => {
 
                         <div className="grid grid-cols-2 gap-4">
                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.date')}</label>
                                 <input required type="date" className="w-full border rounded-md p-2" value={newGameForm.date} onChange={e => setNewGameForm({...newGameForm, date: e.target.value})} />
                              </div>
                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.time')}</label>
                                 <input required type="time" className="w-full border rounded-md p-2" value={newGameForm.time} onChange={e => setNewGameForm({...newGameForm, time: e.target.value})} />
                              </div>
                         </div>
 
                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Game Number</label>
-                            <input 
-                                type="number" 
-                                min="1"
-                                className="w-full border rounded-md p-2" 
-                                value={newGameForm.gameNumber} 
-                                onChange={e => setNewGameForm({...newGameForm, gameNumber: parseInt(e.target.value)})} 
+                            <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.gameNumber')}</label>
+                            <input
+                                type="text"
+                                className="w-full border rounded-md p-2"
+                                value={newGameForm.gameNumber ?? ''}
+                                onChange={e => setNewGameForm({...newGameForm, gameNumber: e.target.value})}
                             />
                          </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Home Team</label>
-                                <select required className="w-full border rounded-md p-2" value={newGameForm.homeTeamId || ''} onChange={e => setNewGameForm({...newGameForm, homeTeamId: e.target.value})}>
-                                    <option value="">Select...</option>
-                                    {formTeams.map((t: Team) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.homeTeam')}</label>
+                                <select required className="w-full border rounded-md p-2" value={newGameForm.homeTeamId || ''} onChange={e => {
+                                    setNewGameForm({...newGameForm, homeTeamId: e.target.value});
+                                }}>
+                                    <option value="">{t('gameForm.selectDots')}</option>
+                                    {formTeams.map((tm: Team) => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Away Team</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.awayTeam')}</label>
                                 <select required className="w-full border rounded-md p-2" value={newGameForm.awayTeamId || ''} onChange={e => setNewGameForm({...newGameForm, awayTeamId: e.target.value})}>
-                                    <option value="">Select...</option>
-                                    {formTeams.map((t: Team) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                    <option value="">{t('gameForm.selectDots')}</option>
+                                    {formTeams.map((tm: Team) => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
                                 </select>
                             </div>
                         </div>
 
                         <div>
-                             <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
-                             <input className="w-full border rounded-md p-2" placeholder="Stadium Name" value={newGameForm.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})} />
+                             <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.location')}</label>
+                             {formFields.length > 0 ? (
+                               <select className="w-full border rounded-md p-2" value={newGameForm.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})}>
+                                 <option value="">{t('gameForm.selectField')}</option>
+                                 {formFields.map(f => <option key={f} value={f}>{f}</option>)}
+                               </select>
+                             ) : (
+                               <input className="w-full border rounded-md p-2" placeholder={t('gameForm.stadiumName')} value={newGameForm.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})} />
+                             )}
                         </div>
-                        
+
                         <div className="pt-2">
                             <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
-                                Add to Schedule
+                                {t('gameForm.addToSchedule')}
                             </button>
                         </div>
                     </form>
@@ -1029,34 +1400,36 @@ const App: React.FC = () => {
           const editFormTeams = editFormLeagues.length > 0
             ? Array.from(new Map(editFormLeagues.flatMap(l => l.teams).map(t => [t.id, t])).values())
             : [];
+          const editFormFields = Array.from(new Set(editFormLeagues.flatMap(l => l.fields || [])));
           
           const closeEditModal = () => {
             setShowEditModal(false);
             setEditingGame(null);
+            setGeneratedLinkUrl(null);
             setNewGameForm({
               date: formatDate(new Date()),
-              time: '19:00',
+              time: '15:00',
               location: 'Main Stadium',
-              gameNumber: 1,
+              gameNumber: '',
               leagueIds: []
             });
           };
           
           return (
             <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={closeEditModal}>
-                <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-                    <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                        <h3 className="font-bold text-slate-800">Edit Game</h3>
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center shrink-0">
+                        <h3 className="font-bold text-slate-800">{t('app.editGameTitle')}</h3>
                         <button onClick={closeEditModal}><X size={20} className="text-slate-400 hover:text-slate-600" /></button>
                     </div>
-                    <form onSubmit={handleGameUpdate} className="p-6 space-y-4">
-                        
+                    <form onSubmit={handleGameUpdate} className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
+
                         {/* League Selection - Multi-select */}
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Leagues (select one or more)</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">{t('gameForm.leaguesSelect')}</label>
                             <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
                                 {leagues.length === 0 ? (
-                                    <p className="text-sm text-slate-400">No leagues available.</p>
+                                    <p className="text-sm text-slate-400">{t('gameForm.noLeaguesShort')}</p>
                                 ) : (
                                     leagues.map(l => (
                                         <label key={l.id} className="flex items-center space-x-2 cursor-pointer hover:bg-slate-50 p-1 rounded">
@@ -1082,65 +1455,284 @@ const App: React.FC = () => {
 
                         <div className="grid grid-cols-2 gap-4">
                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.date')}</label>
                                 <input required type="date" className="w-full border rounded-md p-2" value={newGameForm.date || editingGame.date} onChange={e => setNewGameForm({...newGameForm, date: e.target.value})} />
                              </div>
                              <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Time</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.time')}</label>
                                 <input required type="time" className="w-full border rounded-md p-2" value={newGameForm.time || editingGame.time} onChange={e => setNewGameForm({...newGameForm, time: e.target.value})} />
                              </div>
                         </div>
 
                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Game Number</label>
-                            <input 
-                                type="number" 
-                                min="1"
-                                className="w-full border rounded-md p-2" 
-                                value={newGameForm.gameNumber !== undefined ? newGameForm.gameNumber : (editingGame.gameNumber || 1)} 
-                                onChange={e => setNewGameForm({...newGameForm, gameNumber: parseInt(e.target.value)})} 
+                            <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.gameNumber')}</label>
+                            <input
+                                type="text"
+                                className="w-full border rounded-md p-2"
+                                value={newGameForm.gameNumber !== undefined ? newGameForm.gameNumber : (editingGame.gameNumber ?? '')}
+                                onChange={e => setNewGameForm({...newGameForm, gameNumber: e.target.value})}
                             />
                          </div>
 
                         <div>
-                             <label className="block text-sm font-medium text-slate-700 mb-1">Series Name (optional)</label>
-                             <input 
-                                 className="w-full border rounded-md p-2" 
-                                 placeholder="e.g., Semifinal, Final" 
-                                 value={newGameForm.seriesName !== undefined ? newGameForm.seriesName : (editingGame.seriesName || '')} 
-                                 onChange={e => setNewGameForm({...newGameForm, seriesName: e.target.value})} 
+                             <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.seriesName')}</label>
+                             <input
+                                 className="w-full border rounded-md p-2"
+                                 placeholder={t('gameForm.seriesNamePlaceholder')}
+                                 value={newGameForm.seriesName !== undefined ? newGameForm.seriesName : (editingGame.seriesName || '')}
+                                 onChange={e => setNewGameForm({...newGameForm, seriesName: e.target.value})}
                              />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Home Team</label>
-                                <select required className="w-full border rounded-md p-2" value={newGameForm.homeTeamId || editingGame.homeTeamId || ''} onChange={e => setNewGameForm({...newGameForm, homeTeamId: e.target.value})}>
-                                    <option value="">Select...</option>
-                                    {editFormTeams.map((t: Team) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.homeTeam')}</label>
+                                <select required className="w-full border rounded-md p-2" value={newGameForm.homeTeamId || editingGame.homeTeamId || ''} onChange={e => {
+                                    setNewGameForm({...newGameForm, homeTeamId: e.target.value});
+                                }}>
+                                    <option value="">{t('gameForm.selectDots')}</option>
+                                    {editFormTeams.map((tm: Team) => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Away Team</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.awayTeam')}</label>
                                 <select required className="w-full border rounded-md p-2" value={newGameForm.awayTeamId || editingGame.awayTeamId || ''} onChange={e => setNewGameForm({...newGameForm, awayTeamId: e.target.value})}>
-                                    <option value="">Select...</option>
-                                    {editFormTeams.map((t: Team) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                    <option value="">{t('gameForm.selectDots')}</option>
+                                    {editFormTeams.map((tm: Team) => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
                                 </select>
                             </div>
                         </div>
 
                         <div>
-                             <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
-                             <input className="w-full border rounded-md p-2" placeholder="Stadium Name" value={newGameForm.location || editingGame.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})} />
+                             <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.location')}</label>
+                             {editFormFields.length > 0 ? (
+                               <select className="w-full border rounded-md p-2" value={newGameForm.location || editingGame.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})}>
+                                 <option value="">{t('gameForm.selectField')}</option>
+                                 {editFormFields.map(f => <option key={f} value={f}>{f}</option>)}
+                               </select>
+                             ) : (
+                               <input className="w-full border rounded-md p-2" placeholder={t('gameForm.stadiumName')} value={newGameForm.location || editingGame.location} onChange={e => setNewGameForm({...newGameForm, location: e.target.value})} />
+                             )}
                         </div>
-                        
-                        <div className="pt-2 flex space-x-2">
-                            <button type="button" onClick={closeEditModal} className="flex-1 bg-slate-200 text-slate-700 py-2 rounded-lg font-medium hover:bg-slate-300 transition-colors">
-                                Cancel
+
+                        {/* Status */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">{t('gameForm.status')}</label>
+                            <div className="flex rounded-md border overflow-hidden divide-x flex-wrap">
+                                {(['scheduled', 'live', 'final', 'postponed'] as const).map(s => {
+                                    const current = newGameForm.status !== undefined ? newGameForm.status : editingGame.status;
+                                    const isActive = current === s;
+                                    const activeClass = s === 'live'
+                                        ? 'bg-green-500 text-white'
+                                        : s === 'final'
+                                            ? 'bg-slate-700 text-white'
+                                            : s === 'postponed'
+                                                ? 'bg-orange-500 text-white'
+                                                : 'bg-indigo-600 text-white';
+                                    const labels: Record<string, string> = { scheduled: t('gameForm.statusScheduled'), live: t('gameForm.statusLive'), final: t('gameForm.statusFinal'), postponed: t('gameForm.statusPostponed') };
+                                    return (
+                                        <button
+                                            key={s}
+                                            type="button"
+                                            onClick={() => setNewGameForm({...newGameForm, status: s})}
+                                            className={`flex-1 py-2 text-sm font-medium transition-colors ${isActive ? activeClass : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                                        >
+                                            {labels[s]}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {(newGameForm.status === 'postponed' || (!newGameForm.status && editingGame.status === 'postponed')) && (
+                                <p className="text-xs text-orange-600 mt-1">{t('gameForm.postponedHint')}</p>
+                            )}
+                        </div>
+
+                        {/* Current Inning (live games only) */}
+                        {(newGameForm.status === 'live' || (!newGameForm.status && editingGame.status === 'live')) && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Current Inning</label>
+                                <div className="flex items-center gap-3">
+                                    {/* Top / Bottom toggle */}
+                                    <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+                                        {(['top', 'bottom'] as const).map(half => {
+                                            const currentHalf = newGameForm.inningHalf !== undefined ? newGameForm.inningHalf : editingGame.inningHalf;
+                                            const isActive = currentHalf === half;
+                                            return (
+                                                <button
+                                                    key={half}
+                                                    type="button"
+                                                    onClick={() => setNewGameForm({...newGameForm, inningHalf: half})}
+                                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-colors ${isActive ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                                                >
+                                                    <span className="text-[11px] leading-none">{half === 'top' ? '▲' : '▼'}</span>
+                                                    {half.charAt(0).toUpperCase() + half.slice(1)}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {/* Inning number */}
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={20}
+                                        placeholder="—"
+                                        value={(newGameForm.currentInning !== undefined ? newGameForm.currentInning : editingGame.currentInning) ?? ''}
+                                        onChange={e => setNewGameForm({...newGameForm, currentInning: e.target.value === '' ? undefined : parseInt(e.target.value)})}
+                                        className="w-16 border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm text-center text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Score by Inning */}
+                        {(() => {
+                            const currentStatus = newGameForm.status !== undefined ? newGameForm.status : editingGame.status;
+                            if (currentStatus !== 'live' && currentStatus !== 'final') return null;
+                            const currentScores = newGameForm.scores !== undefined ? newGameForm.scores : editingGame.scores;
+                            const innings = currentScores?.innings || [];
+                            const homeTeamId = newGameForm.homeTeamId || editingGame.homeTeamId;
+                            const awayTeamId = newGameForm.awayTeamId || editingGame.awayTeamId;
+                            const homeTeam = teams.find((t: Team) => t.id === homeTeamId);
+                            const awayTeam = teams.find((t: Team) => t.id === awayTeamId);
+
+                            const updateInning = (idx: number, side: 'home' | 'away', val: string) => {
+                                const newInnings = [...innings];
+                                if (!newInnings[idx]) newInnings[idx] = { home: null, away: null };
+                                newInnings[idx] = { ...newInnings[idx], [side]: val === '' ? null : parseInt(val) };
+                                const totalHome = newInnings.reduce((s, i) => s + (i?.home ?? 0), 0);
+                                const totalAway = newInnings.reduce((s, i) => s + (i?.away ?? 0), 0);
+                                setNewGameForm({...newGameForm, scores: { home: totalHome, away: totalAway, innings: newInnings }});
+                            };
+                            const addInning = () => {
+                                const newInnings = [...innings, { home: null, away: null }];
+                                const totalHome = newInnings.reduce((s, i) => s + (i?.home ?? 0), 0);
+                                const totalAway = newInnings.reduce((s, i) => s + (i?.away ?? 0), 0);
+                                setNewGameForm({...newGameForm, scores: { home: totalHome, away: totalAway, innings: newInnings }});
+                            };
+                            const removeLastInning = () => {
+                                const newInnings = innings.slice(0, -1);
+                                const totalHome = newInnings.reduce((s, i) => s + (i?.home ?? 0), 0);
+                                const totalAway = newInnings.reduce((s, i) => s + (i?.away ?? 0), 0);
+                                setNewGameForm({...newGameForm, scores: newInnings.length > 0 ? { home: totalHome, away: totalAway, innings: newInnings } : undefined});
+                            };
+
+                            return (
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="block text-sm font-medium text-slate-700">Score by Inning</label>
+                                        <div className="flex gap-1">
+                                            <button type="button" onClick={removeLastInning} disabled={innings.length === 0} className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 disabled:opacity-40">− Inning</button>
+                                            <button type="button" onClick={addInning} className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200">+ Inning</button>
+                                        </div>
+                                    </div>
+                                    {innings.length === 0 ? (
+                                        <p className="text-xs text-slate-400 text-center py-3 border rounded-md bg-slate-50">Click "+ Inning" to start entering scores</p>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-xs border-collapse border border-slate-200 rounded-md overflow-hidden">
+                                                <thead>
+                                                    <tr className="bg-slate-100">
+                                                        <th className="text-left px-2 py-1.5 font-semibold text-slate-600 w-16 border-r border-slate-200">Team</th>
+                                                        {innings.map((_, i) => <th key={i} className="px-1 py-1.5 font-medium text-slate-500 w-9 border-r border-slate-200">{i + 1}</th>)}
+                                                        <th className="px-2 py-1.5 font-bold text-slate-800 w-9">R</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {([{team: awayTeam, side: 'away'}, {team: homeTeam, side: 'home'}] as const).map(({team, side}) => (
+                                                        <tr key={side} className="border-t border-slate-200">
+                                                            <td className="px-2 py-1 font-semibold text-slate-700 border-r border-slate-200">{team?.abbreviation || side}</td>
+                                                            {innings.map((inning, i) => (
+                                                                <td key={i} className="p-0.5 border-r border-slate-200">
+                                                                    <input
+                                                                        type="number"
+                                                                        min="0"
+                                                                        className="w-8 text-center border border-slate-200 rounded p-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                                                        value={inning[side] ?? ''}
+                                                                        onChange={e => updateInning(i, side, e.target.value)}
+                                                                    />
+                                                                </td>
+                                                            ))}
+                                                            <td className="px-2 py-1 font-bold text-center text-slate-800">
+                                                                {innings.reduce((s, i) => s + (i[side] ?? 0), 0)}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
+                        {/* Recap */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Recap (optional)</label>
+                            <textarea
+                                className="w-full border rounded-md p-2 text-sm resize-none"
+                                rows={3}
+                                placeholder="Game recap..."
+                                value={newGameForm.recap !== undefined ? newGameForm.recap : (editingGame.recap || '')}
+                                onChange={e => setNewGameForm({...newGameForm, recap: e.target.value})}
+                            />
+                        </div>
+
+                        {/* Live Stream URL */}
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Live Stream URL (optional)</label>
+                            <input
+                                type="url"
+                                className="w-full border rounded-md p-2 text-sm"
+                                placeholder="https://..."
+                                value={newGameForm.streamUrl !== undefined ? newGameForm.streamUrl : (editingGame.streamUrl || '')}
+                                onChange={e => setNewGameForm({...newGameForm, streamUrl: e.target.value})}
+                            />
+                        </div>
+
+                        <div className="pt-2 space-y-2">
+                            <div className="flex space-x-2">
+                                <button type="button" onClick={closeEditModal} className="flex-1 bg-slate-200 text-slate-700 py-2 rounded-lg font-medium hover:bg-slate-300 transition-colors">
+                                    Cancel
+                                </button>
+                                <button type="submit" className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
+                                    Save Changes
+                                </button>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleGameUpdateAndPublish}
+                                disabled={isPublishing || !scheduleKey}
+                                title={!scheduleKey ? 'Publish the schedule first to enable this button' : ''}
+                                className={`w-full py-2 rounded-lg font-medium transition-colors text-white ${scheduleKey && !isPublishing ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-emerald-300 cursor-not-allowed'}`}
+                            >
+                                {isPublishing ? 'Publishing...' : 'Save & Publish'}
                             </button>
-                            <button type="submit" className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
-                                Save Changes
-                            </button>
+
+                            {/* Generate Score Link */}
+                            {scheduleKey && (
+                              <div className="pt-1 border-t border-slate-100">
+                                {generatedLinkUrl && generatingLinkFor === null ? (
+                                  <div className="bg-indigo-50 rounded-lg px-3 py-2 space-y-1">
+                                    <p className="text-xs font-semibold text-indigo-700 flex items-center gap-1"><Link2 size={12} />Score link copied!</p>
+                                    <div className="flex items-center gap-2">
+                                      <input readOnly value={generatedLinkUrl} className="flex-1 text-xs font-mono bg-white border border-indigo-200 rounded px-2 py-1 truncate text-slate-600" onClick={e => (e.target as HTMLInputElement).select()} />
+                                      <button type="button" onClick={() => navigator.clipboard.writeText(generatedLinkUrl)} className="p-1.5 rounded text-indigo-500 hover:bg-indigo-100"><Copy size={13} /></button>
+                                    </div>
+                                    <button type="button" className="text-xs text-indigo-500 underline" onClick={() => setGeneratedLinkUrl(null)}>Generate another</button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled={generatingLinkFor === editingGame.id}
+                                    onClick={() => { setGeneratedLinkUrl(null); handleGenerateScoreLink(editingGame.id); }}
+                                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors disabled:opacity-60"
+                                  >
+                                    <Link2 size={14} />
+                                    {generatingLinkFor === editingGame.id ? 'Generating…' : 'Generate Score Link (48h)'}
+                                  </button>
+                                )}
+                              </div>
+                            )}
                         </div>
                     </form>
                 </div>
@@ -1149,6 +1741,102 @@ const App: React.FC = () => {
         })()}
 
       </main>
+      {showPublishModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-semibold text-slate-800">Publish Schedule</h3>
+              <button onClick={() => setShowPublishModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Schedule Key <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={publishKeyDraft}
+                  onChange={(e) => setPublishKeyDraft(e.target.value)}
+                  placeholder="e.g. summer-2025"
+                  className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  A unique identifier for this schedule (letters, numbers, hyphens). Used in embed URLs and ICS subscriptions.
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Schedule Name</label>
+                <input
+                  type="text"
+                  value={publishNameDraft}
+                  onChange={(e) => setPublishNameDraft(e.target.value)}
+                  placeholder="e.g. Summer League 2025"
+                  className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
+              {publishKeyDraft.trim() && (
+                <div className="flex flex-col items-center gap-1 py-2">
+                  <p className="text-xs text-slate-500">Embed QR code preview</p>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`${window.location.origin}/embed.html?schedule_key=${publishKeyDraft.trim()}`)}`}
+                    alt="QR code for embed URL"
+                    className="rounded border border-slate-200 p-1"
+                    width={120}
+                    height={120}
+                  />
+                  <p className="text-[10px] text-slate-400 break-all text-center max-w-full">
+                    {`${window.location.origin}/embed.html?schedule_key=${publishKeyDraft.trim()}`}
+                  </p>
+                </div>
+              )}
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => setShowPublishModal(false)}
+                  className="flex-1 border border-slate-200 px-4 py-2 rounded-md text-sm hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={!publishKeyDraft.trim() || isPublishing}
+                  onClick={async () => {
+                    const trimmedKey = publishKeyDraft.trim();
+                    if (!trimmedKey) return;
+                    const finalName = publishNameDraft.trim() || trimmedKey;
+                    setIsPublishing(true);
+                    localStorage.setItem('dsa_schedule_publish_key', trimmedKey);
+                    localStorage.setItem('dsa_schedule_publish_name', finalName);
+                    const result = await storageApi.publishScheduleNow(
+                      { leagues, teams, games, gamesInHoldingArea },
+                      { userId, orgId },
+                      trimmedKey,
+                      finalName
+                    );
+                    setIsPublishing(false);
+                    if (!result.ok) {
+                      alert(`Publish failed. ${result.reason || 'Check PocketBase URL and rules.'}`);
+                      return;
+                    }
+                    setScheduleKey(trimmedKey);
+                    setScheduleName(finalName);
+                    setShowPublishModal(false);
+                    alert('Schedule published successfully.');
+                  }}
+                  className={`flex-1 px-4 py-2 rounded-md text-sm text-white font-medium ${
+                    publishKeyDraft.trim() && !isPublishing
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : 'bg-emerald-300 cursor-not-allowed'
+                  }`}
+                >
+                  {isPublishing ? 'Publishing...' : 'Publish'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showScheduleModal && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">

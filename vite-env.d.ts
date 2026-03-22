@@ -12,6 +12,10 @@ interface ImportMetaEnv {
   readonly VITE_PB_SCHEDULE_COLLECTION?: string;
   readonly VITE_PB_SCHEDULE_PUBLISH?: string;
   readonly VITE_PB_SCHEDULE_KEY?: string;
+  readonly VITE_PB_SCORE_LINKS_COLLECTION?: string;
+  readonly VITE_PB_SCORE_EDITS_COLLECTION?: string;
+  readonly VITE_PB_TENANTS_COLLECTION?: string;
+  readonly VITE_ORG_NAME?: string;
 }
 
 interface ImportMeta {

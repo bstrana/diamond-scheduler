@@ -1,19 +1,26 @@
 import React, { useState, useMemo } from 'react';
-import { generateRoundRobinSchedule } from '../utils';
+import { generateRoundRobinSchedule, calculateStandings } from '../utils';
 import { Team, Game, League } from '../types';
-import { Wand2, Loader2, Calendar as CalIcon, Clock, Layers, Info, Plus, X } from 'lucide-react';
+import { Wand2, Loader2, Calendar as CalIcon, Clock, Layers, Info, Plus, X, Trophy } from 'lucide-react';
 import { formatDate } from '../utils';
 import { WEEKDAYS } from '../constants';
+import { useTranslation } from 'react-i18next';
 
 interface ScheduleGeneratorProps {
   leagues: League[];
+  games: Game[];
   onLeagueSelected: (leagueId: string) => void;
-  onScheduleGenerated: (games: Game[]) => void;
+  onScheduleGenerated: (games: Game[], mode: 'replace' | 'append') => void;
 }
 
-const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeagueSelected, onScheduleGenerated }) => {
+// Special prefix used to mark standings-position references in team IDs
+const STANDING_PREFIX = '__standing__';
+
+const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, onLeagueSelected, onScheduleGenerated }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conflicts, setConflicts] = useState<string[]>([]);
   
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
   
@@ -25,15 +32,17 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
   const [bestOf, setBestOf] = useState<number>(3); // For series format
   const [seriesMatchups, setSeriesMatchups] = useState<Array<{team1Id: string, team2Id: string, seriesName?: string}>>([]); // For series format
   const [seriesGameMode, setSeriesGameMode] = useState<'alternate' | 'back_to_back'>('alternate'); // For series format
-  
+  const [matchupMode, setMatchupMode] = useState<'manual' | 'standings'>('manual'); // For series format
+  const [appendMode, setAppendMode] = useState<'replace' | 'append'>('replace');
+
   // Time config per day
   const [dayTimes, setDayTimes] = useState<Record<string, string>>({
     'Sun': '13:00',
-    'Mon': '19:00',
-    'Tue': '19:00',
-    'Wed': '19:00',
-    'Thu': '19:00',
-    'Fri': '19:00',
+    'Mon': '15:00',
+    'Tue': '15:00',
+    'Wed': '15:00',
+    'Thu': '15:00',
+    'Fri': '15:00',
     'Sat': '13:00'
   });
 
@@ -48,29 +57,48 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
     const selectedLeague = leagues.find(l => l.id === selectedLeagueId);
     
     if (!selectedLeague) {
-        setError("Please select a league.");
+        setError(t('scheduler.noLeagueSelected'));
         return;
     }
-    
+
     if (selectedLeague.teams.length < 2) {
-      setError("The selected league needs at least 2 teams to generate a schedule.");
+      setError(t('scheduler.needTwoTeams'));
       return;
     }
 
     if (selectedDays.length === 0) {
-      setError("Please select at least one day of the week for games.");
+      setError(t('scheduler.selectGameDay'));
       return;
     }
 
     // For series format, validate that at least one matchup is selected
     if (doubleHeaderMode === 'series' && seriesMatchups.length === 0) {
-      setError("Please add at least one series matchup.");
+      setError(t('scheduler.addSeriesMatchupFirst'));
       return;
+    }
+
+    // Resolve standings-position references to actual team IDs
+    let resolvedMatchups = seriesMatchups;
+    if (doubleHeaderMode === 'series' && matchupMode === 'standings') {
+      resolvedMatchups = seriesMatchups.map(m => {
+        const resolveId = (id: string): string => {
+          if (!id.startsWith(STANDING_PREFIX)) return id;
+          const pos = parseInt(id.slice(STANDING_PREFIX.length), 10) - 1;
+          return currentStandings[pos]?.team.id ?? '';
+        };
+        return { ...m, team1Id: resolveId(m.team1Id), team2Id: resolveId(m.team2Id) };
+      });
+      // Validate all resolved
+      const unresolved = resolvedMatchups.some(m => !m.team1Id || !m.team2Id);
+      if (unresolved) {
+        setError(t('scheduler.standingsPositionUnavailable'));
+        return;
+      }
     }
 
     setLoading(true);
     setError(null);
-    
+
     // Slight delay to simulate processing for UX
     setTimeout(() => {
         try {
@@ -82,7 +110,7 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
                 dayTimes,
                 doubleHeaderMode,
                 bestOf,
-                seriesMatchups,
+                resolvedMatchups,
                 seriesGameMode
             );
             
@@ -93,13 +121,29 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
             }));
 
             if (gamesWithMeta.length === 0) {
-                setError("No games generated. Check constraints.");
+                setError(t('scheduler.noGamesGenerated'));
             } else {
-                onScheduleGenerated(gamesWithMeta);
+                // Conflict detection: flag any team scheduled twice on the same date
+                const teamDateMap = new Map<string, Set<string>>();
+                const detectedConflicts: string[] = [];
+                gamesWithMeta.forEach(g => {
+                    [g.homeTeamId, g.awayTeamId].forEach(tid => {
+                        if (!teamDateMap.has(tid)) teamDateMap.set(tid, new Set());
+                        const dates = teamDateMap.get(tid)!;
+                        if (dates.has(g.date)) {
+                            const team = selectedLeague.teams.find(t => t.id === tid);
+                            const label = `${team?.abbreviation || tid} on ${g.date}`;
+                            if (!detectedConflicts.includes(label)) detectedConflicts.push(label);
+                        }
+                        dates.add(g.date);
+                    });
+                });
+                setConflicts(detectedConflicts);
+                onScheduleGenerated(gamesWithMeta, appendMode);
             }
         } catch (e) {
             console.error(e);
-            setError("An error occurred while generating the schedule.");
+            setError(t('scheduler.errorGenerating'));
         } finally {
             setLoading(false);
         }
@@ -144,15 +188,22 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
     return Array.from(daysSet).sort((a, b) => orderedWeekdays.indexOf(a as string) - orderedWeekdays.indexOf(b as string));
   }, [selectedDays, doubleHeaderMode, bestOf]);
 
+  // Current standings for the selected league (used for standings-based matchup mode)
+  const currentStandings = useMemo(() => {
+    const league = leagues.find(l => l.id === selectedLeagueId);
+    if (!league) return [];
+    return calculateStandings(league, games);
+  }, [selectedLeagueId, leagues, games]);
+
   return (
     <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
        <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-8 rounded-2xl text-white shadow-xl">
         <div className="flex items-center space-x-4 mb-4">
           <CalIcon className="w-8 h-8" />
-          <h2 className="text-3xl font-bold">Game Scheduler</h2>
+          <h2 className="text-3xl font-bold">{t('scheduler.title')}</h2>
         </div>
         <p className="opacity-90">
-          Create a balanced, mathematically generated season schedule instantly.
+          {t('scheduler.subtitle')}
         </p>
       </div>
 
@@ -162,12 +213,23 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
         </div>
       )}
 
+      {conflicts.length > 0 && (
+        <div className="bg-orange-50 border border-orange-200 text-orange-800 p-4 rounded-lg">
+          <p className="font-semibold mb-1">{t('scheduler.conflictsDetected', { count: conflicts.length })}</p>
+          <p className="text-sm mb-2">{t('scheduler.conflictsNote')}</p>
+          <ul className="text-sm space-y-0.5">
+            {conflicts.map((c, i) => <li key={i} className="font-mono">• {c}</li>)}
+          </ul>
+          <button onClick={() => setConflicts([])} className="mt-2 text-xs text-orange-600 underline">{t('common.dismiss')}</button>
+        </div>
+      )}
+
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 relative">
         {leagues.length === 0 && (
           <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center rounded-xl">
             <div className="text-center p-6 bg-white shadow-lg rounded-lg border border-slate-200">
-              <p className="text-slate-600 font-medium mb-2">No leagues available</p>
-              <p className="text-sm text-slate-500">Go to the League Creator to build a league first.</p>
+              <p className="text-slate-600 font-medium mb-2">{t('scheduler.noLeaguesAvailable')}</p>
+              <p className="text-sm text-slate-500">{t('scheduler.goToLeagueCreator')}</p>
             </div>
           </div>
         )}
@@ -176,19 +238,19 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
           <div className="p-2 bg-green-100 rounded-lg text-green-600">
             <CalIcon size={24} />
           </div>
-          <h3 className="text-xl font-semibold text-slate-800">Configuration</h3>
+          <h3 className="text-xl font-semibold text-slate-800">{t('scheduler.configuration')}</h3>
         </div>
 
         <div className="space-y-6">
           {/* League Selector */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Select League</label>
-            <select 
+            <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.selectLeague')}</label>
+            <select
                 value={selectedLeagueId}
                 onChange={(e) => handleLeagueChange(e.target.value)}
                 className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             >
-                <option value="">-- Choose a League --</option>
+                <option value="">{t('scheduler.chooseLeague')}</option>
                 {leagues.map(l => (
                     <option key={l.id} value={l.id}>
                         {l.name}{l.category ? ` - ${l.category}` : ''} ({l.teams.length} teams)
@@ -199,7 +261,7 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Season Start Date</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.seasonStartDate')}</label>
                 <input 
                 type="date"
                 value={startDate}
@@ -208,7 +270,7 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
                 />
             </div>
             <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Games Per Team</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.gamesPerTeam')}</label>
                 <input 
                 type="number"
                 min="1"
@@ -221,7 +283,7 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
           </div>
 
           <div>
-             <label className="block text-sm font-medium text-slate-700 mb-1">Game Format</label>
+             <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.gameFormat')}</label>
              <div className="relative">
                 <select 
                     value={doubleHeaderMode}
@@ -234,20 +296,17 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
                     }}
                     className="w-full border border-slate-300 rounded-md p-2 pl-9 focus:ring-2 focus:ring-emerald-500 focus:outline-none appearance-none bg-white"
                 >
-                    <option value="none">Single Game (Standard)</option>
-                    <option value="same_day">Double Header (2 Games, Same Day)</option>
-                    <option value="consecutive">Back-to-Back Series (Next Day)</option>
-                    <option value="series">Playoff Series (Best of N)</option>
+                    <option value="none">{t('scheduler.singleGame')}</option>
+                    <option value="same_day">{t('scheduler.doubleHeader')}</option>
+                    <option value="consecutive">{t('scheduler.backToBackSeries')}</option>
+                    <option value="series">{t('scheduler.playoffSeries')}</option>
                 </select>
                 <Layers size={18} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none" />
              </div>
              {doubleHeaderMode === 'consecutive' && (
                  <div className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded flex items-start">
                     <Info size={14} className="mr-1.5 mt-0.5 shrink-0" />
-                    <span>
-                        For back-to-back series (e.g. Sat/Sun), select the <strong>Start Day</strong> below (e.g. Saturday). 
-                        Game 2 will automatically be scheduled for the following day.
-                    </span>
+                    <span>{t('scheduler.backToBackNote')}</span>
                  </div>
              )}
              {doubleHeaderMode === 'series' && (() => {
@@ -258,41 +317,72 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
                     <div className="mt-3 space-y-3">
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Best Of</label>
-                                <select 
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.bestOf')}</label>
+                                <select
                                     value={bestOf}
                                     onChange={(e) => setBestOf(Number(e.target.value))}
                                     className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                                 >
-                                    <option value={3}>Best of 3</option>
-                                    <option value={5}>Best of 5</option>
-                                    <option value={7}>Best of 7</option>
+                                    <option value={3}>{t('scheduler.bestOf3')}</option>
+                                    <option value={5}>{t('scheduler.bestOf5')}</option>
+                                    <option value={7}>{t('scheduler.bestOf7')}</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Game Mode</label>
-                                <select 
+                                <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.gameMode')}</label>
+                                <select
                                     value={seriesGameMode}
                                     onChange={(e) => setSeriesGameMode(e.target.value as 'alternate' | 'back_to_back')}
                                     className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                                 >
-                                    <option value="alternate">Alternate Games</option>
-                                    <option value="back_to_back">Back-to-Back Games</option>
+                                    <option value="alternate">{t('scheduler.alternateGames')}</option>
+                                    <option value="back_to_back">{t('scheduler.backToBackGames')}</option>
                                 </select>
                             </div>
                         </div>
                         
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Series Matchups</label>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-sm font-medium text-slate-700">{t('scheduler.seriesMatchups')}</label>
+                                {/* Matchup mode toggle */}
+                                {selectedLeagueId && (
+                                    <div className="flex rounded-md border border-slate-200 overflow-hidden text-xs font-medium">
+                                        <button
+                                            onClick={() => { setMatchupMode('manual'); setSeriesMatchups([]); }}
+                                            className={`px-2.5 py-1 transition-colors ${matchupMode === 'manual' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                                        >
+                                            {t('scheduler.matchupManual')}
+                                        </button>
+                                        <button
+                                            onClick={() => { setMatchupMode('standings'); setSeriesMatchups([]); }}
+                                            className={`px-2.5 py-1 flex items-center gap-1 transition-colors ${matchupMode === 'standings' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                                        >
+                                            <Trophy size={11} />
+                                            {t('scheduler.matchupByStandings')}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                             {selectedLeagueId ? (
                                 <div className="space-y-2">
+                                    {matchupMode === 'standings' && (
+                                        <div className="text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded p-2 flex items-start gap-1.5">
+                                            <Trophy size={12} className="mt-0.5 shrink-0" />
+                                            <span>{t('scheduler.matchupByStandingsNote')}</span>
+                                        </div>
+                                    )}
                                     {seriesMatchups.map((matchup, idx) => {
-                                        const team1 = availableTeams.find(t => t.id === matchup.team1Id);
-                                        const team2 = availableTeams.find(t => t.id === matchup.team2Id);
+                                        const ordinals = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
+                                        const rankOptions = availableTeams.map((_, i) => ({
+                                            value: `${STANDING_PREFIX}${i + 1}`,
+                                            label: matchupMode === 'standings' && currentStandings[i]
+                                                ? `${ordinals[i] || `#${i+1}`} — ${currentStandings[i].team.city} ${currentStandings[i].team.name} (${currentStandings[i].w}-${currentStandings[i].l})`
+                                                : `${ordinals[i] || `#${i+1}`} Place`,
+                                        }));
                                         return (
                                             <div key={idx} className="space-y-2 p-2 bg-slate-50 rounded border border-slate-200">
                                                 <div>
-                                                    <label className="block text-xs font-medium text-slate-600 mb-1">Series Name (e.g., Semifinal, Final)</label>
+                                                    <label className="block text-xs font-medium text-slate-600 mb-1">{t('scheduler.seriesNameLabel')}</label>
                                                     <input
                                                         type="text"
                                                         value={matchup.seriesName || ''}
@@ -301,44 +391,79 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
                                                             newMatchups[idx].seriesName = e.target.value;
                                                             setSeriesMatchups(newMatchups);
                                                         }}
-                                                        placeholder="Semifinal, Final, etc."
+                                                        placeholder={t('scheduler.seriesNameInput')}
                                                         className="w-full border border-slate-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                                                     />
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <div className="flex-1 grid grid-cols-2 gap-2">
-                                                        <select
-                                                            value={matchup.team1Id}
-                                                            onChange={(e) => {
-                                                                const newMatchups = [...seriesMatchups];
-                                                                newMatchups[idx].team1Id = e.target.value;
-                                                                setSeriesMatchups(newMatchups);
-                                                            }}
-                                                            className="border border-slate-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                                                        >
-                                                            <option value="">Select Team 1...</option>
-                                                            {availableTeams.map(t => (
-                                                                <option key={t.id} value={t.id} disabled={t.id === matchup.team2Id}>
-                                                                    {t.city} {t.name}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                        <select
-                                                            value={matchup.team2Id}
-                                                            onChange={(e) => {
-                                                                const newMatchups = [...seriesMatchups];
-                                                                newMatchups[idx].team2Id = e.target.value;
-                                                                setSeriesMatchups(newMatchups);
-                                                            }}
-                                                            className="border border-slate-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                                                        >
-                                                            <option value="">Select Team 2...</option>
-                                                            {availableTeams.map(t => (
-                                                                <option key={t.id} value={t.id} disabled={t.id === matchup.team1Id}>
-                                                                    {t.city} {t.name}
-                                                                </option>
-                                                            ))}
-                                                        </select>
+                                                        {matchupMode === 'standings' ? (
+                                                            <>
+                                                                <select
+                                                                    value={matchup.team1Id}
+                                                                    onChange={(e) => {
+                                                                        const newMatchups = [...seriesMatchups];
+                                                                        newMatchups[idx].team1Id = e.target.value;
+                                                                        setSeriesMatchups(newMatchups);
+                                                                    }}
+                                                                    className="border border-slate-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                                                                >
+                                                                    <option value="">{t('scheduler.selectPosition1')}</option>
+                                                                    {rankOptions.map(o => (
+                                                                        <option key={o.value} value={o.value} disabled={o.value === matchup.team2Id}>{o.label}</option>
+                                                                    ))}
+                                                                </select>
+                                                                <select
+                                                                    value={matchup.team2Id}
+                                                                    onChange={(e) => {
+                                                                        const newMatchups = [...seriesMatchups];
+                                                                        newMatchups[idx].team2Id = e.target.value;
+                                                                        setSeriesMatchups(newMatchups);
+                                                                    }}
+                                                                    className="border border-slate-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                                                                >
+                                                                    <option value="">{t('scheduler.selectPosition2')}</option>
+                                                                    {rankOptions.map(o => (
+                                                                        <option key={o.value} value={o.value} disabled={o.value === matchup.team1Id}>{o.label}</option>
+                                                                    ))}
+                                                                </select>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <select
+                                                                    value={matchup.team1Id}
+                                                                    onChange={(e) => {
+                                                                        const newMatchups = [...seriesMatchups];
+                                                                        newMatchups[idx].team1Id = e.target.value;
+                                                                        setSeriesMatchups(newMatchups);
+                                                                    }}
+                                                                    className="border border-slate-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                                                                >
+                                                                    <option value="">{t('scheduler.selectTeam1')}</option>
+                                                                    {availableTeams.map(t => (
+                                                                        <option key={t.id} value={t.id} disabled={t.id === matchup.team2Id}>
+                                                                            {t.city} {t.name}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                                <select
+                                                                    value={matchup.team2Id}
+                                                                    onChange={(e) => {
+                                                                        const newMatchups = [...seriesMatchups];
+                                                                        newMatchups[idx].team2Id = e.target.value;
+                                                                        setSeriesMatchups(newMatchups);
+                                                                    }}
+                                                                    className="border border-slate-300 rounded-md p-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                                                                >
+                                                                    <option value="">{t('scheduler.selectTeam2')}</option>
+                                                                    {availableTeams.map(t => (
+                                                                        <option key={t.id} value={t.id} disabled={t.id === matchup.team1Id}>
+                                                                            {t.city} {t.name}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </>
+                                                        )}
                                                     </div>
                                                     <button
                                                         onClick={() => setSeriesMatchups(seriesMatchups.filter((_, i) => i !== idx))}
@@ -356,11 +481,11 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
                                         className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 transition-colors"
                                     >
                                         <Plus size={16} />
-                                        Add Series Matchup
+                                        {t('scheduler.addSeriesMatchup')}
                                     </button>
                                 </div>
                             ) : (
-                                <p className="text-sm text-slate-500">Please select a league first.</p>
+                                <p className="text-sm text-slate-500">{t('scheduler.selectLeagueFirst')}</p>
                             )}
                         </div>
                         
@@ -424,17 +549,33 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, onLeague
             )}
           </div>
 
+          {/* Replace vs Append toggle */}
+          <div className="flex rounded-lg border border-slate-200 overflow-hidden mt-4 text-sm font-medium">
+            <button
+              onClick={() => setAppendMode('replace')}
+              className={`flex-1 py-2 transition-colors ${appendMode === 'replace' ? 'bg-slate-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+            >
+              {t('scheduler.replaceExisting')}
+            </button>
+            <button
+              onClick={() => setAppendMode('append')}
+              className={`flex-1 py-2 transition-colors ${appendMode === 'append' ? 'bg-slate-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+            >
+              {t('scheduler.appendToExisting')}
+            </button>
+          </div>
+
           <button
             onClick={handleGenerateSchedule}
             disabled={loading || !selectedLeagueId}
-            className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-all mt-4
+            className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-all mt-2
               ${loading || !selectedLeagueId
-                ? 'bg-slate-400 cursor-not-allowed' 
+                ? 'bg-slate-400 cursor-not-allowed'
                 : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg hover:shadow-emerald-500/30'
               } flex justify-center items-center`}
           >
             {loading ? <Loader2 className="animate-spin mr-2" /> : <Wand2 className="mr-2" size={18} />}
-            Generate Schedule
+            {appendMode === 'append' ? t('scheduler.generateAndAppend') : t('scheduler.generateSchedule')}
           </button>
         </div>
       </div>

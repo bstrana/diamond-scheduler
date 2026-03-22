@@ -1,9 +1,30 @@
-import { Game, CalendarDay, Team } from './types';
+import { Game, CalendarDay, Team, League } from './types';
 import { WEEKDAYS } from './constants';
+import i18n from './i18n';
 
 export const generateUUID = (): string => {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  return crypto.randomUUID();
 };
+
+/**
+ * Copies text to clipboard with a fallback for iframe/non-secure contexts
+ * where navigator.clipboard may be unavailable.
+ */
+export async function copyToClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.setAttribute('readonly', '');
+    el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    try { document.execCommand('copy'); } catch { /* ignore */ }
+    document.body.removeChild(el);
+  }
+}
 
 // Input validation utilities
 const MAX_NAME_LENGTH = 100;
@@ -188,6 +209,146 @@ export const downloadJSON = (data: any, filename: string) => {
   URL.revokeObjectURL(url);
 };
 
+// ─── Social share text builders ──────────────────────────────────────────────
+
+/**
+ * Builds a plain-text summary of a single game suitable for clipboard sharing.
+ */
+export function buildGameShareText(
+  game: Game,
+  home: Team,
+  away: Team,
+  leagueNames?: string[]
+): string {
+  const gameDate = new Date(game.date + 'T00:00:00');
+  const dateStr = gameDate.toLocaleDateString(i18n.language, { weekday: 'short', month: 'short', day: 'numeric' });
+
+  const isScored = (game.status === 'live' || game.status === 'final') && game.scores != null;
+  let line1: string;
+  if (isScored) {
+    const label = game.status === 'live' ? 'LIVE' : 'Final';
+    line1 = `⚾ ${away.abbreviation} ${game.scores!.away} – ${home.abbreviation} ${game.scores!.home} | ${label}`;
+  } else {
+    line1 = `⚾ ${away.abbreviation} @ ${home.abbreviation}`;
+  }
+
+  const lines: string[] = [line1];
+  const timePart = !isScored ? ` · ${game.time}` : '';
+  lines.push(`${dateStr}${timePart}`);
+  if (game.location) lines.push(game.location);
+  if (game.seriesName) lines.push(game.seriesName);
+  if (leagueNames && leagueNames.length > 0) lines.push(leagueNames.join(', '));
+
+  // Inning-by-inning box score
+  const innings = game.scores?.innings;
+  if (isScored && innings && innings.length > 0) {
+    const pad = (v: number | null, fallback = ' x') => v === null ? fallback : String(v).padStart(2);
+    const header = '      ' + innings.map((_, i) => String(i + 1).padStart(2)).join('') + '   R';
+    const awayRow = away.abbreviation.padEnd(6) + innings.map(inn => pad(inn.away, ' 0')).join('') + '  ' + String(game.scores!.away).padStart(2);
+    const homeRow = home.abbreviation.padEnd(6) + innings.map(inn => pad(inn.home)).join('') + '  ' + String(game.scores!.home).padStart(2);
+    lines.push('');
+    lines.push(header);
+    lines.push(awayRow);
+    lines.push(homeRow);
+  }
+
+  if (game.recap) {
+    lines.push('');
+    lines.push(game.recap);
+  }
+
+  return lines.join('\n');
+}
+
+interface ShareStandingsRow {
+  team: { abbreviation: string };
+  w: number;
+  l: number;
+  pct: number;
+  gb: number | null;
+}
+
+/**
+ * Builds a plain-text standings table suitable for clipboard sharing.
+ */
+export function buildStandingsShareText(rows: ShareStandingsRow[], leagueName: string): string {
+  const header = `🏆 ${leagueName} Standings`;
+  const tableRows = rows.map((r, i) => {
+    const rank = String(i + 1).padStart(2);
+    const abbr = r.team.abbreviation.padEnd(6);
+    const wl = `${r.w}-${r.l}`.padEnd(6);
+    const pct = (r.w + r.l === 0 ? '.000' : r.pct.toFixed(3).replace(/^0/, '')).padStart(5);
+    const gb = (r.gb === null || r.gb === 0
+      ? '—'
+      : r.gb % 1 === 0 ? String(r.gb) : r.gb.toFixed(1)
+    ).padStart(4);
+    return `${rank}. ${abbr} ${wl} ${pct}  ${gb}`;
+  });
+  return [header, '', ...tableRows].join('\n');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface StandingsRow {
+  team: Team;
+  gp: number;
+  w: number;
+  l: number;
+  pct: number;
+  gb: number | null;
+  rs: number;
+  ra: number;
+  diff: number;
+}
+
+function getGameLeagueIds(game: Game): string[] {
+  if (game.leagueIds && game.leagueIds.length > 0) return game.leagueIds;
+  if (game.leagueId) return [game.leagueId];
+  return [];
+}
+
+export function calculateStandings(league: League, games: Game[]): StandingsRow[] {
+  const completedGames = games.filter(game => {
+    const isCompleted = game.status === 'final' || (game.status as string) === 'completed';
+    return isCompleted && game.scores != null && getGameLeagueIds(game).includes(league.id);
+  });
+
+  const stats = new Map<string, { w: number; l: number; rs: number; ra: number }>();
+  league.teams.forEach(team => stats.set(team.id, { w: 0, l: 0, rs: 0, ra: 0 }));
+
+  completedGames.forEach(game => {
+    const home = stats.get(game.homeTeamId);
+    const away = stats.get(game.awayTeamId);
+    if (!home || !away || !game.scores) return;
+    const hr = game.scores.home;
+    const ar = game.scores.away;
+    home.rs += hr; home.ra += ar;
+    away.rs += ar; away.ra += hr;
+    if (hr > ar) { home.w++; away.l++; }
+    else if (ar > hr) { away.w++; home.l++; }
+  });
+
+  const rows: StandingsRow[] = league.teams
+    .filter(team => stats.has(team.id))
+    .map(team => {
+      const s = stats.get(team.id)!;
+      const gp = s.w + s.l;
+      return { team, gp, w: s.w, l: s.l, pct: gp > 0 ? s.w / gp : 0, gb: 0, rs: s.rs, ra: s.ra, diff: s.rs - s.ra };
+    })
+    .sort((a, b) => b.w - a.w || a.l - b.l || b.diff - a.diff);
+
+  if (rows.length > 0) {
+    const leader = rows[0];
+    rows.forEach((row, idx) => {
+      row.gb = idx === 0 ? null : ((leader.w - row.w) + (row.l - leader.l)) / 2;
+    });
+  }
+
+  return rows;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const generateRoundRobinSchedule = (
   teams: Team[],
   startDateStr: string,
@@ -280,7 +441,7 @@ export const generateRoundRobinSchedule = (
         while (remainingGames > 0) {
           const homeTeam = currentSeries % 2 === 1 ? team1 : team2;
           const awayTeam = currentSeries % 2 === 1 ? team2 : team1;
-          const location = `${homeTeam.city} Field`;
+          const location = homeTeam.field || `${homeTeam.city} Field`;
           
           // Schedule 2 games at this location (back-to-back)
           const gamesThisSeries = Math.min(2, remainingGames);
@@ -292,7 +453,7 @@ export const generateRoundRobinSchedule = (
             }
             
             const dayName = getDayName(currentDate);
-            const time = dayTimes[dayName] || '19:00';
+            const time = dayTimes[dayName] || '15:00';
             
             games.push({
               id: generateUUID(),
@@ -302,7 +463,7 @@ export const generateRoundRobinSchedule = (
               time: time,
               location: location,
               status: 'scheduled',
-              gameNumber: games.length + 1,
+              gameNumber: String(games.length + 1),
               seriesName: matchup.seriesName
             });
             
@@ -336,9 +497,9 @@ export const generateRoundRobinSchedule = (
           const homeTeam = isTeam1Home ? team1 : team2;
           const awayTeam = isTeam1Home ? team2 : team1;
           
-          const location = `${homeTeam.city} Field`;
+          const location = homeTeam.field || `${homeTeam.city} Field`;
           const dayName = getDayName(currentDate);
-          const time = dayTimes[dayName] || '19:00';
+          const time = dayTimes[dayName] || '15:00';
           
           games.push({
             id: generateUUID(),
@@ -348,7 +509,7 @@ export const generateRoundRobinSchedule = (
             time: time,
             location: location,
             status: 'scheduled',
-            gameNumber: games.length + 1,
+            gameNumber: String(games.length + 1),
             seriesName: matchup.seriesName
           });
           
@@ -382,9 +543,9 @@ export const generateRoundRobinSchedule = (
     for (const pair of allPairs) {
       // Series 1: Team 1 at home
       const homeTeam1 = teams.find(t => t.id === pair.team1);
-      const location1 = homeTeam1 ? `${homeTeam1.city} Field` : 'Stadium';
+      const location1 = homeTeam1 ? (homeTeam1.field || `${homeTeam1.city} Field`) : 'Stadium';
       const dayName1 = getDayName(currentDate);
-      const time1 = dayTimes[dayName1] || '19:00';
+      const time1 = dayTimes[dayName1] || '15:00';
 
       // Game 1 of Series 1
       games.push({
@@ -395,7 +556,7 @@ export const generateRoundRobinSchedule = (
         time: time1,
         location: location1,
         status: 'scheduled',
-        gameNumber: games.length + 1
+        gameNumber: String(games.length + 1)
       });
 
       if (doubleHeaderMode === 'same_day') {
@@ -412,7 +573,7 @@ export const generateRoundRobinSchedule = (
           time: time2,
           location: location1,
           status: 'scheduled',
-          gameNumber: games.length + 1
+          gameNumber: String(games.length + 1)
         });
       } else if (doubleHeaderMode === 'consecutive') {
         // Game 2 on next calendar day (same home team, same location)
@@ -429,7 +590,7 @@ export const generateRoundRobinSchedule = (
           time: time2,
           location: location1, // Same location
           status: 'scheduled',
-          gameNumber: games.length + 1
+          gameNumber: String(games.length + 1)
         });
       }
 
@@ -446,9 +607,9 @@ export const generateRoundRobinSchedule = (
       // Series 2: Team 2 at home (only for consecutive mode to ensure home/away balance)
       if (doubleHeaderMode === 'consecutive') {
         const homeTeam2 = teams.find(t => t.id === pair.team2);
-        const location2 = homeTeam2 ? `${homeTeam2.city} Field` : 'Stadium';
+        const location2 = homeTeam2 ? (homeTeam2.field || `${homeTeam2.city} Field`) : 'Stadium';
         const dayName2 = getDayName(currentDate);
-        const time3 = dayTimes[dayName2] || '19:00';
+        const time3 = dayTimes[dayName2] || '15:00';
 
         // Game 1 of Series 2
         games.push({
@@ -459,7 +620,7 @@ export const generateRoundRobinSchedule = (
           time: time3,
           location: location2,
           status: 'scheduled',
-          gameNumber: games.length + 1
+          gameNumber: String(games.length + 1)
         });
 
         // Game 2 of Series 2 on next day
@@ -476,7 +637,7 @@ export const generateRoundRobinSchedule = (
           time: time4,
           location: location2, // Same location
           status: 'scheduled',
-          gameNumber: games.length + 1
+          gameNumber: String(games.length + 1)
         });
 
         // Advance date after Series 2

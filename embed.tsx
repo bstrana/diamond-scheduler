@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import EmbeddableCalendar from './components/EmbeddableCalendar';
 import EmbeddableGameBar from './components/EmbeddableGameBar';
+import EmbeddableStandings from './components/EmbeddableStandings';
+import EmbeddableSeries from './components/EmbeddableSeries';
 import './index.css';
-import { loadPublishedScheduleByKey, StorageData } from './services/storage';
+import './i18n';
+import { loadPublishedScheduleByKey, listScoreEditsByScheduleKey, StorageData } from './services/storage';
 
 // Get URL parameters
 const urlParams = new URLSearchParams(window.location.search);
@@ -18,6 +21,54 @@ const scheduleKey = urlParams.get('schedule_key') || undefined;
 const hideLeagueFilter = urlParams.get('hide_league_filter') === '1';
 const hideCategoryFilter = urlParams.get('hide_category_filter') === '1';
 const hideTeamFilter = urlParams.get('hide_team_filter') === '1';
+const hideStatusFilter = urlParams.get('hide_status_filter') === '1';
+const hideLeagueName = urlParams.get('hide_league_name') === '1';
+const hideGameNumber = urlParams.get('hide_game_number') === '1';
+const standingsInfoText = urlParams.get('info_text') || undefined;
+
+// Sanitize CSS property values to prevent CSS injection
+const sanitizeCssColor = (value: unknown, fallback: string): string => {
+  if (typeof value !== 'string') return fallback;
+  const v = value.trim();
+  // Allow hex colors, rgb/rgba/hsl/hsla functions, and CSS named colors (letters only)
+  if (/^#[0-9a-fA-F]{3,8}$/.test(v)) return v;
+  if (/^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(\s*,\s*[\d.]+)?\s*\)$/.test(v)) return v;
+  if (/^hsla?\(\s*\d{1,3}\s*,\s*[\d.]+%\s*,\s*[\d.]+%(\s*,\s*[\d.]+)?\s*\)$/.test(v)) return v;
+  if (/^[a-zA-Z]{2,30}$/.test(v)) return v; // named colors like "red", "transparent"
+  return fallback;
+};
+
+const sanitizeCssSize = (value: unknown, fallback: string): string => {
+  if (typeof value !== 'string') return fallback;
+  const v = value.trim();
+  if (/^\d+(\.\d+)?(px|rem|em|%)$/.test(v)) return v;
+  return fallback;
+};
+
+const sanitizeCssShadow = (value: unknown, fallback: string): string => {
+  if (typeof value !== 'string') return fallback;
+  const v = value.trim();
+  // Allow only safe shadow values: digits, spaces, px, rgba(...), commas
+  if (/^[\d\s\-.,a-zA-Z%()]+$/.test(v) && v.length < 200) return v;
+  return fallback;
+};
+
+const sanitizeCssFontFamily = (value: unknown, fallback: string): string => {
+  if (typeof value !== 'string') return fallback;
+  const v = value.trim();
+  // Allow letters, digits, spaces, commas, hyphens, underscores, and quotes
+  if (/^[a-zA-Z0-9,\s\-_'"]{1,100}$/.test(v)) return v;
+  return fallback;
+};
+
+// Helper to convert hex to rgba with opacity
+const hexToRgba = (hex: string, opacity: number): string => {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return `rgba(79, 70, 229, ${opacity})`;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
 
 // Parse and apply custom styles
 if (stylesParam) {
@@ -27,34 +78,30 @@ if (stylesParam) {
     // Inject CSS variables into the document
     const style = document.createElement('style');
     style.id = 'embed-custom-styles';
-    // Helper to convert hex to rgba with opacity
-    const hexToRgba = (hex: string, opacity: number): string => {
-      const r = parseInt(hex.slice(1, 3), 16);
-      const g = parseInt(hex.slice(3, 5), 16);
-      const b = parseInt(hex.slice(5, 7), 16);
-      return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-    };
-    
-    const primaryColor = customStyles.primaryColor || '#4f46e5';
+
+    const primaryColor = sanitizeCssColor(customStyles.primaryColor, '#4f46e5');
     const primaryLight = hexToRgba(primaryColor, 0.1);
-    
+
     style.textContent = `
       :root {
         --embed-primary: ${primaryColor};
         --embed-primary-light: ${primaryLight};
-        --embed-secondary: ${customStyles.secondaryColor || '#7c3aed'};
-        --embed-bg: ${customStyles.backgroundColor || '#f8fafc'};
-        --embed-text: ${customStyles.textColor || '#1e293b'};
-        --embed-border: ${customStyles.borderColor || '#e2e8f0'};
-        --embed-font: ${customStyles.fontFamily || 'Inter, sans-serif'};
-        --embed-font-size: ${customStyles.fontSize || '14px'};
-        --embed-radius: ${customStyles.borderRadius || '8px'};
-        --embed-border-width: ${customStyles.borderWidth || '1px'};
-        --embed-padding: ${customStyles.padding || '16px'};
-        --embed-card-bg: ${customStyles.cardBackgroundColor || '#ffffff'};
-        --embed-card-border: ${customStyles.cardBorderColor || '#e2e8f0'};
-        --embed-card-radius: ${customStyles.cardBorderRadius || '8px'};
-        --embed-card-shadow: ${customStyles.cardShadow || '0 1px 3px 0 rgba(0, 0, 0, 0.1)'};
+        --embed-secondary: ${sanitizeCssColor(customStyles.secondaryColor, '#7c3aed')};
+        --embed-bg: ${sanitizeCssColor(customStyles.backgroundColor, '#f8fafc')};
+        --embed-text: ${sanitizeCssColor(customStyles.textColor, '#1e293b')};
+        --embed-border: ${sanitizeCssColor(customStyles.borderColor, '#e2e8f0')};
+        --embed-font: ${sanitizeCssFontFamily(customStyles.fontFamily, 'Inter, sans-serif')};
+        --embed-font-size: ${sanitizeCssSize(customStyles.fontSize, '14px')};
+        --embed-radius: ${sanitizeCssSize(customStyles.borderRadius, '8px')};
+        --embed-border-width: ${sanitizeCssSize(customStyles.borderWidth, '1px')};
+        --embed-padding: ${sanitizeCssSize(customStyles.padding, '16px')};
+        --embed-card-bg: ${sanitizeCssColor(customStyles.cardBackgroundColor, '#ffffff')};
+        --embed-card-border: ${sanitizeCssColor(customStyles.cardBorderColor, '#e2e8f0')};
+        --embed-card-radius: ${sanitizeCssSize(customStyles.cardBorderRadius, '8px')};
+        --embed-card-shadow: ${sanitizeCssShadow(customStyles.cardShadow, '0 1px 3px 0 rgba(0, 0, 0, 0.1)')};
+        --embed-announcement-bg: ${sanitizeCssColor(customStyles.announcementBackgroundColor, '#fef3c7')};
+        --embed-announcement-text: ${sanitizeCssColor(customStyles.announcementTextColor, '#92400e')};
+        --embed-announcement-border: ${sanitizeCssColor(customStyles.announcementBorderColor, '#fcd34d')};
       }
       body {
         font-family: var(--embed-font);
@@ -87,9 +134,19 @@ if (!rootElement) {
       }
       let isActive = true;
       const loadSchedule = async () => {
-        // Only load from published schedules - never from local storage
-        const data = await loadPublishedScheduleByKey(scheduleKey);
+        const [data, scoreEdits] = await Promise.all([
+          loadPublishedScheduleByKey(scheduleKey),
+          listScoreEditsByScheduleKey(scheduleKey),
+        ]);
         if (!isActive) return;
+        if (data && scoreEdits.length > 0) {
+          const editMap = new Map(scoreEdits.map(e => [e.gameId, e]));
+          data.games = data.games.map(g => {
+            const edit = editMap.get(g.id);
+            if (!edit) return g;
+            return { ...g, status: edit.status, scores: edit.scores ?? g.scores };
+          });
+        }
         setScheduleData(data);
         setIsLoading(false);
       };
@@ -98,6 +155,29 @@ if (!rootElement) {
         isActive = false;
       };
     }, [scheduleKey]);
+
+    // Poll for updates every 60 seconds for all embed types
+    useEffect(() => {
+      if (!scheduleKey) return;
+      const interval = setInterval(async () => {
+        const [data, scoreEdits] = await Promise.all([
+          loadPublishedScheduleByKey(scheduleKey),
+          listScoreEditsByScheduleKey(scheduleKey),
+        ]);
+        if (data) {
+          if (scoreEdits.length > 0) {
+            const editMap = new Map(scoreEdits.map(e => [e.gameId, e]));
+            data.games = data.games.map(g => {
+              const edit = editMap.get(g.id);
+              if (!edit) return g;
+              return { ...g, status: edit.status, scores: edit.scores ?? g.scores };
+            });
+          }
+          setScheduleData(data);
+        }
+      }, 60000);
+      return () => clearInterval(interval);
+    }, []);
 
     // Require schedule_key - show error if missing
     if (!scheduleKey) {
@@ -140,6 +220,38 @@ if (!rootElement) {
           hideLeagueFilter={hideLeagueFilter}
           hideCategoryFilter={hideCategoryFilter}
           hideTeamFilter={hideTeamFilter}
+          hideStatusFilter={hideStatusFilter}
+          hideLeagueName={hideLeagueName}
+          hideGameNumber={hideGameNumber}
+        />
+      );
+    }
+
+    if (embedType === 'standings') {
+      return (
+        <EmbeddableStandings
+          leagueId={leagueId}
+          scheduleKey={scheduleKey}
+          dataOverride={scheduleData ? {
+            leagues: scheduleData.leagues,
+            teams: scheduleData.teams,
+            games: scheduleData.games
+          } : null}
+          infoText={standingsInfoText}
+        />
+      );
+    }
+
+    if (embedType === 'series') {
+      return (
+        <EmbeddableSeries
+          leagueId={leagueId}
+          scheduleKey={scheduleKey}
+          dataOverride={scheduleData ? {
+            leagues: scheduleData.leagues,
+            teams: scheduleData.teams,
+            games: scheduleData.games
+          } : null}
         />
       );
     }

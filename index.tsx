@@ -4,6 +4,7 @@ import { ReactKeycloakProvider } from '@react-keycloak/web';
 import App from './App';
 import keycloak from './keycloak';
 import './index.css';
+import './i18n';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

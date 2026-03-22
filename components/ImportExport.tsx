@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { Game, Team } from '../types';
 import { Upload, Download, Calendar } from 'lucide-react';
 import { generateUUID } from '../utils';
+import { useTranslation } from 'react-i18next';
 
 interface ImportExportProps {
   teams: Team[];
@@ -18,6 +19,7 @@ const ImportExport: React.FC<ImportExportProps> = ({
   variant = 'buttons',
   onAfterAction
 }) => {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,7 +49,7 @@ const ImportExport: React.FC<ImportExportProps> = ({
               homeTeamId: homeTeam.id,
               awayTeamId: awayTeam.id,
               date,
-              time: time || '19:00',
+              time: time || '15:00',
               location: location || 'Main Stadium',
               status: 'scheduled'
             });
@@ -56,17 +58,26 @@ const ImportExport: React.FC<ImportExportProps> = ({
 
         if (newGames.length > 0) {
           onImportGames(newGames);
-          alert(`Successfully imported ${newGames.length} games.`);
+          alert(t('importExport.importSuccess', { count: newGames.length }));
         } else {
-            alert("No matching teams found. Ensure Team Names match your roster.");
+            alert(t('importExport.noMatchingTeams'));
         }
         onAfterAction?.();
       } catch (err) {
-        alert("Failed to parse CSV.");
+        alert(t('importExport.parseFailed'));
       }
     };
     reader.readAsText(file);
     if(fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const csvEscape = (value: string): string => {
+    // If value contains comma, double-quote, newline, or starts with a formula character, quote it
+    const needsQuoting = /[,"\n\r]/.test(value) || /^[=+\-@\t]/.test(value);
+    if (needsQuoting) {
+      return `"${value.replace(/"/g, '""')}"`;
+    }
+    return value;
   };
 
   const downloadCSV = () => {
@@ -74,9 +85,9 @@ const ImportExport: React.FC<ImportExportProps> = ({
     const rows = allGames.map(g => {
         const h = teams.find(t => t.id === g.homeTeamId)?.name || 'Unknown';
         const a = teams.find(t => t.id === g.awayTeamId)?.name || 'Unknown';
-        return `${g.date},${g.time},${h},${a},${g.location}`;
+        return [g.date, g.time, h, a, g.location || ''].map(csvEscape).join(',');
     }).join('\n');
-    
+
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -85,12 +96,13 @@ const ImportExport: React.FC<ImportExportProps> = ({
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     onAfterAction?.();
   };
 
   const formatICSDate = (date: string, time: string) => {
     const [year, month, day] = date.split('-').map(Number);
-    const [hour, minute] = (time || '19:00').split(':').map(Number);
+    const [hour, minute] = (time || '15:00').split(':').map(Number);
     const dt = new Date(year, (month || 1) - 1, day || 1, hour || 0, minute || 0, 0);
     const pad = (value: number) => String(value).padStart(2, '0');
     return `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
@@ -104,8 +116,8 @@ const ImportExport: React.FC<ImportExportProps> = ({
     const events = allGames.map((g) => {
       const home = teams.find(t => t.id === g.homeTeamId)?.name || 'Unknown';
       const away = teams.find(t => t.id === g.awayTeamId)?.name || 'Unknown';
-      const start = formatICSDate(g.date, g.time || '19:00');
-      const endDate = new Date(`${g.date}T${g.time || '19:00'}:00`);
+      const start = formatICSDate(g.date, g.time || '15:00');
+      const endDate = new Date(`${g.date}T${g.time || '15:00'}:00`);
       endDate.setHours(endDate.getHours() + 2);
       const pad = (value: number) => String(value).padStart(2, '0');
       const end = `${endDate.getFullYear()}${pad(endDate.getMonth() + 1)}${pad(endDate.getDate())}T${pad(endDate.getHours())}${pad(endDate.getMinutes())}00`;
@@ -125,7 +137,7 @@ const ImportExport: React.FC<ImportExportProps> = ({
     const ics = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//Diamond Manager//Scheduler//EN',
+      'PRODID:-//Diamond Manager Scheduler//EN',
       'CALSCALE:GREGORIAN',
       ...events,
       'END:VCALENDAR'
@@ -156,28 +168,28 @@ const ImportExport: React.FC<ImportExportProps> = ({
           onChange={handleFileUpload}
           className="hidden"
         />
-        <button 
+        <button
           onClick={() => {
             fileInputRef.current?.click();
             onAfterAction?.();
           }}
           className={menuButtonClass}
         >
-          <span>Import CSV</span>
+          <span>{t('importExport.importCsv')}</span>
           <Upload size={16} />
         </button>
-        <button 
+        <button
           onClick={downloadCSV}
           className={menuButtonClass}
         >
-          <span>Export CSV</span>
+          <span>{t('importExport.exportCsv')}</span>
           <Download size={16} />
         </button>
-        <button 
+        <button
           onClick={downloadICS}
           className={menuButtonClass}
         >
-          <span>Export ICS</span>
+          <span>{t('importExport.exportIcs')}</span>
           <Calendar size={16} />
         </button>
       </div>
@@ -193,26 +205,26 @@ const ImportExport: React.FC<ImportExportProps> = ({
         onChange={handleFileUpload}
         className="hidden"
       />
-      <button 
+      <button
         onClick={() => fileInputRef.current?.click()}
         className="flex items-center space-x-2 px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md text-sm font-medium transition-colors"
       >
         <Upload size={16} />
-        <span>Import CSV</span>
+        <span>{t('importExport.importCsv')}</span>
       </button>
-      <button 
+      <button
         onClick={downloadCSV}
         className="flex items-center space-x-2 px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md text-sm font-medium transition-colors"
       >
         <Download size={16} />
-        <span>Export CSV</span>
+        <span>{t('importExport.exportCsv')}</span>
       </button>
-      <button 
+      <button
         onClick={downloadICS}
         className="flex items-center space-x-2 px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md text-sm font-medium transition-colors"
       >
         <Calendar size={16} />
-        <span>Export ICS</span>
+        <span>{t('importExport.exportIcs')}</span>
       </button>
     </div>
   );

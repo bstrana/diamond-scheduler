@@ -1,8 +1,10 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Game, Team, CalendarDay, League } from '../types';
-import { WEEKDAYS, MONTH_NAMES } from '../constants';
-import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit } from 'lucide-react';
+import { WEEKDAYS } from '../constants';
+import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio, Printer, SlidersHorizontal, MoreVertical, X, CheckSquare2, Square, ImageDown, Link2 } from 'lucide-react';
 import { formatDate } from '../utils';
+import { useTranslation } from 'react-i18next';
+import PrintSchedule from './PrintSchedule';
 
 interface CalendarProps {
   currentDate: Date;
@@ -19,6 +21,7 @@ interface CalendarProps {
   onDeleteGame: (gameId: string) => void;
   onAddToHoldingArea?: (gameId: string) => void;
   onRemoveAllGames?: () => void;
+  onAddGame?: () => void;
   // New Props
   viewType: 'grid' | 'list';
   onViewTypeChange: (type: 'grid' | 'list') => void;
@@ -31,6 +34,8 @@ interface CalendarProps {
   hideLeagueFilter?: boolean;
   hideCategoryFilter?: boolean;
   hideTeamFilter?: boolean;
+  hideViewToggle?: boolean;
+  onGenerateScoreLinks?: (gameIds: string[]) => void;
 }
 
 const Calendar: React.FC<CalendarProps> = ({ 
@@ -48,6 +53,7 @@ const Calendar: React.FC<CalendarProps> = ({
   onDeleteGame,
   onAddToHoldingArea,
   onRemoveAllGames,
+  onAddGame,
   viewType,
   onViewTypeChange,
   selectedTeamId,
@@ -58,10 +64,64 @@ const Calendar: React.FC<CalendarProps> = ({
   onCategoryFilterChange,
   hideLeagueFilter = false,
   hideCategoryFilter = false,
-  hideTeamFilter = false
+  hideTeamFilter = false,
+  hideViewToggle = false,
+  onGenerateScoreLinks,
 }) => {
+  const { t, i18n } = useTranslation();
+
+  const MONTH_NAMES_T = [
+    t('months.january'), t('months.february'), t('months.march'), t('months.april'),
+    t('months.may'), t('months.june'), t('months.july'), t('months.august'),
+    t('months.september'), t('months.october'), t('months.november'), t('months.december'),
+  ];
+  const WEEKDAYS_T = [t('days.mon'), t('days.tue'), t('days.wed'), t('days.thu'), t('days.fri'), t('days.sat'), t('days.sun')];
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showPrint, setShowPrint] = useState(false);
+  const [showFiltersDrawer, setShowFiltersDrawer] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedGameIds, setSelectedGameIds] = useState<Set<string>>(new Set());
+
+  const toggleSelectMode = () => {
+    setIsSelectMode(p => !p);
+    setSelectedGameIds(new Set());
+  };
+  const toggleGameSelect = (gameId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedGameIds(prev => {
+      const next = new Set(prev);
+      if (next.has(gameId)) next.delete(gameId); else next.add(gameId);
+      return next;
+    });
+  };
+
+  const captureRef = useRef<HTMLDivElement>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+
+  const captureSchedule = async () => {
+    if (!captureRef.current || isCapturing || selectedGameIds.size === 0) return;
+    setIsCapturing(true);
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const canvas = await html2canvas(captureRef.current, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const link = document.createElement('a');
+      link.download = 'schedule.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (err) {
+      console.error('Failed to capture schedule:', err);
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
+  const categories = useMemo(
+    () => Array.from(new Set(leagues.map(l => l.category).filter(Boolean))) as string[],
+    [leagues]
+  );
+  const hasActiveFilters = selectedTeamId !== 'all' || selectedLeagueId !== 'all' || selectedCategory !== 'all';
 
   const getTeam = (id: string) => teams.find(t => t.id === id);
   const getLeague = (id?: string) => leagues.find(l => l.id === id);
@@ -82,6 +142,22 @@ const Calendar: React.FC<CalendarProps> = ({
     const leagueIds = getGameLeagueIds(game);
     return leagueIds.map(id => getLeague(id)).filter(Boolean) as League[];
   };
+
+  // W-L records from all final games in the current filtered set
+  const teamRecords = useMemo(() => {
+    const records: Record<string, { w: number; l: number }> = {};
+    filteredGames.forEach(game => {
+      if (game.status !== 'final' || !game.scores) return;
+      const { home, away } = game.scores;
+      if (home === away) return;
+      const homeWon = home > away;
+      if (!records[game.homeTeamId]) records[game.homeTeamId] = { w: 0, l: 0 };
+      if (!records[game.awayTeamId]) records[game.awayTeamId] = { w: 0, l: 0 };
+      if (homeWon) { records[game.homeTeamId].w++; records[game.awayTeamId].l++; }
+      else { records[game.awayTeamId].w++; records[game.homeTeamId].l++; }
+    });
+    return records;
+  }, [filteredGames]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -140,143 +216,158 @@ const Calendar: React.FC<CalendarProps> = ({
     return groups;
   }, [upcomingGames]);
 
+  // Selected games grouped by date for capture
+  const selectedByDate = useMemo(() => {
+    const groups: { [key: string]: Game[] } = {};
+    upcomingGames.filter(g => selectedGameIds.has(g.id)).forEach(g => {
+      if (!groups[g.date]) groups[g.date] = [];
+      groups[g.date].push(g);
+    });
+    return groups;
+  }, [upcomingGames, selectedGameIds]);
+
   return (
     <div 
       ref={containerRef}
       className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 rounded-none' : ''}`}
     >
-      {/* Header */}
-      <div className="flex flex-col md:flex-row items-center justify-between p-4 border-b border-slate-200 bg-slate-50 gap-4 shrink-0">
-        
-        {/* Month Navigation (Only for Grid) */}
+      {/* ── Mobile Header ──────────────────────────────────────────────────── */}
+      <div className="flex md:hidden items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50 shrink-0">
+        <h2 className="text-base font-bold text-slate-800 truncate">
+          {viewType === 'grid'
+            ? `${MONTH_NAMES_T[currentDate.getMonth()]} ${currentDate.getFullYear()}`
+            : t('app.upcomingSchedule')}
+        </h2>
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Select button (list view only) */}
+          {viewType === 'list' && (
+            <button
+              onClick={toggleSelectMode}
+              className={`p-2 rounded-lg transition-colors ${isSelectMode ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
+              title={isSelectMode ? t('calendar.cancelSelect', 'Cancel') : t('calendar.selectGames', 'Select')}
+            >
+              <CheckSquare2 size={18} />
+            </button>
+          )}
+          {/* Filter button */}
+          <button
+            onClick={() => setShowFiltersDrawer(true)}
+            className="relative p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+            title="Filters"
+          >
+            <SlidersHorizontal size={18} />
+            {hasActiveFilters && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-indigo-500 rounded-full" />
+            )}
+          </button>
+          {/* Actions button */}
+          <button
+            onClick={() => setShowActionsMenu(true)}
+            className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+            title="Actions"
+          >
+            <MoreVertical size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Desktop Header ─────────────────────────────────────────────────── */}
+      <div className="hidden md:flex flex-row items-center justify-between p-4 border-b border-slate-200 bg-slate-50 gap-4 shrink-0">
+
+        {/* Month Navigation (grid) / Title (list) */}
         {viewType === 'grid' ? (
-             <div className="flex items-center space-x-4">
-                <div className="flex space-x-1">
-                    <button onClick={onPrevMonth} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"><ChevronLeft size={18} /></button>
-                    <button onClick={onNextMonth} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"><ChevronRight size={18} /></button>
-                </div>
-                <h2 className="text-xl font-bold text-slate-800">
-                    {MONTH_NAMES[currentDate.getMonth()]} {currentDate.getFullYear()}
-                </h2>
+          <div className="flex items-center space-x-4">
+            <div className="flex space-x-1">
+              <button onClick={onPrevMonth} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"><ChevronLeft size={18} /></button>
+              <button onClick={onNextMonth} className="p-1.5 hover:bg-slate-200 rounded-full transition-colors"><ChevronRight size={18} /></button>
             </div>
+            <h2 className="text-xl font-bold text-slate-800">
+              {MONTH_NAMES_T[currentDate.getMonth()]} {currentDate.getFullYear()}
+            </h2>
+          </div>
         ) : (
-            <h2 className="text-xl font-bold text-slate-800">Upcoming Schedule</h2>
+          <h2 className="text-xl font-bold text-slate-800">{t('app.upcomingSchedule')}</h2>
         )}
 
-        {/* Controls */}
-        <div className="flex items-center space-x-2 w-full md:w-auto justify-end flex-wrap gap-2">
-            
-            {/* League Filter */}
-            {leagues.length > 0 && !hideLeagueFilter && (
-                <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
-                    <Filter size={16} className="text-slate-400" />
-                    <select 
-                        value={selectedLeagueId}
-                        onChange={(e) => onLeagueFilterChange(e.target.value)}
-                        className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
-                    >
-                        <option value="all">All Leagues</option>
-                        <option disabled>──────────</option>
-                        {leagues.map(l => (
-                            <option key={l.id} value={l.id}>{l.name}</option>
-                        ))}
-                    </select>
-                </div>
-            )}
-
-            {/* Category Filter */}
-            {!hideCategoryFilter && leagues.length > 0 && (() => {
-                const categories = Array.from(new Set(leagues.map(l => l.category).filter(Boolean)));
-                return categories.length > 0 ? (
-                    <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
-                        <Filter size={16} className="text-slate-400" />
-                        <select 
-                            value={selectedCategory}
-                            onChange={(e) => onCategoryFilterChange(e.target.value)}
-                            className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
-                        >
-                            <option value="all">All Categories</option>
-                            <option disabled>──────────</option>
-                            {categories.map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                        </select>
-                    </div>
-                ) : null;
-            })()}
-            
-            {/* Team Filter */}
-            {!hideTeamFilter && (
+        {/* Desktop Controls */}
+        <div className="flex items-center space-x-2 w-auto justify-end flex-wrap gap-2">
+          {/* League Filter */}
+          {leagues.length > 0 && !hideLeagueFilter && (
             <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
-                <Filter size={16} className="text-slate-400" />
-                <select 
-                    value={selectedTeamId}
-                    onChange={(e) => onTeamFilterChange(e.target.value)}
-                    className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
-                >
-                    <option value="all">All Teams</option>
-                    <option disabled>──────────</option>
-                    {teams.map(t => (
-                        <option key={t.id} value={t.id}>{t.city} {t.name}</option>
-                    ))}
-                </select>
+              <Filter size={16} className="text-slate-400" />
+              <select value={selectedLeagueId} onChange={(e) => onLeagueFilterChange(e.target.value)} className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none">
+                <option value="all">{t('app.allLeagues')}</option>
+                <option disabled>──────────</option>
+                {leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
             </div>
-            )}
-
-            {/* View Toggle */}
+          )}
+          {/* Category Filter */}
+          {!hideCategoryFilter && categories.length > 0 && (
+            <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
+              <Filter size={16} className="text-slate-400" />
+              <select value={selectedCategory} onChange={(e) => onCategoryFilterChange(e.target.value)} className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none">
+                <option value="all">{t('app.allCategories')}</option>
+                <option disabled>──────────</option>
+                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+          )}
+          {/* Team Filter */}
+          {!hideTeamFilter && (
+            <div className="flex items-center space-x-2 bg-white border border-slate-300 rounded-lg px-3 py-1.5">
+              <Filter size={16} className="text-slate-400" />
+              <select value={selectedTeamId} onChange={(e) => onTeamFilterChange(e.target.value)} className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none">
+                <option value="all">{t('app.allTeams')}</option>
+                <option disabled>──────────</option>
+                {teams.map(t => <option key={t.id} value={t.id}>{t.city} {t.name}</option>)}
+              </select>
+            </div>
+          )}
+          {/* View Toggle */}
+          {!hideViewToggle && (
             <div className="flex bg-slate-200 p-1 rounded-lg">
-                <button 
-                    onClick={() => onViewTypeChange('grid')}
-                    className={`p-1.5 rounded-md transition-all ${viewType === 'grid' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                    title="Calendar View"
-                >
-                    <Grid size={18} />
-                </button>
-                <button 
-                    onClick={() => onViewTypeChange('list')}
-                    className={`p-1.5 rounded-md transition-all ${viewType === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                    title="List View"
-                >
-                    <List size={18} />
-                </button>
+              <button onClick={() => onViewTypeChange('grid')} className={`p-1.5 rounded-md transition-all ${viewType === 'grid' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title={t('app.calendarView')}><Grid size={18} /></button>
+              <button onClick={() => onViewTypeChange('list')} className={`p-1.5 rounded-md transition-all ${viewType === 'list' ? 'bg-white shadow text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title={t('app.listView')}><List size={18} /></button>
             </div>
-
-            {/* Full Screen Toggle */}
+          )}
+          {viewType === 'list' && (
             <button
-              onClick={toggleFullscreen}
-              className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-              title={isFullscreen ? "Exit Full Screen" : "Enter Full Screen"}
+              onClick={toggleSelectMode}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${isSelectMode ? 'bg-indigo-600 text-white border-indigo-600' : 'text-slate-600 border-slate-300 hover:bg-slate-100'}`}
+              title={isSelectMode ? t('calendar.cancelSelect', 'Cancel') : t('calendar.selectGames', 'Select')}
             >
-              {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+              <CheckSquare2 size={16} />
+              {isSelectMode ? t('calendar.cancelSelect', 'Cancel') : t('calendar.selectGames', 'Select')}
             </button>
-
-            {/* Remove All Games */}
-            {onRemoveAllGames && (
-              <button
-                onClick={onRemoveAllGames}
-                className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="Remove All Games from Schedule"
-              >
-                <Trash2 size={20} />
-              </button>
-            )}
+          )}
+          <button onClick={() => setShowPrint(true)} className="no-print p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title={t('app.printPDF')}><Printer size={20} /></button>
+          <button onClick={toggleFullscreen} className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title={isFullscreen ? t('app.exitFullscreen') : t('app.enterFullscreen')}>{isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}</button>
+          {onAddGame && (
+            <button onClick={onAddGame} className="flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors" title={t('app.addGameBtn')}>
+              <PlusCircle size={16} /><span>{t('app.addGameBtn')}</span>
+            </button>
+          )}
+          {onRemoveAllGames && (
+            <button onClick={onRemoveAllGames} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title={t('app.removeAllGames')}><Trash2 size={20} /></button>
+          )}
         </div>
       </div>
 
       {/* View Content */}
-      {viewType === 'grid' ? (
+      {viewType === 'grid' && (
           <>
-            {/* Weekday Headers */}
-            <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-100 shrink-0">
-                {WEEKDAYS.map(day => (
+            {/* Weekday Headers - desktop only */}
+            <div className="hidden md:grid grid-cols-7 border-b border-slate-200 bg-slate-100 shrink-0">
+                {WEEKDAYS_T.map(day => (
                 <div key={day} className="py-2 text-center text-sm font-semibold text-slate-500 uppercase tracking-wider">
                     {day}
                 </div>
                 ))}
             </div>
 
-            {/* Grid */}
-            <div className="grid grid-cols-7 flex-1 auto-rows-fr bg-slate-200 gap-px overflow-y-auto">
+            {/* Grid - desktop only */}
+            <div className="hidden md:grid grid-cols-7 flex-1 auto-rows-fr bg-slate-200 gap-px overflow-y-auto">
                 {days.map((day, idx) => (
                 <div 
                     key={idx} 
@@ -292,7 +383,7 @@ const Calendar: React.FC<CalendarProps> = ({
                         {day.date.getDate()}
                     </span>
                     <button className="opacity-0 group-hover:opacity-100 text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-slate-600">
-                        + Add
+                        {t('app.addGame')}
                     </button>
                     </div>
 
@@ -332,7 +423,7 @@ const Calendar: React.FC<CalendarProps> = ({
                                 <button
                                     onClick={(e) => { e.stopPropagation(); onGameClick(game); }}
                                     className="p-1 bg-white/90 border border-slate-200 shadow-sm rounded text-slate-400 hover:text-blue-600"
-                                    title="Edit Game"
+                                    title={t('calendar.editGame')}
                                 >
                                     <Edit size={10} />
                                 </button>
@@ -340,7 +431,7 @@ const Calendar: React.FC<CalendarProps> = ({
                                     <button
                                         onClick={(e) => { e.stopPropagation(); onAddToHoldingArea(game.id); }}
                                         className="p-1 bg-white/90 border border-slate-200 shadow-sm rounded text-slate-400 hover:text-amber-600"
-                                        title="Move to Holding Area"
+                                        title={t('calendar.moveToHolding')}
                                     >
                                         <Minimize size={10} />
                                     </button>
@@ -348,14 +439,14 @@ const Calendar: React.FC<CalendarProps> = ({
                                 <button
                                     onClick={(e) => { e.stopPropagation(); onGameCopy(game); }}
                                     className="p-1 bg-white/90 border border-slate-200 shadow-sm rounded text-slate-400 hover:text-indigo-600"
-                                    title="Copy Game"
+                                    title={t('calendar.copyGame')}
                                 >
                                     <Copy size={10} />
                                 </button>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); onDeleteGame(game.id); }}
                                     className="p-1 bg-white/90 border border-slate-200 shadow-sm rounded text-slate-400 hover:text-red-600"
-                                    title="Delete Game"
+                                    title={t('calendar.deleteGame')}
                                 >
                                     <Trash2 size={10} />
                                 </button>
@@ -380,14 +471,18 @@ const Calendar: React.FC<CalendarProps> = ({
                             {/* Main Content: Teams on left, Time/Location on right */}
                             <div className="flex items-start justify-between gap-2">
                                 {/* Teams - Show only opponent if single team filter, otherwise show both */}
-                                {isSingleTeamFilter && opponent ? (
-                                    <div className="flex items-center space-x-1.5 w-full justify-center flex-1 min-w-0" title={`${opponent.city} ${opponent.name}`}>
-                                        <span className="text-base text-slate-400 font-bold">
-                                            {isSelectedTeamAway ? '@' : 'vs'}
-                                        </span>
-                                        <span className="font-bold text-xs" style={{color: opponent.primaryColor}}>{opponent.abbreviation}</span>
-                                    </div>
-                                ) : (
+                                {isSingleTeamFilter && opponent ? (() => {
+                                    const selectedTeam = getTeam(selectedTeamId);
+                                    const leftTeam  = isSelectedTeamAway ? selectedTeam : opponent;
+                                    const rightTeam = isSelectedTeamAway ? opponent     : selectedTeam;
+                                    return (
+                                        <div className="flex items-center space-x-1.5 w-full justify-center flex-1 min-w-0">
+                                            <span className="font-bold text-xs" style={{color: leftTeam?.primaryColor}}>{leftTeam?.abbreviation ?? '?'}</span>
+                                            <span className="text-base text-slate-400 font-bold">{isSelectedTeamAway ? '@' : 'vs'}</span>
+                                            <span className="font-bold text-xs" style={{color: rightTeam?.primaryColor}}>{rightTeam?.abbreviation ?? '?'}</span>
+                                        </div>
+                                    );
+                                })() : (
                                     <div className="flex items-center space-x-1.5 flex-1 min-w-0 justify-center">
                                         {/* Away Team */}
                                         <div className="flex items-center space-x-1" title={`${away.city} ${away.name}`}>
@@ -407,11 +502,11 @@ const Calendar: React.FC<CalendarProps> = ({
                                         <span className="text-[10px] text-slate-500 font-medium">{game.time}</span>
                                 {game.status !== 'scheduled' && (
                                     <span className={`text-[8px] px-1 py-0.5 rounded uppercase font-bold tracking-wider leading-none
-                                    ${game.status === 'completed' ? 'bg-slate-200 text-slate-600' : ''}
-                                    ${game.status === 'in-progress' ? 'bg-emerald-100 text-emerald-700 animate-pulse' : ''}
+                                    ${game.status === 'final' ? 'bg-slate-200 text-slate-600' : ''}
+                                    ${game.status === 'live' ? 'bg-emerald-100 text-emerald-700 animate-pulse' : ''}
                                     ${game.status === 'postponed' ? 'bg-orange-100 text-orange-700' : ''}
                                     `}>
-                                    {game.status === 'in-progress' ? 'LIVE' : game.status === 'postponed' ? 'PPD' : 'FIN'}
+                                    {game.status === 'live' ? 'LIVE' : game.status === 'postponed' ? 'PPD' : 'FIN'}
                                     </span>
                                 )}
                             </div>
@@ -429,20 +524,21 @@ const Calendar: React.FC<CalendarProps> = ({
                 ))}
             </div>
           </>
-      ) : (
-          /* List View */
-          <div className="flex-1 overflow-y-auto bg-slate-50 p-6 space-y-6">
+      )}
+      {/* List View - always on mobile; on desktop when viewType === 'list' */}
+      {(viewType === 'list' || viewType === 'grid') && (
+          <div className={`flex-1 overflow-y-auto bg-slate-50 p-6 space-y-6${viewType === 'grid' ? ' md:hidden' : ''}`}>
               {Object.keys(gamesByDate).length === 0 ? (
                   <div className="text-center py-20 opacity-50">
-                      <p className="text-xl font-medium">No upcoming games scheduled.</p>
-                      <p className="text-sm">Try changing the filter or generating a new schedule.</p>
+                      <p className="text-xl font-medium">{t('calendar.noUpcomingGames')}</p>
+                      <p className="text-sm">{t('calendar.tryChangingFilter')}</p>
                   </div>
               ) : (
                   Object.keys(gamesByDate).sort().map(dateStr => (
                       <div key={dateStr}>
-                          <div className="flex items-center space-x-4 mb-3 sticky top-0 bg-slate-50 py-2 z-10">
+                          <div className="flex items-center space-x-4 mb-3">
                               <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
-                                  {new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+                                  {new Date(dateStr + 'T00:00:00').toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric' })}
                               </h3>
                               <div className="h-px bg-slate-200 flex-1"></div>
                           </div>
@@ -472,35 +568,76 @@ const Calendar: React.FC<CalendarProps> = ({
                                       }
                                   }
                                   
-                                  // Get league logo from first league if available
-                                  const leagueLogo = gameLeagues.length > 0 && gameLeagues[0].logoUrl 
-                                    ? gameLeagues[0].logoUrl 
+                                  const leagueCoverImage = gameLeagues.length > 0
+                                    ? (gameLeagues[0].coverImageUrl || null)
+                                    : null;
+                                  const leagueLogoCorner = gameLeagues.length > 0 && !leagueCoverImage
+                                    ? (gameLeagues[0].logoUrl || null)
                                     : null;
 
+                                  const isSelected = selectedGameIds.has(game.id);
                                   return (
-                                    <div 
+                                    <div
                                         key={game.id}
-                                        onClick={() => onGameClick(game)}
-                                        className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer relative group overflow-hidden"
+                                        onClick={(e) => isSelectMode ? toggleGameSelect(game.id, e) : onGameClick(game)}
+                                        className={`bg-white p-4 rounded-xl border shadow-sm transition-all cursor-pointer relative group overflow-hidden ${isSelected ? 'border-indigo-400 ring-2 ring-indigo-200 shadow-md' : 'border-slate-200 hover:shadow-md'}`}
                                     >
-                                        {/* League logo in bottom right as background */}
-                                        {leagueLogo && (
-                                          <div 
-                                            className="absolute bottom-0 right-0 w-24 h-24 opacity-10 z-0"
+                                        {/* Bulk-select checkbox */}
+                                        {isSelectMode && (
+                                          <div className="absolute top-3 left-3 z-20" onClick={(e) => toggleGameSelect(game.id, e)}>
+                                            {isSelected
+                                              ? <CheckSquare2 size={20} className="text-indigo-600" />
+                                              : <Square size={20} className="text-slate-400" />
+                                            }
+                                          </div>
+                                        )}
+
+                                        {/* League cover image as card background */}
+                                        {leagueCoverImage && (
+                                          <div
+                                            className="absolute inset-0 z-0"
                                             style={{
-                                              backgroundImage: `url(${leagueLogo})`,
-                                              backgroundSize: 'contain',
-                                              backgroundPosition: 'bottom right',
-                                              backgroundRepeat: 'no-repeat'
+                                              backgroundImage: `url(${leagueCoverImage})`,
+                                              backgroundSize: 'cover',
+                                              backgroundPosition: 'center',
+                                              opacity: 0.07,
                                             }}
-                                          ></div>
+                                          />
+                                        )}
+                                        {/* League logo in bottom-right corner when no cover image */}
+                                        {leagueLogoCorner && (
+                                          <img
+                                            src={leagueLogoCorner}
+                                            alt=""
+                                            className="absolute bottom-2 right-2 z-0 w-10 h-10 object-contain pointer-events-none"
+                                            style={{ opacity: 0.18 }}
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                          />
                                         )}
                                         
                                         {/* Content wrapper with relative positioning */}
-                                        <div className="relative z-10">
-                                        {/* Time in top right corner */}
-                                        <div className="absolute top-4 right-4 text-lg font-bold text-slate-800">
-                                            {game.time}
+                                        <div className={`relative z-10${isSelectMode ? ' pl-7' : ''}`}>
+                                        {/* Time / Status badge in top right corner */}
+                                        <div className="absolute top-4 right-4 flex flex-col items-end space-y-1">
+                                            {game.status === 'live' ? (
+                                                <>
+                                                    <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-green-500 text-white">
+                                                        <span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span></span>
+                                                        LIVE
+                                                    </span>
+                                                    {game.currentInning != null && (
+                                                        <span className="flex items-center gap-0.5 text-xs font-bold text-green-600 tabular-nums">
+                                                            {game.inningHalf === 'top' && <span className="text-[10px] leading-none">▲</span>}
+                                                            {game.inningHalf === 'bottom' && <span className="text-[10px] leading-none">▼</span>}
+                                                            {game.currentInning}
+                                                        </span>
+                                                    )}
+                                                </>
+                                            ) : game.status === 'final' ? (
+                                                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-700 text-white">FINAL</span>
+                                            ) : (
+                                                <span className="text-lg font-bold text-slate-800">{game.time}</span>
+                                            )}
                                         </div>
 
                                         <div>
@@ -513,7 +650,7 @@ const Calendar: React.FC<CalendarProps> = ({
                                                     {game.seriesName && gameLeagues.length > 0 && <span className="text-slate-300">|</span>}
                                                     {gameLeagues.map((league, idx) => (
                                                         <React.Fragment key={league.id}>
-                                                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{league.name}</span>
+                                                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{league.shortName || league.name}</span>
                                                             {league.category && <span>• {league.category}</span>}
                                                             {idx < gameLeagues.length - 1 && <span className="text-slate-300">|</span>}
                                                         </React.Fragment>
@@ -526,32 +663,36 @@ const Calendar: React.FC<CalendarProps> = ({
                                                 </div>
                                             )}
                                             
-                                            {/* Show only opponent if single team filter, otherwise show both teams */}
-                                            {isSingleTeamFilter && opponent ? (
-                                                <div className="flex items-center space-x-3">
-                                                    <span className="text-slate-400 font-bold text-lg">
-                                                        {isSelectedTeamAway ? '@' : 'vs'}
-                                                    </span>
-                                                    {opponent.logoUrl ? (
-                                                        <img src={opponent.logoUrl} alt={`${opponent.name} logo`} className="w-12 h-12 object-contain" onError={(e) => {
-                                                            e.currentTarget.style.display = 'none';
-                                                            const parent = e.currentTarget.parentElement;
-                                                            if (parent) {
-                                                                const span = document.createElement('span');
-                                                                span.className = 'text-3xl';
-                                                                span.textContent = '⚾';
-                                                                parent.insertBefore(span, e.currentTarget.nextSibling);
-                                                            }
-                                                        }} />
-                                                    ) : (
-                                                        <span className="text-3xl">⚾</span>
-                                                    )}
-                                                    <div className="flex flex-col">
-                                                        <span className="font-bold text-base" style={{color: opponent.primaryColor}}>{opponent.abbreviation}</span>
-                                                        <span className="text-xs text-slate-500">{opponent.city}</span>
+                                            {/* Show both teams in single team filter; show both teams otherwise */}
+                                            {isSingleTeamFilter && opponent ? (() => {
+                                                const selectedTeam = getTeam(selectedTeamId);
+                                                // Left = away team, Right = home team
+                                                const leftTeam  = isSelectedTeamAway ? selectedTeam : opponent;
+                                                const rightTeam = isSelectedTeamAway ? opponent     : selectedTeam;
+                                                const renderTeam = (t: Team | null | undefined) => (
+                                                    <div className="flex items-center space-x-2">
+                                                        {t?.logoUrl ? (
+                                                            <img src={t.logoUrl} alt={`${t.name} logo`} className="w-10 h-10 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                                                        ) : (
+                                                            <span className="text-2xl">⚾</span>
+                                                        )}
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-sm" style={{color: t?.primaryColor}}>{t?.abbreviation ?? '?'}</span>
+                                                            <span className="text-xs text-slate-500">{t?.city ?? ''}</span>
+                                                            {t && teamRecords[t.id] && <span className="text-xs text-slate-400">({teamRecords[t.id].w}-{teamRecords[t.id].l})</span>}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ) : (
+                                                );
+                                                return (
+                                                    <div className="flex items-center space-x-3">
+                                                        {renderTeam(leftTeam)}
+                                                        <span className="text-slate-400 font-bold text-lg">
+                                                            {isSelectedTeamAway ? '@' : 'vs'}
+                                                        </span>
+                                                        {renderTeam(rightTeam)}
+                                                    </div>
+                                                );
+                                            })() : (
                                                 <div className="flex flex-col items-start space-y-2">
                                                     {/* Away Team */}
                                                     <div className="flex items-center space-x-3">
@@ -572,6 +713,7 @@ const Calendar: React.FC<CalendarProps> = ({
                                                         <div className="flex flex-col">
                                                             <span className="font-bold text-base" style={{color: away.primaryColor}}>{away.abbreviation}</span>
                                                             <span className="text-xs text-slate-500">{away.city}</span>
+                                                            {teamRecords[away.id] && <span className="text-xs text-slate-400">({teamRecords[away.id].w}-{teamRecords[away.id].l})</span>}
                                                         </div>
                                                     </div>
                                                     {/* Home Team */}
@@ -593,16 +735,75 @@ const Calendar: React.FC<CalendarProps> = ({
                                                         <div className="flex flex-col">
                                                             <span className="font-bold text-base" style={{color: home.primaryColor}}>{home.abbreviation}</span>
                                                             <span className="text-xs text-slate-500">{home.city}</span>
+                                                            {teamRecords[home.id] && <span className="text-xs text-slate-400">({teamRecords[home.id].w}-{teamRecords[home.id].l})</span>}
                                                         </div>
                                                     </div>
                                                 </div>
                                             )}
 
-                                            {/* Location below teams */}
-                                            <div className="text-xs text-slate-500 flex items-center justify-center mt-2">
-                                                <MapPin size={10} className="mr-1" />
-                                                {game.location}
-                                            </div>
+                                            {/* Score by innings for live/final games */}
+                                            {(game.status === 'live' || game.status === 'final') && game.scores && (
+                                                <div className="mt-3">
+                                                    {game.scores.innings && game.scores.innings.length > 0 ? (
+                                                        <div className="overflow-x-auto">
+                                                            <table className="w-full text-xs border-collapse">
+                                                                <thead>
+                                                                    <tr className="bg-slate-50">
+                                                                        <th className="text-left py-1 px-1.5 text-slate-500 w-8"></th>
+                                                                        {game.scores.innings.map((_, i) => (
+                                                                            <th key={i} className="py-1 px-1 text-center text-slate-500">{i + 1}</th>
+                                                                        ))}
+                                                                        <th className="py-1 px-1.5 text-center font-bold text-slate-700">R</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {([{team: away, side: 'away'}, {team: home, side: 'home'}] as const).map(({team, side}) => (
+                                                                        <tr key={side} className="border-t border-slate-100">
+                                                                            <td className="py-1 px-1.5 font-bold" style={{color: team.primaryColor}}>{team.abbreviation}</td>
+                                                                            {game.scores!.innings!.map((inning, i) => (
+                                                                                <td key={i} className="py-1 px-1 text-center text-slate-600">{inning[side] ?? '-'}</td>
+                                                                            ))}
+                                                                            <td className="py-1 px-1.5 text-center font-bold text-slate-800">{game.scores![side]}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex justify-center items-baseline space-x-2">
+                                                            <span className="font-bold text-sm" style={{color: away.primaryColor}}>{away.abbreviation}</span>
+                                                            <span className="text-xl font-bold text-slate-800">{game.scores.away}</span>
+                                                            <span className="text-slate-300 text-base">–</span>
+                                                            <span className="text-xl font-bold text-slate-800">{game.scores.home}</span>
+                                                            <span className="font-bold text-sm" style={{color: home.primaryColor}}>{home.abbreviation}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Location below teams — hidden when game is live */}
+                                            {game.status !== 'live' && (
+                                                <div className="text-xs text-slate-500 flex items-center justify-center mt-2">
+                                                    <MapPin size={10} className="mr-1" />
+                                                    {game.location}
+                                                </div>
+                                            )}
+
+                                            {/* Live stream link */}
+                                            {game.streamUrl && (
+                                                <a
+                                                    href={game.streamUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    onClick={e => e.stopPropagation()}
+                                                    className="flex items-center justify-center space-x-1 text-xs font-semibold mt-1"
+                                                    style={{color: game.status === 'live' ? '#22c55e' : '#4f46e5'}}
+                                                    title={t('gameBar.watchLiveStream')}
+                                                >
+                                                    <Radio size={10} />
+                                                    <span>{t('calendar.watchLive')}</span>
+                                                </a>
+                                            )}
                                         </div>
                                         </div>
                                     </div>
@@ -614,6 +815,202 @@ const Calendar: React.FC<CalendarProps> = ({
               )}
           </div>
       )}
+
+      {/* Bulk select action bar */}
+      {isSelectMode && (
+        <div className="shrink-0 flex items-center justify-between px-4 py-3 bg-indigo-600 text-white gap-3">
+          <span className="text-sm font-semibold shrink-0">
+            {selectedGameIds.size > 0
+              ? `${selectedGameIds.size} ${t('calendar.selected', 'selected')}`
+              : t('calendar.selectGamesHint', 'Tap games to select')}
+          </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {selectedGameIds.size > 0 && (
+              <>
+                <button
+                  onClick={captureSchedule}
+                  disabled={isCapturing}
+                  className="flex items-center gap-1.5 text-sm font-medium px-3 py-1 bg-white/20 rounded-lg hover:bg-white/30 transition-colors disabled:opacity-60"
+                >
+                  <ImageDown size={15} />
+                  {isCapturing ? t('common.saving', 'Saving…') : t('calendar.saveAsImage', 'Save as image')}
+                </button>
+                {onGenerateScoreLinks && (
+                  <button
+                    onClick={() => onGenerateScoreLinks(Array.from(selectedGameIds))}
+                    className="flex items-center gap-1.5 text-sm font-medium px-3 py-1 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
+                  >
+                    <Link2 size={15} />
+                    {t('calendar.generateScoreLinks', 'Score links')}
+                  </button>
+                )}
+              </>
+            )}
+            <button onClick={toggleSelectMode} className="text-sm font-medium px-3 py-1 bg-white/20 rounded-lg hover:bg-white/30 transition-colors">
+              {t('calendar.cancelSelect', 'Cancel')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile Filters Drawer (bottom sheet) ──────────────────────────── */}
+      {showFiltersDrawer && (
+        <div className="md:hidden fixed inset-0 z-[70]">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowFiltersDrawer(false)} />
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl">
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-slate-200" /></div>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+              <h3 className="font-semibold text-slate-800">Filters</h3>
+              <button onClick={() => setShowFiltersDrawer(false)} className="p-1 text-slate-400 hover:text-slate-600"><X size={20} /></button>
+            </div>
+            <div className="p-5 space-y-4 pb-8">
+              {leagues.length > 0 && !hideLeagueFilter && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">{t('app.allLeagues').replace('All ', '')}</label>
+                  <select value={selectedLeagueId} onChange={(e) => onLeagueFilterChange(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <option value="all">{t('app.allLeagues')}</option>
+                    {leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  </select>
+                </div>
+              )}
+              {!hideCategoryFilter && categories.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">{t('app.allCategories').replace('All ', '')}</label>
+                  <select value={selectedCategory} onChange={(e) => onCategoryFilterChange(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <option value="all">{t('app.allCategories')}</option>
+                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
+                </div>
+              )}
+              {!hideTeamFilter && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">{t('app.allTeams').replace('All ', '')}</label>
+                  <select value={selectedTeamId} onChange={(e) => onTeamFilterChange(e.target.value)} className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <option value="all">{t('app.allTeams')}</option>
+                    {teams.map(t => <option key={t.id} value={t.id}>{t.city} {t.name}</option>)}
+                  </select>
+                </div>
+              )}
+              <button onClick={() => setShowFiltersDrawer(false)} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold mt-2">
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile Actions Bottom Sheet ────────────────────────────────────── */}
+      {showActionsMenu && (
+        <div className="md:hidden fixed inset-0 z-[70]">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowActionsMenu(false)} />
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl">
+            <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-slate-200" /></div>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+              <h3 className="font-semibold text-slate-800">Actions</h3>
+              <button onClick={() => setShowActionsMenu(false)} className="p-1 text-slate-400 hover:text-slate-600"><X size={20} /></button>
+            </div>
+            <div className="p-3 pb-10">
+              {/* View toggle rows */}
+              {!hideViewToggle && (
+                <div className="flex gap-2 px-1 py-2 mb-1">
+                  <button onClick={() => { onViewTypeChange('grid'); setShowActionsMenu(false); }} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-colors ${viewType === 'grid' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                    <Grid size={16} />{t('app.calendarView')}
+                  </button>
+                  <button onClick={() => { onViewTypeChange('list'); setShowActionsMenu(false); }} className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-colors ${viewType === 'list' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                    <List size={16} />{t('app.listView')}
+                  </button>
+                </div>
+              )}
+              {onAddGame && (
+                <button onClick={() => { onAddGame(); setShowActionsMenu(false); }} className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-indigo-50 transition-colors">
+                  <PlusCircle size={20} className="text-indigo-600 shrink-0" />
+                  <span className="font-medium text-slate-700">{t('app.addGameBtn')}</span>
+                </button>
+              )}
+              <button onClick={() => { setShowPrint(true); setShowActionsMenu(false); }} className="no-print flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-slate-50 transition-colors">
+                <Printer size={20} className="text-slate-500 shrink-0" />
+                <span className="font-medium text-slate-700">{t('app.printPDF')}</span>
+              </button>
+              <button onClick={() => { toggleFullscreen(); setShowActionsMenu(false); }} className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-slate-50 transition-colors">
+                {isFullscreen ? <Minimize size={20} className="text-slate-500 shrink-0" /> : <Maximize size={20} className="text-slate-500 shrink-0" />}
+                <span className="font-medium text-slate-700">{isFullscreen ? t('app.exitFullscreen') : t('app.enterFullscreen')}</span>
+              </button>
+              {onRemoveAllGames && (
+                <button onClick={() => { onRemoveAllGames(); setShowActionsMenu(false); }} className="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-red-50 transition-colors">
+                  <Trash2 size={20} className="text-red-500 shrink-0" />
+                  <span className="font-medium text-red-600">{t('app.removeAllGames')}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPrint && (
+        <PrintSchedule
+          games={filteredGames}
+          teams={teams}
+          leagues={leagues}
+          onClose={() => setShowPrint(false)}
+        />
+      )}
+
+      {/* Off-screen schedule capture card */}
+      <div
+        ref={captureRef}
+        style={{
+          position: 'absolute', left: '-9999px', top: 0,
+          width: '480px',
+          background: '#ffffff',
+          fontFamily: 'Inter, system-ui, sans-serif',
+          padding: '20px 22px',
+          borderRadius: '12px',
+        }}
+      >
+        {/* Card header */}
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '14px', paddingBottom: '10px', borderBottom: '2px solid #4f46e5' }}>
+          <span style={{ fontWeight: 800, fontSize: '1rem', color: '#1e293b', letterSpacing: '-0.01em' }}>
+            {t('app.upcomingSchedule', 'Schedule')}
+          </span>
+          <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+            {selectedGameIds.size} {t('calendar.selected', 'games')}
+          </span>
+        </div>
+
+        {/* Date groups */}
+        {Object.keys(selectedByDate).sort().map(dateStr => (
+          <div key={dateStr} style={{ marginBottom: '10px' }}>
+            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>
+              {new Date(dateStr + 'T00:00:00').toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric' })}
+            </div>
+            {selectedByDate[dateStr].sort((a, b) => a.time.localeCompare(b.time)).map(game => {
+              const home = getTeam(game.homeTeamId);
+              const away = getTeam(game.awayTeamId);
+              return (
+                <div key={game.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', borderRadius: '6px', background: '#f8fafc', marginBottom: '3px', fontSize: '0.8rem' }}>
+                  <span style={{ color: '#64748b', fontWeight: 600, minWidth: '40px', flexShrink: 0 }}>{game.time}</span>
+                  <span style={{ fontWeight: 700, flex: 1, color: '#1e293b', whiteSpace: 'nowrap' }}>
+                    <span style={{ color: away?.primaryColor || '#1e293b' }}>{away?.abbreviation ?? '?'}</span>
+                    <span style={{ color: '#94a3b8', margin: '0 4px' }}>@</span>
+                    <span style={{ color: home?.primaryColor || '#1e293b' }}>{home?.abbreviation ?? '?'}</span>
+                  </span>
+                  {game.location && (
+                    <span style={{ color: '#94a3b8', fontSize: '0.72rem', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>
+                      {game.location}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+
+        {/* Footer */}
+        <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid #e2e8f0', fontSize: '0.62rem', color: '#cbd5e1', textAlign: 'right' }}>
+          {(import.meta.env.VITE_ORG_NAME as string | undefined) || 'DIAMOND MANAGER SCHEDULER'}
+        </div>
+      </div>
     </div>
   );
 };
