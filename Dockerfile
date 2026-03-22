@@ -19,9 +19,10 @@ WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/server.js ./
+COPY start.sh /app/start.sh
 
-RUN npm install --omit=dev
+RUN npm install --omit=dev && chmod +x /app/start.sh
 
-EXPOSE 3000
+EXPOSE 8000
 
-CMD ["node", "server.js"]
+CMD ["/app/start.sh"]
