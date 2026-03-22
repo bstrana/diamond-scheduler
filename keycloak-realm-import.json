@@ -1,18 +1,4 @@
 {
-  "_comment": [
-    "Diamond Scheduler — Keycloak realm import for SaaS / multi-tenant deployment.",
-    "Import via Admin UI: Realm → Create → Import, or:",
-    "  kcadm.sh create realms -f keycloak-realm-import.json",
-    "",
-    "After import:",
-    "  1. Replace all 'your-app.example.com' URIs with your real domain.",
-    "  2. Copy the auto-generated client-secret for 'diamond-scheduler-server'",
-    "     into KC_CLIENT_SECRET on the server.",
-    "  3. Enable the placeholder users and set passwords, or delete them.",
-    "  4. For Keycloak 24+: enable the 'Organizations' feature in realm settings",
-    "     and create one Organization per customer tenant (see §4 of KEYCLOAK_INTEGRATION.md)."
-  ],
-
   "id": "diamond",
   "realm": "diamond",
   "displayName": "Diamond Scheduler",
@@ -78,10 +64,6 @@
   "smtpServer": {},
   "identityProviders": [],
   "identityProviderMappers": [],
-  "userFederationProviders": [],
-  "userFederationMappers": [],
-  "authenticationFlows": [],
-  "authenticatorConfig": [],
   "internationalizationEnabled": false,
   "supportedLocales": [],
 
@@ -89,22 +71,18 @@
     "realm": [
       {
         "name": "system_admin",
-        "description": "Platform superadmin: manages all tenants, can impersonate any user, bypasses tenant suspension gate",
+        "description": "Platform superadmin: manages all tenants, bypasses tenant suspension gate",
         "composite": true,
-        "composites": {
-          "realm": ["tenant_admin"]
-        },
+        "composites": { "realm": ["tenant_admin"] },
         "clientRole": false,
         "containerId": "diamond",
         "attributes": {}
       },
       {
         "name": "tenant_admin",
-        "description": "Manages a single tenant's users, plan, and settings; inherits all scheduler permissions",
+        "description": "Manages a single tenant's users, plan, and settings",
         "composite": true,
-        "composites": {
-          "realm": ["scheduler_admin"]
-        },
+        "composites": { "realm": ["scheduler_admin"] },
         "clientRole": false,
         "containerId": "diamond",
         "attributes": {}
@@ -113,9 +91,7 @@
         "name": "scheduler_admin",
         "description": "Publish/delete schedules, manage score links, all app settings",
         "composite": true,
-        "composites": {
-          "realm": ["scheduler_editor"]
-        },
+        "composites": { "realm": ["scheduler_editor"] },
         "clientRole": false,
         "containerId": "diamond",
         "attributes": {}
@@ -124,9 +100,7 @@
         "name": "scheduler_editor",
         "description": "Edit games and enter scores via the main application",
         "composite": true,
-        "composites": {
-          "realm": ["scheduler_viewer"]
-        },
+        "composites": { "realm": ["scheduler_viewer"] },
         "clientRole": false,
         "containerId": "diamond",
         "attributes": {}
@@ -166,7 +140,6 @@
       "clientRoles": {},
       "subGroups": [
         {
-          "_comment": "Template group — copy this structure for every new tenant, replacing 'acme' with the org slug.",
           "name": "acme",
           "path": "/tenants/acme",
           "realmRoles": [],
@@ -216,7 +189,7 @@
       },
       "protocolMappers": [
         {
-          "name": "org_id — user attribute",
+          "name": "org_id",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-usermodel-attribute-mapper",
           "consentRequired": false,
@@ -231,31 +204,6 @@
             "aggregate.attrs": "false"
           }
         },
-        {
-          "name": "org_id — group attribute",
-          "_comment": "Reads org_id from the user's /tenants/<slug> group attributes. Takes effect when org_id is not set directly on the user. Delete this mapper if you set org_id per-user instead.",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-group-member-mapper",
-          "consentRequired": false,
-          "config": {
-            "full.path": "false",
-            "id.token.claim": "false",
-            "access.token.claim": "false",
-            "claim.name": "groups",
-            "userinfo.token.claim": "false"
-          }
-        }
-      ]
-    },
-    {
-      "name": "roles",
-      "description": "Includes realm_access.roles in the access token",
-      "protocol": "openid-connect",
-      "attributes": {
-        "include.in.token.scope": "false",
-        "display.on.consent.screen": "true"
-      },
-      "protocolMappers": [
         {
           "name": "realm roles",
           "protocol": "openid-connect",
@@ -290,10 +238,8 @@
     {
       "clientId": "diamond-scheduler",
       "name": "Diamond Scheduler (SPA)",
-      "description": "Public SPA client. Uses PKCE S256. One client serves all tenants — tenant isolation enforced via org_id claim.",
+      "description": "Public SPA client — uses PKCE S256. Replace redirect URIs with your real domain.",
       "enabled": true,
-      "clientAuthenticatorType": "client-secret",
-      "secret": "",
       "publicClient": true,
       "bearerOnly": false,
       "standardFlowEnabled": true,
@@ -339,10 +285,9 @@
     },
     {
       "clientId": "diamond-scheduler-server",
-      "name": "Diamond Scheduler (Server — confidential)",
-      "description": "Confidential back-channel client for server.js token introspection (ICS Bearer auth) and admin operations. Never exposed to the browser.",
+      "name": "Diamond Scheduler (Server)",
+      "description": "Confidential back-channel client for server-side ICS token introspection. Copy the generated secret to KC_CLIENT_SECRET in config.env.",
       "enabled": true,
-      "clientAuthenticatorType": "client-secret",
       "publicClient": false,
       "bearerOnly": false,
       "standardFlowEnabled": false,
@@ -366,8 +311,6 @@
       "name": "Diamond Scheduler (Embed widget)",
       "description": "Public client for the embeddable schedule widget. Uses check-sso so anonymous visitors are never redirected to Keycloak.",
       "enabled": true,
-      "clientAuthenticatorType": "client-secret",
-      "secret": "",
       "publicClient": true,
       "bearerOnly": false,
       "standardFlowEnabled": true,
@@ -423,7 +366,6 @@
 
   "users": [
     {
-      "_comment": "Platform superadmin. Enable and set password after import. Remove from production if using SSO federation.",
       "username": "platform-admin",
       "enabled": false,
       "emailVerified": true,
@@ -438,7 +380,6 @@
       "notBefore": 0
     },
     {
-      "_comment": "Example tenant admin for the 'acme' tenant. Set org_id to the real org UUID, enable after import.",
       "username": "acme-admin",
       "enabled": false,
       "emailVerified": true,
@@ -455,7 +396,6 @@
       "notBefore": 0
     },
     {
-      "_comment": "Example read-only viewer for the 'acme' tenant.",
       "username": "acme-viewer",
       "enabled": false,
       "emailVerified": true,
