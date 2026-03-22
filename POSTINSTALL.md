@@ -18,43 +18,24 @@ Diamond Scheduler requires an external Keycloak instance for authentication. If 
 
 A `keycloak-realm-import.json` is included in the repository. Import it via **Realm Settings → Action → Partial import** to bootstrap roles and client scopes.
 
-### 2. Create `/app/data/config.env`
+### 2. Edit `/app/data/config.env`
 
-Cloudron does not expose a UI for per-app environment variables. Instead, create
-the file `/app/data/config.env` using the **Cloudron File Manager** (Cloudron
-dashboard → App → Files) or via SSH into the Cloudron server:
+On first boot the app automatically creates a template config file at
+`/app/data/config.env`. Edit it via the **Cloudron File Manager**
+(dashboard → App → Files → `/app/data/config.env`) and fill in your values:
 
-```bash
-# on the Cloudron host
-cloudron files edit --app <app-id> /app/data/config.env
-```
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `VITE_KEYCLOAK_URL` | Public URL of your Keycloak instance | `https://keycloak.example.com` |
+| `VITE_KEYCLOAK_REALM` | Realm name | `diamond` |
+| `VITE_KEYCLOAK_CLIENT_ID` | Public client ID | `diamond-scheduler` |
+| `VITE_APP_ID` | Unique identifier for this installation | `scheduler` |
+| `KC_REALM` | Realm for server-side introspection | `diamond` |
+| `KC_CLIENT_ID` | Confidential client ID | `diamond-scheduler-server` |
+| `KC_CLIENT_SECRET` | Confidential client secret | _(from Keycloak → Clients → Credentials)_ |
 
-Paste the following, filling in your values:
-
-```bash
-# ── Keycloak (required) ───────────────────────────────────────────────────────
-VITE_KEYCLOAK_URL=https://keycloak.example.com
-VITE_KEYCLOAK_REALM=diamond
-VITE_KEYCLOAK_CLIENT_ID=diamond-scheduler
-
-# ── App identity ──────────────────────────────────────────────────────────────
-VITE_APP_ID=scheduler
-
-# ── Server-side ICS token validation ─────────────────────────────────────────
-KC_REALM=diamond
-KC_CLIENT_ID=diamond-scheduler-server
-KC_CLIENT_SECRET=<confidential-client-secret>
-
-# ── Optional overrides (defaults shown) ──────────────────────────────────────
-# SCHEDULE_EVENT_DURATION_MINUTES=120
-# VITE_PB_SCHEDULE_COLLECTION=published_schedules
-# VITE_PB_SCORE_LINKS_COLLECTION=score_links
-# VITE_PB_SCORE_EDITS_COLLECTION=score_edits
-# VITE_PB_TENANTS_COLLECTION=tenants
-```
-
-After saving the file, **restart the app** from the Cloudron dashboard so the
-new values are stamped into the SPA bundle.
+After saving, **restart the app** from the Cloudron dashboard so the new values
+are stamped into the SPA bundle.
 
 ### 3. First Login
 

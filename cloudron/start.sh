@@ -12,19 +12,46 @@ PB_DATA_DIR="/app/data/pb_data"
 mkdir -p "${PB_DATA_DIR}"
 
 # ── Admin config file ─────────────────────────────────────────────────────────
-# Cloudron has no UI for per-app env vars; admins create this file via the
-# Cloudron file manager or SSH.  See POSTINSTALL.md for the full variable list.
+# Cloudron has no dashboard UI for per-app env vars.  On first boot this script
+# writes a template to /app/data/config.env so the admin can edit it via the
+# Cloudron file manager (App → Files) and then restart the app.
 CONFIG_FILE="/app/data/config.env"
-if [ -f "${CONFIG_FILE}" ]; then
-    echo "==> Loading config from ${CONFIG_FILE}"
-    set -o allexport
-    # shellcheck source=/dev/null
-    source "${CONFIG_FILE}"
-    set +o allexport
-else
-    echo "WARNING: ${CONFIG_FILE} not found — Keycloak auth will not work."
-    echo "         Create it following the instructions in POSTINSTALL.md."
+if [ ! -f "${CONFIG_FILE}" ]; then
+    echo "==> Creating config template at ${CONFIG_FILE}"
+    cat > "${CONFIG_FILE}" <<'TEMPLATE'
+# Diamond Scheduler configuration
+# Edit this file via the Cloudron file manager (App → Files → /app/data/config.env)
+# then restart the app for changes to take effect.
+
+# ── Keycloak (required) ───────────────────────────────────────────────────────
+VITE_KEYCLOAK_URL=https://keycloak.example.com
+VITE_KEYCLOAK_REALM=diamond
+VITE_KEYCLOAK_CLIENT_ID=diamond-scheduler
+
+# ── App identity ──────────────────────────────────────────────────────────────
+VITE_APP_ID=scheduler
+
+# ── Server-side ICS token validation ─────────────────────────────────────────
+KC_REALM=diamond
+KC_CLIENT_ID=diamond-scheduler-server
+KC_CLIENT_SECRET=replace-with-client-secret
+
+# ── Optional overrides ────────────────────────────────────────────────────────
+# SCHEDULE_EVENT_DURATION_MINUTES=120
+# VITE_PB_SCHEDULE_COLLECTION=published_schedules
+# VITE_PB_SCORE_LINKS_COLLECTION=score_links
+# VITE_PB_SCORE_EDITS_COLLECTION=score_edits
+# VITE_PB_TENANTS_COLLECTION=tenants
+TEMPLATE
+    chmod 644 "${CONFIG_FILE}"
+    echo "    Edit it and restart the app to apply your Keycloak settings."
 fi
+
+echo "==> Loading config from ${CONFIG_FILE}"
+set -o allexport
+# shellcheck source=/dev/null
+source "${CONFIG_FILE}"
+set +o allexport
 
 # ── Runtime env vars that depend on APP_DOMAIN ────────────────────────────────
 VITE_PB_URL="https://${APP_DOMAIN:-localhost}/_pb"
