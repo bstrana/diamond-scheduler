@@ -51,7 +51,7 @@ export interface Game {
   inningHalf?: 'top' | 'bottom'; // Top (▲) or bottom (▼) of the inning
 }
 
-export type ViewMode = 'calendar' | 'list' | 'teams' | 'leagues' | 'league_builder' | 'scheduler' | 'embed' | 'gamebar' | 'help' | 'bracket' | 'score_links';
+export type ViewMode = 'calendar' | 'list' | 'teams' | 'leagues' | 'league_builder' | 'scheduler' | 'embed' | 'gamebar' | 'help' | 'bracket' | 'score_links' | 'tenant_settings';
 
 export interface ScoreLink {
   id?: string;          // PocketBase record id

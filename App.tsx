@@ -29,6 +29,7 @@ import {
   Menu,
   Link2,
   Download,
+  Building2,
 } from 'lucide-react';
 import LeagueBuilder from './components/LeagueBuilder';
 import ScheduleGenerator from './components/ScheduleGenerator';
@@ -37,6 +38,7 @@ import HelpPage from './components/HelpPage';
 import PlayoffBracket from './components/PlayoffBracket';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import ScoreLinksManager from './components/ScoreLinksManager';
+import TenantLimitsTable from './components/TenantLimitsTable';
 
 const App: React.FC = () => {
   const { t } = useTranslation();
@@ -971,7 +973,7 @@ const App: React.FC = () => {
                       {/* Mobile: menu icon + current section */}
                       <div className="flex items-center space-x-1 md:hidden">
                         <span className="text-sm font-semibold text-slate-700 truncate max-w-[110px]">
-                          {viewMode === 'league_builder' ? t('nav.leagueManagement') : viewMode === 'scheduler' ? t('nav.scheduler') : viewMode === 'teams' ? t('nav.teams') : viewMode === 'embed' ? t('nav.embedCode') : viewMode === 'help' ? t('nav.helpGuide') : viewMode === 'bracket' ? t('nav.playoffBracket') : t('nav.calendar')}
+                          {viewMode === 'league_builder' ? t('nav.leagueManagement') : viewMode === 'scheduler' ? t('nav.scheduler') : viewMode === 'teams' ? t('nav.teams') : viewMode === 'embed' ? t('nav.embedCode') : viewMode === 'help' ? t('nav.helpGuide') : viewMode === 'bracket' ? t('nav.playoffBracket') : viewMode === 'tenant_settings' ? 'Plan & Limits' : t('nav.calendar')}
                         </span>
                         <ChevronDown size={14} className="text-slate-500 flex-shrink-0" />
                       </div>
@@ -1024,7 +1026,7 @@ const App: React.FC = () => {
                     ))}
                   </div>
                   <h2 className="text-lg font-semibold text-slate-800 capitalize hidden md:block">
-                      {viewMode === 'league_builder' ? t('nav.leagueManagement') : viewMode === 'scheduler' ? t('nav.scheduler') : viewMode === 'teams' ? t('nav.teams') : viewMode === 'embed' ? t('nav.embedCode') : viewMode === 'help' ? t('nav.helpGuide') : viewMode === 'bracket' ? t('nav.playoffBracket') : t('nav.calendar')}
+                      {viewMode === 'league_builder' ? t('nav.leagueManagement') : viewMode === 'scheduler' ? t('nav.scheduler') : viewMode === 'teams' ? t('nav.teams') : viewMode === 'embed' ? t('nav.embedCode') : viewMode === 'help' ? t('nav.helpGuide') : viewMode === 'bracket' ? t('nav.playoffBracket') : viewMode === 'tenant_settings' ? 'Plan & Limits' : t('nav.calendar')}
                   </h2>
                 </div>
 
@@ -1097,6 +1099,15 @@ const App: React.FC = () => {
                         </div>
                       </div>
                       <div className="border-t border-slate-100">
+                        {isTenantAdmin && (
+                          <button
+                            onClick={() => { setShowUserMenu(false); setViewMode('tenant_settings'); }}
+                            className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                          >
+                            <span>Plan &amp; Limits</span>
+                            <Building2 size={16} />
+                          </button>
+                        )}
                         <button
                           onClick={() => { setShowUserMenu(false); setViewMode('score_links'); }}
                           className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
@@ -1263,6 +1274,19 @@ const App: React.FC = () => {
               leagues={leagues}
               userId={userId}
               orgId={orgId}
+            />
+          )}
+
+          {viewMode === 'tenant_settings' && (
+            <TenantLimitsTable
+              tenant={tenant}
+              usage={{
+                leagues:            leagues.length,
+                teams:              teams.length,
+                scoreLinks:         0,
+                publishedSchedules: publishedSchedules.length,
+              }}
+              isSystemAdmin={isSystemAdmin}
             />
           )}
 
