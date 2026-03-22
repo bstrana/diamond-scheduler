@@ -60,6 +60,15 @@ VITE_PB_COLLECTION="${VITE_PB_COLLECTION:-app_state}"
 # Pass KC_URL through for the server-side ICS token introspection
 export KC_URL="${VITE_KEYCLOAK_URL:-}"
 
+# ── Stamp Keycloak origin into nginx CSP ──────────────────────────────────────
+# frame-src needs the Keycloak origin so the OIDC silent-check-sso iframe works.
+KC_ORIGIN="'none'"
+if [ -n "${VITE_KEYCLOAK_URL:-}" ]; then
+    # Extract scheme + host from the full URL (strip any path)
+    KC_ORIGIN="$(echo "${VITE_KEYCLOAK_URL}" | grep -oP '^https?://[^/]+')"
+fi
+sed -i "s|__KC_ORIGIN__|${KC_ORIGIN}|g" /etc/nginx/sites-enabled/default
+
 # ── Stamp runtime values into the pre-built SPA ───────────────────────────────
 # /app is read-only in Cloudron; copy the image-built dist to writable storage
 # and substitute the placeholders baked in during the Docker build.
