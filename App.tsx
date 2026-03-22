@@ -1123,7 +1123,7 @@ const App: React.FC = () => {
                           <HelpCircle size={16} />
                         </button>
                         <button
-                          onClick={() => keycloak.logout()}
+                          onClick={() => keycloak.logout({ redirectUri: window.location.origin + '/' })}
                           className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
                         >
                           <span>{t('nav.signOut')}</span>
