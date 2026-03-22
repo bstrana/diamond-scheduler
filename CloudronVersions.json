@@ -1,7 +1,51 @@
 [
   {
     "version": "1.0.0",
-    "manifestUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/claude/cloudron-packaging-F81iV/CloudronManifest.json",
-    "imageUrl": "ghcr.io/bstrana/diamond-scheduler:1.0.0"
+    "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.0",
+    "manifest": {
+      "id": "io.github.bstrana.diamond-scheduler",
+      "title": "Diamond Scheduler",
+      "author": "bstrana",
+      "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
+      "tagline": "Baseball & multi-sport league scheduling",
+      "version": "1.0.0",
+      "manifestVersion": 2,
+
+      "httpPort": 8000,
+      "healthCheckPath": "/health",
+      "maxBoxSize": "medium",
+
+      "addons": {
+        "localstorage": {}
+      },
+
+      "tcpPorts": {},
+
+      "environmentVariables": {
+        "VITE_KEYCLOAK_URL":                  "https://keycloak.example.com",
+        "VITE_KEYCLOAK_REALM":                "diamond",
+        "VITE_KEYCLOAK_CLIENT_ID":            "diamond-scheduler",
+        "VITE_APP_ID":                        "scheduler",
+        "VITE_PB_SCHEDULE_COLLECTION":        "published_schedules",
+        "VITE_PB_SCHEDULE_PUBLISH":           "true",
+        "VITE_PB_SCORE_LINKS_COLLECTION":     "score_links",
+        "VITE_PB_SCORE_EDITS_COLLECTION":     "score_edits",
+        "VITE_PB_TENANTS_COLLECTION":         "tenants",
+        "SCHEDULE_EVENT_DURATION_MINUTES":    "120",
+        "KC_REALM":                           "diamond",
+        "KC_CLIENT_ID":                       "diamond-scheduler-server",
+        "KC_CLIENT_SECRET":                   ""
+      },
+
+      "website":      "https://github.com/bstrana/diamond-scheduler",
+      "contactEmail": "support@example.com",
+      "packagerName": "bstrana",
+      "packagerUrl":  "https://github.com/bstrana",
+      "iconUrl":      "https://raw.githubusercontent.com/bstrana/diamond-scheduler/master/public/logo.png",
+
+      "tags": ["sports", "scheduling", "calendar", "league"],
+
+      "mediaLinks": []
+    }
   }
 ]
