@@ -32,22 +32,7 @@
         "changelog": "Initial Cloudron community release with embedded PocketBase and multi-tenant support.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart. See the documentation link above for full Keycloak setup instructions.",
         "packagerName": "bstrana",
-        "packagerUrl": "https://github.com/bstrana",
-        "environmentVariables": {
-          "VITE_KEYCLOAK_URL":               "https://keycloak.example.com",
-          "VITE_KEYCLOAK_REALM":             "diamond",
-          "VITE_KEYCLOAK_CLIENT_ID":         "diamond-scheduler",
-          "VITE_APP_ID":                     "scheduler",
-          "VITE_PB_SCHEDULE_COLLECTION":     "published_schedules",
-          "VITE_PB_SCHEDULE_PUBLISH":        "true",
-          "VITE_PB_SCORE_LINKS_COLLECTION":  "score_links",
-          "VITE_PB_SCORE_EDITS_COLLECTION":  "score_edits",
-          "VITE_PB_TENANTS_COLLECTION":      "tenants",
-          "SCHEDULE_EVENT_DURATION_MINUTES": "120",
-          "KC_REALM":                        "diamond",
-          "KC_CLIENT_ID":                    "diamond-scheduler-server",
-          "KC_CLIENT_SECRET":                ""
-        }
+        "packagerUrl": "https://github.com/bstrana"
       },
       "creationDate": "Sat, 22 Mar 2026 00:00:00 GMT",
       "ts": "Sat, 22 Mar 2026 00:00:00 GMT",
