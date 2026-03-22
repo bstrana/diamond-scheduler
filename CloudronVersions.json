@@ -21,7 +21,7 @@
         "manifestVersion": 2,
         "memoryLimit": 1073741824,
         "minBoxVersion": "9.1.0",
-        "icon": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
+        "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
         "tags": ["sports", "scheduling", "calendar", "league"],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
