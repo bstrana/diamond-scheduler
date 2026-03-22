@@ -34,6 +34,10 @@ find "${DIST_DIR}" -type f -name "*.js" \
 # Cloudron checks GET /health. Nginx returns 200 from a static stub.
 echo "OK" > "${DIST_DIR}/health"
 
+# ── Nginx writable temp dirs (filesystem is read-only except /tmp, /app/data) ─
+mkdir -p /tmp/nginx/client_body /tmp/nginx/proxy /tmp/nginx/fastcgi \
+         /tmp/nginx/scgi /tmp/nginx/uwsgi
+
 # ── Launch via supervisord ────────────────────────────────────────────────────
 echo "==> Starting supervisord"
 exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/diamond.conf

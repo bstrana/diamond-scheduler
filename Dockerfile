@@ -1,10 +1,9 @@
 # Diamond Scheduler — Cloudron package
 # https://docs.cloudron.io/packaging/
 #
-# The SPA is intentionally built at container startup (cloudron/start.sh) so
-# that Vite can bake Cloudron-provided runtime env vars (APP_DOMAIN, Keycloak
-# URLs, etc.) into the bundle.  All source files are therefore shipped inside
-# the image and npm run build executes on first start.
+# The SPA is built here at image build time with placeholder env vars.
+# start.sh stamps the real APP_DOMAIN-derived values via sed at container
+# startup, copying the bundle to writable /app/data/dist before nginx starts.
 
 FROM cloudron/base:5.0.0
 
@@ -49,6 +48,17 @@ COPY cloudron/nginx.conf      /etc/nginx/sites-enabled/default
 COPY cloudron/supervisord.conf /etc/supervisor/conf.d/diamond.conf
 COPY cloudron/start.sh        /app/start.sh
 RUN chmod +x /app/start.sh
+
+# ── Nginx temp dirs ────────────────────────────────────────────────────────────
+# Cloudron's filesystem is read-only at runtime; redirect nginx's temp dirs
+# to /tmp which is always a writable tmpfs.  The dirs themselves are created
+# by start.sh before supervisord starts nginx.
+RUN printf 'client_body_temp_path /tmp/nginx/client_body;\n\
+proxy_temp_path      /tmp/nginx/proxy;\n\
+fastcgi_temp_path    /tmp/nginx/fastcgi;\n\
+scgi_temp_path       /tmp/nginx/scgi;\n\
+uwsgi_temp_path      /tmp/nginx/uwsgi;\n' \
+    > /etc/nginx/conf.d/cloudron-temp-paths.conf
 
 # ── Remove default nginx site ─────────────────────────────────────────────────
 RUN rm -f /etc/nginx/sites-enabled/default.bak
