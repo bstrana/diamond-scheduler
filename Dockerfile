@@ -36,7 +36,9 @@ RUN mkdir -p /app/pocketbase \
 
 # ── Application source ────────────────────────────────────────────────────────
 COPY package*.json ./
-RUN npm install
+RUN npm install \
+    && mkdir -p /app/node_modules/.vite-temp \
+    && chown cloudron:cloudron /app/node_modules/.vite-temp
 COPY . .
 
 # ── Cloudron config files ─────────────────────────────────────────────────────
