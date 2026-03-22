@@ -67,7 +67,11 @@ if [ -n "${VITE_KEYCLOAK_URL:-}" ]; then
     # Extract scheme + host from the full URL (strip any path)
     KC_ORIGIN="$(echo "${VITE_KEYCLOAK_URL}" | grep -oP '^https?://[^/]+')"
 fi
-sed -i "s|__KC_ORIGIN__|${KC_ORIGIN}|g" /etc/nginx/sites-enabled/default
+# /etc/nginx/sites-enabled/ is read-only at runtime; render the template into
+# the writable /tmp/nginx/sites-enabled/ that nginx is configured to include.
+mkdir -p /tmp/nginx/sites-enabled
+sed "s|__KC_ORIGIN__|${KC_ORIGIN}|g" /app/nginx.conf.template \
+    > /tmp/nginx/sites-enabled/default
 
 # ── Stamp runtime values into the pre-built SPA ───────────────────────────────
 # /app is read-only in Cloudron; copy the image-built dist to writable storage
