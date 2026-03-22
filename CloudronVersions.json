@@ -1,5 +1,4 @@
 {
-  "stable": true,
   "versions": {
     "1.0.0": {
       "manifest": {
@@ -34,8 +33,7 @@
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
       },
-      "creationDate": "Sat, 22 Mar 2026 00:00:00 GMT",
-      "ts": "Sat, 22 Mar 2026 00:00:00 GMT",
+      "creationDate": "2026-03-22T00:00:00.000Z",
       "publishState": "published"
     }
   }
