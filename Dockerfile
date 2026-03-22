@@ -49,16 +49,21 @@ COPY cloudron/supervisord.conf /etc/supervisor/conf.d/diamond.conf
 COPY cloudron/start.sh        /app/start.sh
 RUN chmod +x /app/start.sh
 
-# ── Nginx temp dirs ────────────────────────────────────────────────────────────
+# ── Nginx temp dirs & log paths ────────────────────────────────────────────────
 # Cloudron's filesystem is read-only at runtime; redirect nginx's temp dirs
 # to /tmp which is always a writable tmpfs.  The dirs themselves are created
 # by start.sh before supervisord starts nginx.
+# Also redirect logs to stdout/stderr so supervisord captures them.
 RUN printf 'client_body_temp_path /tmp/nginx/client_body;\n\
 proxy_temp_path      /tmp/nginx/proxy;\n\
 fastcgi_temp_path    /tmp/nginx/fastcgi;\n\
 scgi_temp_path       /tmp/nginx/scgi;\n\
 uwsgi_temp_path      /tmp/nginx/uwsgi;\n' \
-    > /etc/nginx/conf.d/cloudron-temp-paths.conf
+    > /etc/nginx/conf.d/cloudron-temp-paths.conf \
+    && sed -i \
+        -e 's|error_log /var/log/nginx/error.log.*|error_log /dev/stderr warn;|' \
+        -e 's|access_log /var/log/nginx/access.log.*|access_log /dev/stdout;|' \
+        /etc/nginx/nginx.conf
 
 # ── Remove default nginx site ─────────────────────────────────────────────────
 RUN rm -f /etc/nginx/sites-enabled/default.bak
