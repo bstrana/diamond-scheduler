@@ -11,6 +11,21 @@ echo "==> Diamond Scheduler starting"
 PB_DATA_DIR="/app/data/pb_data"
 mkdir -p "${PB_DATA_DIR}"
 
+# ── Admin config file ─────────────────────────────────────────────────────────
+# Cloudron has no UI for per-app env vars; admins create this file via the
+# Cloudron file manager or SSH.  See POSTINSTALL.md for the full variable list.
+CONFIG_FILE="/app/data/config.env"
+if [ -f "${CONFIG_FILE}" ]; then
+    echo "==> Loading config from ${CONFIG_FILE}"
+    set -o allexport
+    # shellcheck source=/dev/null
+    source "${CONFIG_FILE}"
+    set +o allexport
+else
+    echo "WARNING: ${CONFIG_FILE} not found — Keycloak auth will not work."
+    echo "         Create it following the instructions in POSTINSTALL.md."
+fi
+
 # ── Runtime env vars that depend on APP_DOMAIN ────────────────────────────────
 VITE_PB_URL="https://${APP_DOMAIN:-localhost}/_pb"
 VITE_PB_COLLECTION="${VITE_PB_COLLECTION:-app_state}"
