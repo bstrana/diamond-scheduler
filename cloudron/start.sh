@@ -12,21 +12,27 @@ PB_DATA_DIR="/app/data/pb_data"
 mkdir -p "${PB_DATA_DIR}"
 
 # ── Runtime env vars that depend on APP_DOMAIN ────────────────────────────────
-# VITE_ variables are baked in at build time, so we build here after
-# Cloudron has injected all env vars.
-export VITE_PB_URL="https://${APP_DOMAIN:-localhost}/_pb"
-export VITE_PB_COLLECTION="${VITE_PB_COLLECTION:-app_state}"
+VITE_PB_URL="https://${APP_DOMAIN:-localhost}/_pb"
+VITE_PB_COLLECTION="${VITE_PB_COLLECTION:-app_state}"
 
 # Pass KC_URL through for the server-side ICS token introspection
 export KC_URL="${VITE_KEYCLOAK_URL:-}"
 
-echo "==> Building SPA (VITE_PB_URL=${VITE_PB_URL})"
-cd /app
-npm run build
+# ── Stamp runtime values into the pre-built SPA ───────────────────────────────
+# /app is read-only in Cloudron; copy the image-built dist to writable storage
+# and substitute the placeholders baked in during the Docker build.
+DIST_DIR="/app/data/dist"
+echo "==> Stamping SPA (VITE_PB_URL=${VITE_PB_URL})"
+rm -rf "${DIST_DIR}"
+cp -r /app/dist "${DIST_DIR}"
+find "${DIST_DIR}" -type f -name "*.js" \
+    -exec sed -i \
+        "s|__VITE_PB_URL__|${VITE_PB_URL}|g; s|__VITE_PB_COLLECTION__|${VITE_PB_COLLECTION}|g" \
+        {} \;
 
 # ── Health endpoint ────────────────────────────────────────────────────────────
 # Cloudron checks GET /health. Nginx returns 200 from a static stub.
-echo "OK" > /app/dist/health
+echo "OK" > "${DIST_DIR}/health"
 
 # ── Launch via supervisord ────────────────────────────────────────────────────
 echo "==> Starting supervisord"

@@ -36,10 +36,13 @@ RUN mkdir -p /app/pocketbase \
 
 # ── Application source ────────────────────────────────────────────────────────
 COPY package*.json ./
-RUN npm install \
-    && mkdir -p /app/node_modules/.vite-temp \
-    && chown cloudron:cloudron /app/node_modules/.vite-temp
+RUN npm install
 COPY . .
+# Build the SPA at image build time with placeholder values that start.sh
+# will sed-replace with the real APP_DOMAIN at container startup.
+RUN VITE_PB_URL="__VITE_PB_URL__" \
+    VITE_PB_COLLECTION="__VITE_PB_COLLECTION__" \
+    npm run build
 
 # ── Cloudron config files ─────────────────────────────────────────────────────
 COPY cloudron/nginx.conf      /etc/nginx/sites-enabled/default
