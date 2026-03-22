@@ -53,7 +53,7 @@ RUN VITE_PB_URL="__VITE_PB_URL__" \
     npm run build
 
 # ── Cloudron config files ─────────────────────────────────────────────────────
-COPY cloudron/nginx.conf      /etc/nginx/sites-enabled/default
+COPY cloudron/nginx.conf      /app/nginx.conf.template
 COPY cloudron/supervisord.conf /etc/supervisor/conf.d/diamond.conf
 COPY cloudron/start.sh        /app/start.sh
 RUN chmod +x /app/start.sh
@@ -63,6 +63,9 @@ RUN chmod +x /app/start.sh
 # to /tmp which is always a writable tmpfs.  The dirs themselves are created
 # by start.sh before supervisord starts nginx.
 # Also redirect logs to stdout/stderr so supervisord captures them.
+# Also redirect the sites-enabled include to /tmp/nginx/sites-enabled/ so
+# start.sh can write the rendered site config there without hitting the
+# read-only /etc/nginx/sites-enabled/ filesystem.
 RUN printf 'client_body_temp_path /tmp/nginx/client_body;\n\
 proxy_temp_path      /tmp/nginx/proxy;\n\
 fastcgi_temp_path    /tmp/nginx/fastcgi;\n\
@@ -72,10 +75,12 @@ uwsgi_temp_path      /tmp/nginx/uwsgi;\n' \
     && sed -i \
         -e 's|error_log /var/log/nginx/error.log.*|error_log /dev/stderr warn;|' \
         -e 's|access_log /var/log/nginx/access.log.*|access_log /dev/stdout;|' \
+        -e 's|include /etc/nginx/sites-enabled/\*;|include /tmp/nginx/sites-enabled/*;|' \
         /etc/nginx/nginx.conf
 
-# ── Remove default nginx site ─────────────────────────────────────────────────
-RUN rm -f /etc/nginx/sites-enabled/default.bak
+# ── Remove any default nginx sites (config is rendered at runtime into /tmp) ──
+RUN rm -f /etc/nginx/sites-enabled/default \
+          /etc/nginx/sites-enabled/default.bak
 
 # Cloudron listens on 8000; PocketBase and node.js are internal only
 EXPOSE 8000

@@ -1,9 +1,10 @@
 name: Build & Push Cloudron Image
 
 on:
+  workflow_dispatch: {}
   push:
     branches:
-      - claude/cloudron-packaging-F81iV
+      - main
     tags:
       - 'v*'
 
