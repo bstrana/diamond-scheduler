@@ -11,7 +11,7 @@
         "website": "https://github.com/bstrana/diamond-scheduler",
         "contactEmail": "support@example.com",
         "forumUrl": "https://github.com/bstrana/diamond-scheduler/issues",
-        "documentationUrl": "https://github.com/bstrana/diamond-scheduler/blob/master/POSTINSTALL.md",
+        "documentationUrl": "https://github.com/bstrana/diamond-scheduler",
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.0",
@@ -22,19 +22,17 @@
         "memoryLimit": 1073741824,
         "maxBoxSize": "medium",
         "minBoxVersion": "9.1.0",
-        "icon": "public/logo.png",
-        "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/master/public/logo.png",
+        "icon": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
         "tags": ["sports", "scheduling", "calendar", "league"],
         "mediaLinks": [
-          "https://raw.githubusercontent.com/bstrana/diamond-scheduler/master/public/logo.png"
+          "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
         "changelog": "Initial Cloudron community release with embedded PocketBase and multi-tenant support.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart. See the documentation link above for full Keycloak setup instructions.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
       },
-      "creationDate": "2026-03-22T00:00:00.000Z",
-      "publishState": "published"
+      "creationDate": "2026-03-22T00:00:00.000Z"
     }
   }
 }
