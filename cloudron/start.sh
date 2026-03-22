@@ -14,7 +14,7 @@ mkdir -p "${PB_DATA_DIR}"
 # ── Runtime env vars that depend on APP_DOMAIN ────────────────────────────────
 # VITE_ variables are baked in at build time, so we build here after
 # Cloudron has injected all env vars.
-export VITE_PB_URL="https://${APP_DOMAIN}/_pb"
+export VITE_PB_URL="https://${APP_DOMAIN:-localhost}/_pb"
 export VITE_PB_COLLECTION="${VITE_PB_COLLECTION:-app_state}"
 
 # Pass KC_URL through for the server-side ICS token introspection
