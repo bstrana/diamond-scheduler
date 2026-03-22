@@ -1,27 +1,54 @@
-FROM node:20-alpine AS builder
+# Diamond Scheduler — Cloudron package
+# https://docs.cloudron.io/packaging/
+#
+# The SPA is intentionally built at container startup (cloudron/start.sh) so
+# that Vite can bake Cloudron-provided runtime env vars (APP_DOMAIN, Keycloak
+# URLs, etc.) into the bundle.  All source files are therefore shipped inside
+# the image and npm run build executes on first start.
+
+FROM cloudron/base:4.2.0
 
 WORKDIR /app
 
-RUN apk add --no-cache bash
+# ── System dependencies ────────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        nginx \
+        supervisor \
+        curl \
+        unzip \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-SHELL ["/bin/bash", "-lc"]
+# ── Node.js 20 ────────────────────────────────────────────────────────────────
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
 
+# ── PocketBase ─────────────────────────────────────────────────────────────────
+ARG PB_VERSION=0.26.3
+RUN mkdir -p /app/pocketbase \
+    && curl -fsSL \
+       "https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip" \
+       -o /tmp/pb.zip \
+    && unzip -q /tmp/pb.zip -d /app/pocketbase \
+    && rm /tmp/pb.zip \
+    && chmod +x /app/pocketbase/pocketbase
+
+# ── Application source ────────────────────────────────────────────────────────
 COPY package*.json ./
 RUN npm install
-
 COPY . .
-RUN npm run build
 
-FROM node:20-alpine
+# ── Cloudron config files ─────────────────────────────────────────────────────
+COPY cloudron/nginx.conf      /etc/nginx/sites-enabled/default
+COPY cloudron/supervisord.conf /etc/supervisor/conf.d/diamond.conf
+COPY cloudron/start.sh        /app/start.sh
+RUN chmod +x /app/start.sh
 
-WORKDIR /app
+# ── Remove default nginx site ─────────────────────────────────────────────────
+RUN rm -f /etc/nginx/sites-enabled/default.bak
 
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/server.js ./
+# Cloudron listens on 8000; PocketBase and node.js are internal only
+EXPOSE 8000
 
-RUN npm install --omit=dev
-
-EXPOSE 3000
-
-CMD ["node", "server.js"]
+CMD ["/app/start.sh"]
