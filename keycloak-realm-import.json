@@ -1,0 +1,353 @@
+{
+  "id": "diamond",
+  "realm": "diamond",
+  "displayName": "Diamond Scheduler",
+  "displayNameHtml": "<strong>Diamond Scheduler</strong>",
+  "enabled": true,
+  "sslRequired": "all",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 5,
+
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 28800,
+  "offlineSessionIdleTimeout": 2592000,
+  "offlineSessionMaxLifespanEnabled": false,
+  "accessCodeLifespan": 60,
+  "accessCodeLifespanUserAction": 300,
+  "accessCodeLifespanLogin": 1800,
+  "actionTokenGeneratedByAdminLifespan": 43200,
+  "actionTokenGeneratedByUserLifespan": 300,
+
+  "defaultSignatureAlgorithm": "RS256",
+  "revokeRefreshToken": false,
+  "refreshTokenMaxReuse": 0,
+
+  "internationalizationEnabled": false,
+  "supportedLocales": [],
+
+  "roles": {
+    "realm": [
+      {
+        "name": "scheduler_admin",
+        "description": "Full access: publish/delete schedules, manage score links, all settings",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "diamond",
+        "attributes": {}
+      },
+      {
+        "name": "scheduler_editor",
+        "description": "Edit games and enter scores via the main application",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "diamond",
+        "attributes": {}
+      },
+      {
+        "name": "scheduler_viewer",
+        "description": "Read-only access to the calendar; no edits permitted",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "diamond",
+        "attributes": {}
+      }
+    ],
+    "client": {}
+  },
+
+  "groups": [
+    {
+      "name": "admins",
+      "path": "/admins",
+      "realmRoles": ["scheduler_admin"],
+      "clientRoles": {},
+      "subGroups": []
+    },
+    {
+      "name": "editors",
+      "path": "/editors",
+      "realmRoles": ["scheduler_editor"],
+      "clientRoles": {},
+      "subGroups": []
+    },
+    {
+      "name": "viewers",
+      "path": "/viewers",
+      "realmRoles": ["scheduler_viewer"],
+      "clientRoles": {},
+      "subGroups": []
+    }
+  ],
+
+  "defaultGroups": ["/viewers"],
+
+  "clientScopes": [
+    {
+      "name": "scheduler",
+      "description": "Diamond Scheduler custom claims",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Access your Diamond Scheduler profile"
+      },
+      "protocolMappers": [
+        {
+          "name": "org_id mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "org_id",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "org_id",
+            "jsonType.label": "String",
+            "multivalued": "false",
+            "aggregate.attrs": "false"
+          }
+        }
+      ]
+    },
+    {
+      "name": "roles",
+      "description": "OpenID Connect scope for add user roles to the access token",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "${rolesScopeConsentText}"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "foo",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "multivalued": "true"
+          }
+        }
+      ]
+    }
+  ],
+
+  "defaultDefaultClientScopes": [
+    "roles",
+    "profile",
+    "email",
+    "scheduler"
+  ],
+  "defaultOptionalClientScopes": [
+    "offline_access",
+    "address",
+    "phone",
+    "microprofile-jwt"
+  ],
+
+  "clients": [
+    {
+      "clientId": "diamond-scheduler",
+      "name": "Diamond Scheduler",
+      "description": "Main scheduling application — public SPA with PKCE",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "",
+      "publicClient": true,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "authorizationServicesEnabled": false,
+      "redirectUris": [
+        "https://your-app.example.com/*",
+        "http://localhost:3000/*",
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "https://your-app.example.com",
+        "http://localhost:3000",
+        "http://localhost:5173"
+      ],
+      "notBefore": 0,
+      "protocol": "openid-connect",
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "https://your-app.example.com/logged-out.html##http://localhost:3000/logged-out.html##http://localhost:5173/logged-out.html",
+        "backchannel.logout.session.required": "true",
+        "backchannel.logout.revoke.offline.tokens": "false",
+        "access.token.lifespan": "300",
+        "client.session.idle.timeout": "0",
+        "client.session.max.lifespan": "0"
+      },
+      "fullScopeAllowed": false,
+      "defaultClientScopes": [
+        "roles",
+        "profile",
+        "email",
+        "scheduler"
+      ],
+      "optionalClientScopes": [
+        "offline_access"
+      ],
+      "protocolMappers": [
+        {
+          "name": "audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "included.client.audience": "diamond-scheduler",
+            "included.custom.audience": ""
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "diamond-scheduler-server",
+      "name": "Diamond Scheduler — Server (confidential)",
+      "description": "Confidential client used by server.js for token introspection (ICS Bearer auth)",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "authorizationServicesEnabled": false,
+      "redirectUris": [],
+      "webOrigins": [],
+      "notBefore": 0,
+      "protocol": "openid-connect",
+      "attributes": {
+        "backchannel.logout.session.required": "true"
+      },
+      "fullScopeAllowed": false,
+      "defaultClientScopes": ["roles", "profile", "email"],
+      "optionalClientScopes": []
+    }
+  ],
+
+  "browserSecurityHeaders": {
+    "contentSecurityPolicyReportOnly": "",
+    "xContentTypeOptions": "nosniff",
+    "xRobotsTag": "none",
+    "xFrameOptions": "SAMEORIGIN",
+    "contentSecurityPolicy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
+    "xXSSProtection": "0",
+    "strictTransportSecurity": "max-age=31536000; includeSubDomains"
+  },
+
+  "smtpServer": {},
+
+  "loginTheme": "",
+  "accountTheme": "",
+  "adminTheme": "",
+  "emailTheme": "",
+
+  "eventsEnabled": true,
+  "eventsListeners": ["jboss-logging"],
+  "enabledEventTypes": [
+    "LOGIN",
+    "LOGIN_ERROR",
+    "LOGOUT",
+    "LOGOUT_ERROR",
+    "REGISTER",
+    "REGISTER_ERROR",
+    "TOKEN_EXCHANGE",
+    "CODE_TO_TOKEN",
+    "CODE_TO_TOKEN_ERROR",
+    "UPDATE_PASSWORD",
+    "UPDATE_PASSWORD_ERROR"
+  ],
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
+
+  "identityProviders": [],
+  "identityProviderMappers": [],
+
+  "userFederationProviders": [],
+  "userFederationMappers": [],
+
+  "authenticationFlows": [],
+  "authenticatorConfig": [],
+  "requiredActions": [
+    {
+      "alias": "CONFIGURE_TOTP",
+      "name": "Configure OTP",
+      "providerId": "CONFIGURE_TOTP",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 10,
+      "config": {}
+    },
+    {
+      "alias": "UPDATE_PASSWORD",
+      "name": "Update Password",
+      "providerId": "UPDATE_PASSWORD",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 30,
+      "config": {}
+    },
+    {
+      "alias": "VERIFY_EMAIL",
+      "name": "Verify Email",
+      "providerId": "VERIFY_EMAIL",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 50,
+      "config": {}
+    },
+    {
+      "alias": "terms_and_conditions",
+      "name": "Terms and Conditions",
+      "providerId": "terms_and_conditions",
+      "enabled": false,
+      "defaultAction": false,
+      "priority": 20,
+      "config": {}
+    }
+  ],
+
+  "users": [
+    {
+      "username": "admin-example",
+      "enabled": false,
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "Example",
+      "email": "admin@your-org.example.com",
+      "credentials": [],
+      "realmRoles": ["scheduler_admin"],
+      "groups": ["/admins"],
+      "attributes": {
+        "org_id": ["your-org-id"]
+      },
+      "requiredActions": ["UPDATE_PASSWORD"],
+      "notBefore": 0
+    }
+  ]
+}
