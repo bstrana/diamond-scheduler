@@ -1,6 +1,5 @@
-[
-  {
-    "version": "1.0.0",
+{
+  "version": "1.0.0",
     "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.0",
     "manifest": {
       "id": "io.github.bstrana.diamond-scheduler",
@@ -47,5 +46,4 @@
 
       "mediaLinks": []
     }
-  }
-]
+}
