@@ -27,7 +27,17 @@ rm -rf "${DIST_DIR}"
 cp -r /app/dist "${DIST_DIR}"
 find "${DIST_DIR}" -type f -name "*.js" \
     -exec sed -i \
-        "s|__VITE_PB_URL__|${VITE_PB_URL}|g; s|__VITE_PB_COLLECTION__|${VITE_PB_COLLECTION}|g" \
+        -e "s|__VITE_PB_URL__|${VITE_PB_URL}|g" \
+        -e "s|__VITE_PB_COLLECTION__|${VITE_PB_COLLECTION}|g" \
+        -e "s|__VITE_KEYCLOAK_URL__|${VITE_KEYCLOAK_URL:-}|g" \
+        -e "s|__VITE_KEYCLOAK_REALM__|${VITE_KEYCLOAK_REALM:-}|g" \
+        -e "s|__VITE_KEYCLOAK_CLIENT_ID__|${VITE_KEYCLOAK_CLIENT_ID:-}|g" \
+        -e "s|__VITE_APP_ID__|${VITE_APP_ID:-}|g" \
+        -e "s|__VITE_PB_SCHEDULE_COLLECTION__|${VITE_PB_SCHEDULE_COLLECTION:-}|g" \
+        -e "s|__VITE_PB_SCHEDULE_PUBLISH__|${VITE_PB_SCHEDULE_PUBLISH:-}|g" \
+        -e "s|__VITE_PB_SCORE_LINKS_COLLECTION__|${VITE_PB_SCORE_LINKS_COLLECTION:-}|g" \
+        -e "s|__VITE_PB_SCORE_EDITS_COLLECTION__|${VITE_PB_SCORE_EDITS_COLLECTION:-}|g" \
+        -e "s|__VITE_PB_TENANTS_COLLECTION__|${VITE_PB_TENANTS_COLLECTION:-}|g" \
         {} \;
 
 # ── Health endpoint ────────────────────────────────────────────────────────────

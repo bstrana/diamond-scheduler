@@ -38,9 +38,18 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 # Build the SPA at image build time with placeholder values that start.sh
-# will sed-replace with the real APP_DOMAIN at container startup.
+# will sed-replace with Cloudron-injected env vars at container startup.
 RUN VITE_PB_URL="__VITE_PB_URL__" \
     VITE_PB_COLLECTION="__VITE_PB_COLLECTION__" \
+    VITE_KEYCLOAK_URL="__VITE_KEYCLOAK_URL__" \
+    VITE_KEYCLOAK_REALM="__VITE_KEYCLOAK_REALM__" \
+    VITE_KEYCLOAK_CLIENT_ID="__VITE_KEYCLOAK_CLIENT_ID__" \
+    VITE_APP_ID="__VITE_APP_ID__" \
+    VITE_PB_SCHEDULE_COLLECTION="__VITE_PB_SCHEDULE_COLLECTION__" \
+    VITE_PB_SCHEDULE_PUBLISH="__VITE_PB_SCHEDULE_PUBLISH__" \
+    VITE_PB_SCORE_LINKS_COLLECTION="__VITE_PB_SCORE_LINKS_COLLECTION__" \
+    VITE_PB_SCORE_EDITS_COLLECTION="__VITE_PB_SCORE_EDITS_COLLECTION__" \
+    VITE_PB_TENANTS_COLLECTION="__VITE_PB_TENANTS_COLLECTION__" \
     npm run build
 
 # ── Cloudron config files ─────────────────────────────────────────────────────
