@@ -1,5 +1,4 @@
 {
-  "stable": true,
   "versions": {
     "1.0.0": {
       "manifest": {
@@ -11,6 +10,8 @@
         "version": "1.0.0",
         "website": "https://github.com/bstrana/diamond-scheduler",
         "contactEmail": "support@example.com",
+        "forumUrl": "https://github.com/bstrana/diamond-scheduler/issues",
+        "documentationUrl": "https://github.com/bstrana/diamond-scheduler",
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.0",
@@ -18,21 +19,19 @@
           "localstorage": {}
         },
         "manifestVersion": 2,
+        "memoryLimit": 1073741824,
         "minBoxVersion": "9.1.0",
-        "icon": "file://appicon.png",
-        "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/master/public/logo.png",
+        "icon": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
         "tags": ["sports", "scheduling", "calendar", "league"],
         "mediaLinks": [
-          "https://raw.githubusercontent.com/bstrana/diamond-scheduler/master/public/logo.png"
+          "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Initial Cloudron community release.",
-        "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
+        "changelog": "Initial Cloudron community release with embedded PocketBase and multi-tenant support.",
+        "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart. See the documentation link above for full Keycloak setup instructions.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
       },
-      "creationDate": "Sun, 22 Mar 2026 00:00:00 GMT",
-      "ts": "Sun, 22 Mar 2026 00:00:00 GMT",
-      "publishState": "published"
+      "creationDate": "2026-03-22T00:00:00.000Z"
     }
   }
 }
