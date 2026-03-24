@@ -53,8 +53,10 @@ set -o allexport
 source "${CONFIG_FILE}"
 set +o allexport
 
-# ── Runtime env vars that depend on APP_DOMAIN ────────────────────────────────
-VITE_PB_URL="https://${APP_DOMAIN:-localhost}/_pb"
+# ── Runtime env vars ──────────────────────────────────────────────────────────
+# PB_URL is the absolute internal URL used by server.js (Node.js ICS endpoint).
+# The browser SPA uses the relative URL /_pb baked in at Docker build time.
+export PB_URL="http://127.0.0.1:8090"
 VITE_PB_COLLECTION="${VITE_PB_COLLECTION:-app_state}"
 
 # Default values for all other collection/feature vars.
@@ -92,7 +94,6 @@ rm -rf "${DIST_DIR}"
 cp -r /app/dist "${DIST_DIR}"
 find "${DIST_DIR}" -type f -name "*.js" \
     -exec sed -i \
-        -e "s|__VITE_PB_URL__|${VITE_PB_URL}|g" \
         -e "s|__VITE_PB_COLLECTION__|${VITE_PB_COLLECTION}|g" \
         -e "s|__VITE_KEYCLOAK_URL__|${VITE_KEYCLOAK_URL:-}|g" \
         -e "s|__VITE_KEYCLOAK_REALM__|${VITE_KEYCLOAK_REALM:-}|g" \
