@@ -7,6 +7,10 @@
   "version": "1.0.0",
   "manifestVersion": 2,
 
+  "image": {
+    "url": "ghcr.io/bstrana/diamond-scheduler"
+  },
+
   "httpPort": 8000,
   "healthCheckPath": "/health",
   "maxBoxSize": "medium",
