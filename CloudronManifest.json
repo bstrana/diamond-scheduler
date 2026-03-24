@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "manifestVersion": 2,
 
   "image": {
@@ -40,6 +40,8 @@
     "KC_CLIENT_SECRET": ""
   },
 
+  "updateUrl":     "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/CloudronVersions.json",
+
   "website":       "https://github.com/bstrana/diamond-scheduler",
   "contactEmail":  "support@example.com",
   "packagerName":  "bstrana",
@@ -51,6 +53,7 @@
   "mediaLinks": [],
 
   "changelog": {
-    "1.0.0": "Initial Cloudron community release with embedded PocketBase and multi-tenant support."
+    "1.0.0": "Initial Cloudron community release with embedded PocketBase and multi-tenant support.",
+    "1.0.1": "Fix: add image URL and updateUrl to manifest so Cloudron update checks resolve correctly."
   }
 }
