@@ -89,7 +89,7 @@ sed "s|__KC_ORIGIN__|${KC_ORIGIN}|g" /app/nginx.conf.template \
 # /app is read-only in Cloudron; copy the image-built dist to writable storage
 # and substitute the placeholders baked in during the Docker build.
 DIST_DIR="/app/data/dist"
-echo "==> Stamping SPA (VITE_PB_URL=${VITE_PB_URL})"
+echo "==> Stamping SPA (PB_URL=${PB_URL})"
 rm -rf "${DIST_DIR}"
 cp -r /app/dist "${DIST_DIR}"
 find "${DIST_DIR}" -type f -name "*.js" \
@@ -125,7 +125,7 @@ echo "==> Running PocketBase migrations"
     --migrationsDir=/app/pb_migrations \
     2>&1 || {
     echo "WARNING: PocketBase migrations failed – see errors above."
-    echo "         Collections may be missing. Open ${VITE_PB_URL}/_/ to inspect."
+    echo "         Collections may be missing. Open ${PB_URL}/_/ to inspect."
 }
 
 # ── Launch via supervisord ────────────────────────────────────────────────────
