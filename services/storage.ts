@@ -252,14 +252,16 @@ const saveScheduleToPocketBase = async (
       .collection(scheduleCollection)
       .getFirstListItem(`app_id="${appId}" && schedule_key="${finalKey}"`);
 
-    // Verify the record belongs to the calling user's org before updating
+    // Verify the record belongs to the calling user's org before updating.
+    // Records with empty org_id/user_id are legacy (published before auth was
+    // configured) and are treated as belonging to the app, not blocked.
     const safeOrgIdCheck = sanitizeFilterValue(context?.orgId);
-    if (safeOrgIdCheck && record.org_id !== safeOrgIdCheck) {
+    if (safeOrgIdCheck && record.org_id !== '' && record.org_id !== safeOrgIdCheck) {
       return { ok: false, reason: 'Schedule not found or access denied.' };
     }
     if (!safeOrgIdCheck && context?.userId) {
       const safeUserIdCheck = sanitizeFilterValue(context.userId);
-      if (safeUserIdCheck && record.user_id !== safeUserIdCheck) {
+      if (safeUserIdCheck && record.user_id !== '' && record.user_id !== safeUserIdCheck) {
         return { ok: false, reason: 'Schedule not found or access denied.' };
       }
     }
@@ -315,15 +317,17 @@ export const listPublishedSchedules = async (
     baseFilters.push('active=true');
   }
   const scopedFilters = [...baseFilters];
-  // For logged-in users, enforce org_id filtering - no fallback to all schedules
+  // For logged-in users, scope by org_id or user_id.
+  // Also include legacy records that were published before auth was configured
+  // (those have empty org_id/user_id and belong to the same app_id).
   const safeOrgId = sanitizeFilterValue(context?.orgId);
   if (safeOrgId) {
-    scopedFilters.push(`org_id="${safeOrgId}"`);
+    scopedFilters.push(`(org_id="${safeOrgId}" || org_id="")`);
   } else if (context?.userId) {
     // If user has userId but no orgId, filter by userId only
     const safeUserId = sanitizeFilterValue(context.userId);
     if (safeUserId) {
-      scopedFilters.push(`user_id="${safeUserId}"`);
+      scopedFilters.push(`(user_id="${safeUserId}" || user_id="")`);
     }
   }
   const scopedFilter = scopedFilters.join(' && ');
@@ -354,16 +358,17 @@ export const deletePublishedSchedule = async (
     return { ok: false, reason: 'PocketBase is not configured.' };
   }
   try {
-    // First verify the schedule belongs to the user's org
+    // First verify the schedule belongs to the user's org.
+    // Legacy records with empty org_id/user_id are accessible to any app user.
     const record = await pocketbaseClient.collection(scheduleCollection).getOne(recordId);
     const safeOrgId = sanitizeFilterValue(context?.orgId);
-    if (safeOrgId && record.org_id !== safeOrgId) {
+    if (safeOrgId && record.org_id !== '' && record.org_id !== safeOrgId) {
       return { ok: false, reason: 'Schedule not found or access denied.' };
     }
     // If user has userId but no orgId, verify by userId
     if (!safeOrgId && context?.userId) {
       const safeUserId = sanitizeFilterValue(context.userId);
-      if (safeUserId && record.user_id !== safeUserId) {
+      if (safeUserId && record.user_id !== '' && record.user_id !== safeUserId) {
         return { ok: false, reason: 'Schedule not found or access denied.' };
       }
     }
@@ -387,16 +392,17 @@ export const updatePublishedScheduleActive = async (
     return { ok: false, reason: 'PocketBase is not configured.' };
   }
   try {
-    // First verify the schedule belongs to the user's org
+    // First verify the schedule belongs to the user's org.
+    // Legacy records with empty org_id/user_id are accessible to any app user.
     const record = await pocketbaseClient.collection(scheduleCollection).getOne(recordId);
     const safeOrgId = sanitizeFilterValue(context?.orgId);
-    if (safeOrgId && record.org_id !== safeOrgId) {
+    if (safeOrgId && record.org_id !== '' && record.org_id !== safeOrgId) {
       return { ok: false, reason: 'Schedule not found or access denied.' };
     }
     // If user has userId but no orgId, verify by userId
     if (!safeOrgId && context?.userId) {
       const safeUserId = sanitizeFilterValue(context.userId);
-      if (safeUserId && record.user_id !== safeUserId) {
+      if (safeUserId && record.user_id !== '' && record.user_id !== safeUserId) {
         return { ok: false, reason: 'Schedule not found or access denied.' };
       }
     }
