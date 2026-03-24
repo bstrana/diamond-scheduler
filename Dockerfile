@@ -56,6 +56,7 @@ RUN VITE_PB_URL="__VITE_PB_URL__" \
 COPY cloudron/nginx.conf      /app/nginx.conf.template
 COPY cloudron/supervisord.conf /etc/supervisor/conf.d/diamond.conf
 COPY cloudron/start.sh        /app/start.sh
+COPY pb_migrations/           /app/pb_migrations/
 RUN chmod +x /app/start.sh
 
 # ── Nginx temp dirs & log paths ────────────────────────────────────────────────
