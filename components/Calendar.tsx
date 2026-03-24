@@ -477,8 +477,10 @@ const Calendar: React.FC<CalendarProps> = ({
                                     const rightTeam = isSelectedTeamAway ? opponent     : selectedTeam;
                                     return (
                                         <div className="flex items-center space-x-1.5 w-full justify-center flex-1 min-w-0">
+                                            {leftTeam?.logoUrl && <img src={leftTeam.logoUrl} alt="" className="w-4 h-4 object-contain flex-shrink-0" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
                                             <span className="font-bold text-xs" style={{color: leftTeam?.primaryColor}}>{leftTeam?.abbreviation ?? '?'}</span>
                                             <span className="text-base text-slate-400 font-bold">{isSelectedTeamAway ? '@' : 'vs'}</span>
+                                            {rightTeam?.logoUrl && <img src={rightTeam.logoUrl} alt="" className="w-4 h-4 object-contain flex-shrink-0" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
                                             <span className="font-bold text-xs" style={{color: rightTeam?.primaryColor}}>{rightTeam?.abbreviation ?? '?'}</span>
                                         </div>
                                     );
@@ -486,11 +488,13 @@ const Calendar: React.FC<CalendarProps> = ({
                                     <div className="flex items-center space-x-1.5 flex-1 min-w-0 justify-center">
                                         {/* Away Team */}
                                         <div className="flex items-center space-x-1" title={`${away.city} ${away.name}`}>
+                                            {away.logoUrl && <img src={away.logoUrl} alt="" className="w-4 h-4 object-contain flex-shrink-0" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
                                             <span className="font-bold text-xs" style={{color: away.primaryColor}}>{away.abbreviation}</span>
                                         </div>
                                         <span className="text-base text-slate-400 font-bold">@</span>
                                         {/* Home Team */}
                                         <div className="flex items-center space-x-1" title={`${home.city} ${home.name}`}>
+                                            {home.logoUrl && <img src={home.logoUrl} alt="" className="w-4 h-4 object-contain flex-shrink-0" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
                                             <span className="font-bold text-xs" style={{color: home.primaryColor}}>{home.abbreviation}</span>
                                         </div>
                                     </div>
