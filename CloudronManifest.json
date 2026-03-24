@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "manifestVersion": 2,
 
   "image": {
@@ -54,6 +54,7 @@
 
   "changelog": {
     "1.0.0": "Initial Cloudron community release with embedded PocketBase and multi-tenant support.",
-    "1.0.1": "Fix: add image URL and updateUrl to manifest so Cloudron update checks resolve correctly."
+    "1.0.1": "Fix: add image URL and updateUrl to manifest so Cloudron update checks resolve correctly.",
+    "1.0.2": "Fix: team logos now render (CSP allows https: images); schedule publishing now works (env var defaults guaranteed in start.sh)."
   }
 }
