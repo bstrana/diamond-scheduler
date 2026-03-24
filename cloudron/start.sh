@@ -57,6 +57,16 @@ set +o allexport
 VITE_PB_URL="https://${APP_DOMAIN:-localhost}/_pb"
 VITE_PB_COLLECTION="${VITE_PB_COLLECTION:-app_state}"
 
+# Default values for all other collection/feature vars.
+# Cloudron injects these from the manifest, but guard against cases where
+# they are absent (e.g. first boot on an older Cloudron version, or a
+# variable not yet configured in the app settings UI).
+VITE_PB_SCHEDULE_PUBLISH="${VITE_PB_SCHEDULE_PUBLISH:-true}"
+VITE_PB_SCHEDULE_COLLECTION="${VITE_PB_SCHEDULE_COLLECTION:-published_schedules}"
+VITE_PB_SCORE_LINKS_COLLECTION="${VITE_PB_SCORE_LINKS_COLLECTION:-score_links}"
+VITE_PB_SCORE_EDITS_COLLECTION="${VITE_PB_SCORE_EDITS_COLLECTION:-score_edits}"
+VITE_PB_TENANTS_COLLECTION="${VITE_PB_TENANTS_COLLECTION:-tenants}"
+
 # Pass KC_URL through for the server-side ICS token introspection
 export KC_URL="${VITE_KEYCLOAK_URL:-}"
 
