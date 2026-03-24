@@ -176,18 +176,31 @@ type PublishResult = { ok: boolean; reason?: string };
 
 const formatPocketbaseError = (error: unknown) => {
   if (!error) return 'Unknown PocketBase error.';
-  const err = error as { status?: number; message?: string; data?: any };
-  if (err.data?.message) {
-    return `PocketBase ${err.status || ''} ${err.data.message}`.trim();
-  }
-  if (err.message) {
-    return `PocketBase ${err.status || ''} ${err.message}`.trim();
-  }
-  try {
-    return `PocketBase error: ${JSON.stringify(err)}`;
-  } catch {
-    return 'PocketBase error (unserializable).';
-  }
+  // PocketBase JS SDK v0.21+ stores the response body in `response`,
+  // field-level validation errors in `data` (= response.data), and
+  // the human-readable message in `message` (getter → response.message).
+  const err = error as {
+    status?: number;
+    message?: string;
+    data?: Record<string, any>;
+    response?: Record<string, any>;
+  };
+  const status = typeof err.status === 'number' ? err.status : 0;
+  // Prefer the server-level message; fall back to SDK network-error message.
+  const msg =
+    err.response?.message ||
+    err.data?.message ||
+    err.message ||
+    '';
+  // Collect field-level validation errors (e.g. { title: { code, message } }).
+  const fieldErrors =
+    err.data && typeof err.data === 'object' && !err.data.message
+      ? Object.entries(err.data)
+          .map(([k, v]) => `${k}: ${(v as any)?.message ?? JSON.stringify(v)}`)
+          .join(', ')
+      : '';
+  const detail = [msg, fieldErrors].filter(Boolean).join(' — ');
+  return `PocketBase ${status} ${detail || '(no detail)'}`.trim();
 };
 
 const saveScheduleToPocketBase = async (

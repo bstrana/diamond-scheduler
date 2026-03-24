@@ -113,6 +113,20 @@ echo "OK" > "${DIST_DIR}/health"
 mkdir -p /tmp/nginx/client_body /tmp/nginx/proxy /tmp/nginx/fastcgi \
          /tmp/nginx/scgi /tmp/nginx/uwsgi
 
+# ── PocketBase migrations (explicit pre-flight run) ───────────────────────────
+# Running `migrate up` here (before supervisord) gives us clear log output if
+# something is wrong with the migration files, and guarantees collections exist
+# before the first HTTP request arrives. The serve command also has
+# --migrationsDir set, but already-applied migrations are skipped.
+echo "==> Running PocketBase migrations"
+/app/pocketbase/pocketbase migrate up \
+    --dir="${PB_DATA_DIR}" \
+    --migrationsDir=/app/pb_migrations \
+    2>&1 || {
+    echo "WARNING: PocketBase migrations failed – see errors above."
+    echo "         Collections may be missing. Open ${VITE_PB_URL}/_/ to inspect."
+}
+
 # ── Launch via supervisord ────────────────────────────────────────────────────
 echo "==> Starting supervisord"
 exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/diamond.conf
