@@ -103,11 +103,15 @@ const App: React.FC = () => {
     const token = keycloak.tokenParsed as any;
     // Flat claim: User Attribute mapper → org_id: "uuid"
     if (token?.org_id) return token.org_id as string;
-    // Nested claim: Organization Membership mapper → organization: { alias: { id: "uuid" } }
+    // Nested claim: Organization Membership mapper → organization: { alias: { id?: "uuid" } }
+    // Keycloak 24+ emits the org alias as the key; the value may or may not contain an id field.
     const orgs = token?.organization;
-    if (orgs && typeof orgs === 'object') {
+    if (orgs && typeof orgs === 'object' && !Array.isArray(orgs)) {
+      const alias = Object.keys(orgs)[0];
       const first = Object.values(orgs)[0] as any;
+      // Prefer explicit id, fall back to alias as the stable org identifier.
       if (first?.id) return first.id as string;
+      if (alias) return alias;
     }
     return undefined;
   })();
@@ -953,7 +957,7 @@ const App: React.FC = () => {
           <p className="text-xs text-slate-400">Org: {tenant.orgId}</p>
           <button
             className="mt-2 text-sm text-indigo-600 underline hover:text-indigo-800"
-            onClick={() => keycloak.logout({ redirectUri: `${window.location.origin}/logged-out.html` })}
+            onClick={() => keycloak.logout({ redirectUri: window.location.origin + '/' })}
           >
             Sign out
           </button>
