@@ -96,9 +96,21 @@ const App: React.FC = () => {
     'Signed in';
   const userEmail  = keycloak.tokenParsed?.email as string | undefined;
   const userDomain = window.location.hostname;
-  // Canonical claim — configure the 'org_id' mapper in Keycloak (see KEYCLOAK_INTEGRATION.md §2.4)
+  // Canonical claim — supports both a flat 'org_id' string claim (User Attribute mapper)
+  // and the nested 'organization' claim produced by the Keycloak Organization Membership mapper.
   const userId = (keycloak.tokenParsed as any)?.sub as string | undefined;
-  const orgId  = (keycloak.tokenParsed as any)?.org_id as string | undefined;
+  const orgId: string | undefined = (() => {
+    const token = keycloak.tokenParsed as any;
+    // Flat claim: User Attribute mapper → org_id: "uuid"
+    if (token?.org_id) return token.org_id as string;
+    // Nested claim: Organization Membership mapper → organization: { alias: { id: "uuid" } }
+    const orgs = token?.organization;
+    if (orgs && typeof orgs === 'object') {
+      const first = Object.values(orgs)[0] as any;
+      if (first?.id) return first.id as string;
+    }
+    return undefined;
+  })();
   // Derive a display role from the roles set
   const userRole = ['system_admin', 'tenant_admin', 'scheduler_admin', 'scheduler_editor', 'scheduler_viewer']
     .find(r => realmRolesSet.has(r)) ?? 'viewer';
