@@ -225,10 +225,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
             <select
               value={scheduleKey}
               onChange={(e) => setScheduleKey(e.target.value)}
-              disabled={!isPublishedScheduleLoaded}
-              className={`w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
-                !isPublishedScheduleLoaded ? 'bg-slate-100 cursor-not-allowed' : ''
-              }`}
+              className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             >
               <option value="">
                 {isLoadingSchedules ? t('embed.loadingSchedules') : t('embed.selectPublishedSchedule')}
@@ -242,9 +239,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                 ))}
             </select>
             <p className="text-xs text-slate-500 mt-1">
-              {isPublishedScheduleLoaded
-                ? t('embed.selectActiveSchedule')
-                : t('embed.loadScheduleFirst')}
+              {t('embed.selectActiveSchedule')}
             </p>
           </div>
 
