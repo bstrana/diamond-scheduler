@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "manifestVersion": 2,
 
   "image": {
@@ -60,6 +60,7 @@
     "1.0.4": "Fix: bake relative PocketBase URL (/_pb) into SPA at build time; eliminate runtime sed substitution that caused fetch() to throw status 0 when APP_DOMAIN was unset.",
     "1.0.5": "Maintenance: bump package version to 1.0.5.",
     "1.0.6": "Fix: embed schedule source dropdown no longer requires a schedule to be loaded first; any published schedule can now be selected directly.",
-    "1.0.7": "Fix: Load Published Schedule modal now fetches the schedule list on open instead of relying on the user menu load."
+    "1.0.7": "Fix: Load Published Schedule modal now fetches the schedule list on open instead of relying on the user menu load.",
+    "1.0.8": "Fix: forward Keycloak JWT to PocketBase on every storage call (enables @request.auth.* collection rules); support Keycloak Organization Membership mapper for org_id claim; guard localStorage clear to only run when PocketBase schedule publishing is configured; fix loadPublishedScheduleById blocking legacy records with empty org_id."
   }
 }

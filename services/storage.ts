@@ -69,6 +69,35 @@ const createPocketBaseClient = () => {
 
 const pocketbaseClient = createPocketBaseClient();
 
+// ─── Keycloak token forwarding ────────────────────────────────────────────────
+
+/**
+ * Save the Keycloak access token into the PocketBase auth store so that every
+ * subsequent API call carries it in the Authorization header. PocketBase then
+ * validates the token against the configured OIDC provider and populates
+ * @request.auth.* in collection rules.
+ */
+export const authenticatePocketBase = (token: string) => {
+  if (!pocketbaseClient || !token) return;
+  pocketbaseClient.authStore.save(token, null);
+};
+
+let keycloakRefreshFn: (() => Promise<void>) | null = null;
+
+/**
+ * Register a callback that refreshes the Keycloak token when it is close to
+ * expiry. Call this once from App.tsx after Keycloak initialises. The refresh
+ * fn should call keycloak.updateToken() and then authenticatePocketBase().
+ */
+export const registerKeycloakRefresh = (fn: () => Promise<void>) => {
+  keycloakRefreshFn = fn;
+};
+
+const withFreshToken = async <T>(fn: () => Promise<T>): Promise<T> => {
+  await keycloakRefreshFn?.();
+  return fn();
+};
+
 const sanitizeFilterValue = (value: string | undefined): string | null => {
   if (!value || typeof value !== 'string') return null;
   return value.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 200);
@@ -76,73 +105,75 @@ const sanitizeFilterValue = (value: string | undefined): string | null => {
 
 const loadFromPocketBase = async (context?: StorageContext): Promise<StorageData | null> => {
   if (!pocketbaseClient) return null;
-  try {
-    const baseFilter = `app_id="${appId}"`;
-    const safeOrgId = sanitizeFilterValue(context?.orgId);
-    const safeUserId = sanitizeFilterValue(context?.userId);
-    
-    // Try with org_id/user_id filter first
-    let filter = baseFilter;
-    if (safeOrgId) {
-      filter = `${baseFilter} && org_id="${safeOrgId}"`;
-    } else if (safeUserId) {
-      filter = `${baseFilter} && user_id="${safeUserId}"`;
+  return withFreshToken(async () => {
+    try {
+      const baseFilter = `app_id="${appId}"`;
+      const safeOrgId = sanitizeFilterValue(context?.orgId);
+      const safeUserId = sanitizeFilterValue(context?.userId);
+
+      let filter = baseFilter;
+      if (safeOrgId) {
+        filter = `${baseFilter} && org_id="${safeOrgId}"`;
+      } else if (safeUserId) {
+        filter = `${baseFilter} && user_id="${safeUserId}"`;
+      }
+
+      const record = await pocketbaseClient
+        .collection(pocketbaseCollection)
+        .getFirstListItem(filter);
+      const payload = (record as { payload?: StorageData }).payload;
+      if (!payload) return null;
+      return payload;
+    } catch (error) {
+      console.warn('PocketBase load failed, falling back to local storage.', error);
+      return null;
     }
-    
-    const record = await pocketbaseClient
-      .collection(pocketbaseCollection)
-      .getFirstListItem(filter);
-    const payload = (record as { payload?: StorageData }).payload;
-    if (!payload) return null;
-    return payload;
-  } catch (error) {
-    console.warn('PocketBase load failed, falling back to local storage.', error);
-    return null;
-  }
+  });
 };
 
 const saveToPocketBase = async (data: StorageData, context?: StorageContext) => {
   if (!pocketbaseClient) return;
-  try {
-    const baseFilter = `app_id="${appId}"`;
-    const safeOrgId = sanitizeFilterValue(context?.orgId);
-    const safeUserId = sanitizeFilterValue(context?.userId);
-    
-    // Try with org_id/user_id filter first
-    let filter = baseFilter;
-    if (safeOrgId) {
-      filter = `${baseFilter} && org_id="${safeOrgId}"`;
-    } else if (safeUserId) {
-      filter = `${baseFilter} && user_id="${safeUserId}"`;
-    }
-    
-    const existing = await pocketbaseClient
-      .collection(pocketbaseCollection)
-      .getFirstListItem(filter);
-    await pocketbaseClient
-      .collection(pocketbaseCollection)
-      .update(existing.id, {
-        app_id: appId,
-        org_id: safeOrgId || undefined,
-        user_id: safeUserId || undefined,
-        payload: data
-      });
-  } catch (error) {
+  return withFreshToken(async () => {
     try {
+      const baseFilter = `app_id="${appId}"`;
       const safeOrgId = sanitizeFilterValue(context?.orgId);
       const safeUserId = sanitizeFilterValue(context?.userId);
+
+      let filter = baseFilter;
+      if (safeOrgId) {
+        filter = `${baseFilter} && org_id="${safeOrgId}"`;
+      } else if (safeUserId) {
+        filter = `${baseFilter} && user_id="${safeUserId}"`;
+      }
+
+      const existing = await pocketbaseClient
+        .collection(pocketbaseCollection)
+        .getFirstListItem(filter);
       await pocketbaseClient
         .collection(pocketbaseCollection)
-        .create({ 
+        .update(existing.id, {
           app_id: appId,
           org_id: safeOrgId || undefined,
           user_id: safeUserId || undefined,
-          payload: data 
+          payload: data
         });
-    } catch (createError) {
-      console.warn('PocketBase save failed, keeping local storage only.', createError);
+    } catch (error) {
+      try {
+        const safeOrgId = sanitizeFilterValue(context?.orgId);
+        const safeUserId = sanitizeFilterValue(context?.userId);
+        await pocketbaseClient
+          .collection(pocketbaseCollection)
+          .create({
+            app_id: appId,
+            org_id: safeOrgId || undefined,
+            user_id: safeUserId || undefined,
+            payload: data
+          });
+      } catch (createError) {
+        console.warn('PocketBase save failed, keeping local storage only.', createError);
+      }
     }
-  }
+  });
 };
 
 export const loadStorageData = async (
@@ -224,7 +255,7 @@ const saveScheduleToPocketBase = async (
   const safeKey = scheduleKey ? sanitizeFilterValue(scheduleKey) : null;
   const envKey = scheduleKeyEnv ? sanitizeFilterValue(scheduleKeyEnv) : null;
   const finalKey = safeKey || envKey || 'default';
-  
+
   // If schedule_key is "default", use empty data
   const isDefaultKey = finalKey === 'default';
   const payload = {
@@ -235,60 +266,51 @@ const saveScheduleToPocketBase = async (
     schedule_key: finalKey,
     schedule_name: scheduleName ? scheduleName.slice(0, 200) : undefined,
     data: isDefaultKey
-      ? {
-          leagues: [],
-          teams: [],
-          games: []
-        }
-      : {
-          leagues: data.leagues,
-          teams: data.teams,
-          games: data.games
-        }
+      ? { leagues: [], teams: [], games: [] }
+      : { leagues: data.leagues, teams: data.teams, games: data.games }
   };
 
-  try {
-    const record = await pocketbaseClient
-      .collection(scheduleCollection)
-      .getFirstListItem(`app_id="${appId}" && schedule_key="${finalKey}"`);
+  return withFreshToken(async () => {
+    try {
+      const record = await pocketbaseClient!
+        .collection(scheduleCollection!)
+        .getFirstListItem(`app_id="${appId}" && schedule_key="${finalKey}"`);
 
-    // Verify the record belongs to the calling user's org before updating.
-    // Records with empty org_id/user_id are legacy (published before auth was
-    // configured) and are treated as belonging to the app, not blocked.
-    const safeOrgIdCheck = sanitizeFilterValue(context?.orgId);
-    if (safeOrgIdCheck && record.org_id !== '' && record.org_id !== safeOrgIdCheck) {
-      return { ok: false, reason: 'Schedule not found or access denied.' };
-    }
-    if (!safeOrgIdCheck && context?.userId) {
-      const safeUserIdCheck = sanitizeFilterValue(context.userId);
-      if (safeUserIdCheck && record.user_id !== '' && record.user_id !== safeUserIdCheck) {
+      // Verify the record belongs to the calling user's org before updating.
+      // Records with empty org_id/user_id are legacy (published before auth was
+      // configured) and are treated as belonging to the app, not blocked.
+      const safeOrgIdCheck = sanitizeFilterValue(context?.orgId);
+      if (safeOrgIdCheck && record.org_id !== '' && record.org_id !== safeOrgIdCheck) {
         return { ok: false, reason: 'Schedule not found or access denied.' };
       }
-    }
+      if (!safeOrgIdCheck && context?.userId) {
+        const safeUserIdCheck = sanitizeFilterValue(context.userId);
+        if (safeUserIdCheck && record.user_id !== '' && record.user_id !== safeUserIdCheck) {
+          return { ok: false, reason: 'Schedule not found or access denied.' };
+        }
+      }
 
-    // Preserve existing org_id/user_id on update if context doesn't supply them,
-    // so an unauthenticated auto-save never clears ownership fields.
-    const updatePayload: Record<string, unknown> = { ...payload };
-    if (updatePayload.org_id === undefined && record.org_id) {
-      delete updatePayload.org_id;
-    }
-    if (updatePayload.user_id === undefined && record.user_id) {
-      delete updatePayload.user_id;
-    }
-    await pocketbaseClient.collection(scheduleCollection).update(record.id, updatePayload);
-    return { ok: true };
-  } catch (error) {
-    try {
-      await pocketbaseClient.collection(scheduleCollection).create(payload);
+      // Preserve existing org_id/user_id on update if context doesn't supply them,
+      // so an unauthenticated auto-save never clears ownership fields.
+      const updatePayload: Record<string, unknown> = { ...payload };
+      if (updatePayload.org_id === undefined && record.org_id) {
+        delete updatePayload.org_id;
+      }
+      if (updatePayload.user_id === undefined && record.user_id) {
+        delete updatePayload.user_id;
+      }
+      await pocketbaseClient!.collection(scheduleCollection!).update(record.id, updatePayload);
       return { ok: true };
-    } catch (createError) {
-      console.warn('PocketBase schedule publish failed.', createError);
-      return {
-        ok: false,
-        reason: formatPocketbaseError(createError)
-      };
+    } catch (error) {
+      try {
+        await pocketbaseClient!.collection(scheduleCollection!).create(payload);
+        return { ok: true };
+      } catch (createError) {
+        console.warn('PocketBase schedule publish failed.', createError);
+        return { ok: false, reason: formatPocketbaseError(createError) };
+      }
     }
-  }
+  });
 };
 
 export const persistStorageData = async (
@@ -340,23 +362,25 @@ export const listPublishedSchedules = async (
     }
   }
   const scopedFilter = scopedFilters.join(' && ');
-  try {
-    const data = await pocketbaseClient
-      .collection(scheduleCollection)
-      .getList(1, 200, { filter: scopedFilter, sort: '-updated' });
-    const items = data.items || [];
-    return items
-      .map((item: any) => ({
-        id: item.id,
-        scheduleKey: item.schedule_key || 'default',
-        scheduleName: item.schedule_name || undefined,
-        active: item.active !== false
-      }))
-      .filter((item) => item.scheduleKey);
-  } catch (error) {
-    console.warn('PocketBase schedule list failed.', error);
-    return [];
-  }
+  return withFreshToken(async () => {
+    try {
+      const data = await pocketbaseClient!
+        .collection(scheduleCollection!)
+        .getList(1, 200, { filter: scopedFilter, sort: '-updated' });
+      const items = data.items || [];
+      return items
+        .map((item: any) => ({
+          id: item.id,
+          scheduleKey: item.schedule_key || 'default',
+          scheduleName: item.schedule_name || undefined,
+          active: item.active !== false
+        }))
+        .filter((item: PublishedScheduleSummary) => item.scheduleKey);
+    } catch (error) {
+      console.warn('PocketBase schedule list failed.', error);
+      return [];
+    }
+  });
 };
 
 export const deletePublishedSchedule = async (

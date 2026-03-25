@@ -272,6 +272,23 @@ const App: React.FC = () => {
     };
   }, [userId, orgId]);
 
+  // Sync the Keycloak token into PocketBase so @request.auth.* collection rules work.
+  useEffect(() => {
+    if (keycloak.token) {
+      storageApi.authenticatePocketBase(keycloak.token);
+    }
+  }, [keycloak.token]);
+
+  // Register a refresh callback so storage functions can freshen the token before API calls.
+  useEffect(() => {
+    storageApi.registerKeycloakRefresh(async () => {
+      if (keycloak.isTokenExpired(30)) {
+        await keycloak.updateToken(30);
+        if (keycloak.token) storageApi.authenticatePocketBase(keycloak.token);
+      }
+    });
+  }, [keycloak]);
+
   useEffect(() => {
     if (initialized) return;
     const timeoutId = window.setTimeout(() => {
