@@ -282,6 +282,7 @@ const App: React.FC = () => {
   // Register a refresh callback so storage functions can freshen the token before API calls.
   useEffect(() => {
     storageApi.registerKeycloakRefresh(async () => {
+      if (!keycloak.authenticated) return;
       if (keycloak.isTokenExpired(30)) {
         await keycloak.updateToken(30);
         if (keycloak.token) storageApi.authenticatePocketBase(keycloak.token);

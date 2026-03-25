@@ -45,6 +45,10 @@ const tenantsCollection     = import.meta.env.VITE_PB_TENANTS_COLLECTION      ||
 const schedulePublishEnabled =
   (import.meta.env.VITE_PB_SCHEDULE_PUBLISH || 'false').toLowerCase() === 'true';
 const scheduleKeyEnv = import.meta.env.VITE_PB_SCHEDULE_KEY;
+// Only forward the Keycloak JWT to PocketBase when the OIDC provider has been configured in
+// the PocketBase admin UI. Without it, PocketBase rejects the unknown token with a 400 error.
+const pbKeycloakAuthEnabled =
+  (import.meta.env.VITE_PB_KEYCLOAK_AUTH || 'false').toLowerCase() === 'true';
 
 const parseArray = <T>(value: string | null, fallback: T[]): T[] => {
   if (!value) return fallback;
@@ -78,7 +82,7 @@ const pocketbaseClient = createPocketBaseClient();
  * @request.auth.* in collection rules.
  */
 export const authenticatePocketBase = (token: string) => {
-  if (!pocketbaseClient || !token) return;
+  if (!pocketbaseClient || !token || !pbKeycloakAuthEnabled) return;
   pocketbaseClient.authStore.save(token, null);
 };
 
@@ -94,7 +98,12 @@ export const registerKeycloakRefresh = (fn: () => Promise<void>) => {
 };
 
 const withFreshToken = async <T>(fn: () => Promise<T>): Promise<T> => {
-  await keycloakRefreshFn?.();
+  try {
+    await keycloakRefreshFn?.();
+  } catch {
+    // Refresh failed (Keycloak not yet authenticated or token unavailable) — proceed anyway.
+    // Storage functions have their own try/catch; this just prevents an unhandled rejection.
+  }
   return fn();
 };
 

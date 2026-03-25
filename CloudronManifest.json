@@ -32,6 +32,7 @@
     "VITE_PB_SCORE_LINKS_COLLECTION": "score_links",
     "VITE_PB_SCORE_EDITS_COLLECTION": "score_edits",
     "VITE_PB_TENANTS_COLLECTION":     "tenants",
+    "VITE_PB_KEYCLOAK_AUTH":          "false",
 
     "SCHEDULE_EVENT_DURATION_MINUTES": "120",
 
