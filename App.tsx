@@ -117,6 +117,7 @@ const App: React.FC = () => {
       : [];
     setPublishedSchedules(items);
     setIsLoadingSchedules(false);
+    return items;
   };
 
   const selectedPublishedSchedule = publishedSchedules.find((item) => item.id === selectedScheduleId);
@@ -132,10 +133,6 @@ const App: React.FC = () => {
     const selectedSchedule = publishedSchedules.find((item) => item.id === selectedScheduleId);
     if (!selectedSchedule) {
       alert(t('schedule.scheduleNotFound'));
-      return;
-    }
-    if (!selectedSchedule.active) {
-      alert(t('schedule.onlyActiveSchedules'));
       return;
     }
     if (!storageApi.loadPublishedScheduleById) return;
@@ -1821,7 +1818,10 @@ const App: React.FC = () => {
                     setScheduleKey(trimmedKey);
                     setScheduleName(finalName);
                     setShowPublishModal(false);
-                    alert('Schedule published successfully.');
+                    const items = await loadPublishedSchedules();
+                    const published = items.find((s) => s.scheduleKey === trimmedKey);
+                    if (published) setSelectedScheduleId(published.id);
+                    setShowScheduleModal(true);
                   }}
                   className={`flex-1 px-4 py-2 rounded-md text-sm text-white font-medium ${
                     publishKeyDraft.trim() && !isPublishing
