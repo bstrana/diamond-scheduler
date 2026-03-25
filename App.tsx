@@ -96,18 +96,30 @@ const App: React.FC = () => {
     'Signed in';
   const userEmail  = keycloak.tokenParsed?.email as string | undefined;
   const userDomain = window.location.hostname;
-  // Canonical claim — supports both a flat 'org_id' string claim (User Attribute mapper)
-  // and the nested 'organization' claim produced by the Keycloak Organization Membership mapper.
+  // Canonical claim — supports multiple Keycloak mapper configurations:
+  //   1. Flat org_id claim: User/Org Attribute mapper → org_id: "value"
+  //   2. Organization Membership mapper with "Add organization attributes" ON:
+  //        organization: { alias: { org_id: "value", id: "uuid", ... } }
+  //      Attributes may also be nested: { alias: { attributes: { org_id: ["value"] } } }
+  //   3. Plain Organization Membership mapper (no attributes): falls back to alias key.
   const userId = (keycloak.tokenParsed as any)?.sub as string | undefined;
   const orgId: string | undefined = (() => {
     const token = keycloak.tokenParsed as any;
-    // Flat claim: User Attribute mapper → org_id: "uuid"
+    // 1. Flat claim from a dedicated mapper
     if (token?.org_id) return token.org_id as string;
-    // Nested claim: Organization Membership mapper → organization: { alias: { id: "uuid" } }
+    // 2. Nested organization claim
     const orgs = token?.organization;
-    if (orgs && typeof orgs === 'object') {
+    if (orgs && typeof orgs === 'object' && !Array.isArray(orgs)) {
+      const alias = Object.keys(orgs)[0];
       const first = Object.values(orgs)[0] as any;
+      // org_id attribute merged directly into the org entry
+      if (first?.org_id) return first.org_id as string;
+      // org_id attribute nested under attributes (array or scalar)
+      const attrOrgId = first?.attributes?.org_id;
+      if (attrOrgId) return (Array.isArray(attrOrgId) ? attrOrgId[0] : attrOrgId) as string;
+      // Fall back to Keycloak-generated org UUID, then alias
       if (first?.id) return first.id as string;
+      if (alias) return alias;
     }
     return undefined;
   })();
@@ -282,6 +294,7 @@ const App: React.FC = () => {
   // Register a refresh callback so storage functions can freshen the token before API calls.
   useEffect(() => {
     storageApi.registerKeycloakRefresh(async () => {
+      if (!keycloak.authenticated) return;
       if (keycloak.isTokenExpired(30)) {
         await keycloak.updateToken(30);
         if (keycloak.token) storageApi.authenticatePocketBase(keycloak.token);
@@ -952,7 +965,7 @@ const App: React.FC = () => {
           <p className="text-xs text-slate-400">Org: {tenant.orgId}</p>
           <button
             className="mt-2 text-sm text-indigo-600 underline hover:text-indigo-800"
-            onClick={() => keycloak.logout({ redirectUri: `${window.location.origin}/logged-out.html` })}
+            onClick={() => keycloak.logout({ redirectUri: window.location.origin + '/logged-out.html' })}
           >
             Sign out
           </button>
@@ -1159,7 +1172,7 @@ const App: React.FC = () => {
                           <HelpCircle size={16} />
                         </button>
                         <button
-                          onClick={() => keycloak.logout({ redirectUri: window.location.origin + '/' })}
+                          onClick={() => keycloak.logout({ redirectUri: window.location.origin + '/logged-out.html' })}
                           className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
                         >
                           <span>{t('nav.signOut')}</span>
