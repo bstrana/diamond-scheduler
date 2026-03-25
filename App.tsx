@@ -96,20 +96,28 @@ const App: React.FC = () => {
     'Signed in';
   const userEmail  = keycloak.tokenParsed?.email as string | undefined;
   const userDomain = window.location.hostname;
-  // Canonical claim — supports both a flat 'org_id' string claim (User Attribute mapper)
-  // and the nested 'organization' claim produced by the Keycloak Organization Membership mapper.
+  // Canonical claim — supports multiple Keycloak mapper configurations:
+  //   1. Flat org_id claim: User/Org Attribute mapper → org_id: "value"
+  //   2. Organization Membership mapper with "Add organization attributes" ON:
+  //        organization: { alias: { org_id: "value", id: "uuid", ... } }
+  //      Attributes may also be nested: { alias: { attributes: { org_id: ["value"] } } }
+  //   3. Plain Organization Membership mapper (no attributes): falls back to alias key.
   const userId = (keycloak.tokenParsed as any)?.sub as string | undefined;
   const orgId: string | undefined = (() => {
     const token = keycloak.tokenParsed as any;
-    // Flat claim: User Attribute mapper → org_id: "uuid"
+    // 1. Flat claim from a dedicated mapper
     if (token?.org_id) return token.org_id as string;
-    // Nested claim: Organization Membership mapper → organization: { alias: { id?: "uuid" } }
-    // Keycloak 24+ emits the org alias as the key; the value may or may not contain an id field.
+    // 2. Nested organization claim
     const orgs = token?.organization;
     if (orgs && typeof orgs === 'object' && !Array.isArray(orgs)) {
       const alias = Object.keys(orgs)[0];
       const first = Object.values(orgs)[0] as any;
-      // Prefer explicit id, fall back to alias as the stable org identifier.
+      // org_id attribute merged directly into the org entry
+      if (first?.org_id) return first.org_id as string;
+      // org_id attribute nested under attributes (array or scalar)
+      const attrOrgId = first?.attributes?.org_id;
+      if (attrOrgId) return (Array.isArray(attrOrgId) ? attrOrgId[0] : attrOrgId) as string;
+      // Fall back to Keycloak-generated org UUID, then alias
       if (first?.id) return first.id as string;
       if (alias) return alias;
     }
