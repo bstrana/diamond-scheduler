@@ -17,7 +17,6 @@ migrate(
       updateRule: "",
       deleteRule: "",
       fields: [
-        { type: "text", name: "app_id",  required: true  },
         { type: "text", name: "org_id",  required: false },
         { type: "text", name: "user_id", required: false },
         { type: "json", name: "payload", required: true, maxSize: 5242880 },
@@ -37,7 +36,6 @@ migrate(
       updateRule: "",
       deleteRule: "",
       fields: [
-        { type: "text", name: "app_id",        required: true  },
         { type: "text", name: "schedule_key",  required: true  },
         { type: "text", name: "schedule_name", required: false },
         { type: "bool", name: "active"                         },

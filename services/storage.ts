@@ -29,7 +29,6 @@ const STORAGE_KEYS = {
 
 const DEFAULT_COLLECTION = 'app_state';
 
-const appId = import.meta.env.VITE_APP_ID || 'scheduler';
 const pocketbaseUrl = import.meta.env.VITE_PB_URL;
 const pocketbaseCollection = import.meta.env.VITE_PB_COLLECTION || DEFAULT_COLLECTION;
 
@@ -116,15 +115,14 @@ const loadFromPocketBase = async (context?: StorageContext): Promise<StorageData
   if (!pocketbaseClient) return null;
   return withFreshToken(async () => {
     try {
-      const baseFilter = `app_id="${appId}"`;
       const safeOrgId = sanitizeFilterValue(context?.orgId);
       const safeUserId = sanitizeFilterValue(context?.userId);
 
-      let filter = baseFilter;
+      let filter = '';
       if (safeOrgId) {
-        filter = `${baseFilter} && org_id="${safeOrgId}"`;
+        filter = `org_id="${safeOrgId}"`;
       } else if (safeUserId) {
-        filter = `${baseFilter} && user_id="${safeUserId}"`;
+        filter = `user_id="${safeUserId}"`;
       }
 
       const record = await pocketbaseClient
@@ -144,15 +142,14 @@ const saveToPocketBase = async (data: StorageData, context?: StorageContext) => 
   if (!pocketbaseClient) return;
   return withFreshToken(async () => {
     try {
-      const baseFilter = `app_id="${appId}"`;
       const safeOrgId = sanitizeFilterValue(context?.orgId);
       const safeUserId = sanitizeFilterValue(context?.userId);
 
-      let filter = baseFilter;
+      let filter = '';
       if (safeOrgId) {
-        filter = `${baseFilter} && org_id="${safeOrgId}"`;
+        filter = `org_id="${safeOrgId}"`;
       } else if (safeUserId) {
-        filter = `${baseFilter} && user_id="${safeUserId}"`;
+        filter = `user_id="${safeUserId}"`;
       }
 
       const existing = await pocketbaseClient
@@ -161,7 +158,6 @@ const saveToPocketBase = async (data: StorageData, context?: StorageContext) => 
       await pocketbaseClient
         .collection(pocketbaseCollection)
         .update(existing.id, {
-          app_id: appId,
           org_id: safeOrgId || undefined,
           user_id: safeUserId || undefined,
           payload: data
@@ -173,7 +169,6 @@ const saveToPocketBase = async (data: StorageData, context?: StorageContext) => 
         await pocketbaseClient
           .collection(pocketbaseCollection)
           .create({
-            app_id: appId,
             org_id: safeOrgId || undefined,
             user_id: safeUserId || undefined,
             payload: data
@@ -268,7 +263,6 @@ const saveScheduleToPocketBase = async (
   // If schedule_key is "default", use empty data
   const isDefaultKey = finalKey === 'default';
   const payload = {
-    app_id: appId,
     active: true,
     org_id: sanitizeFilterValue(context?.orgId) || undefined,
     user_id: sanitizeFilterValue(context?.userId) || undefined,
@@ -283,7 +277,7 @@ const saveScheduleToPocketBase = async (
     try {
       const record = await pocketbaseClient!
         .collection(scheduleCollection!)
-        .getFirstListItem(`app_id="${appId}" && schedule_key="${finalKey}"`);
+        .getFirstListItem(`schedule_key="${finalKey}"`);
 
       // Verify the record belongs to the calling user's org before updating.
       // Records with empty org_id/user_id are legacy (published before auth was
@@ -352,14 +346,11 @@ export const listPublishedSchedules = async (
   options?: { onlyActive?: boolean }
 ): Promise<PublishedScheduleSummary[]> => {
   if (!pocketbaseClient || !scheduleCollection) return [];
-  const baseFilters = [`app_id="${appId}"`];
+  const baseFilters: string[] = [];
   if (options?.onlyActive) {
     baseFilters.push('active=true');
   }
   const scopedFilters = [...baseFilters];
-  // For logged-in users, scope by org_id or user_id.
-  // Also include legacy records that were published before auth was configured
-  // (those have empty org_id/user_id and belong to the same app_id).
   const safeOrgId = sanitizeFilterValue(context?.orgId);
   if (safeOrgId) {
     scopedFilters.push(`(org_id="${safeOrgId}" || org_id="")`);
@@ -468,7 +459,7 @@ export const loadPublishedScheduleByKey = async (
   try {
     const record = await pocketbaseClient
       .collection(scheduleCollection)
-      .getFirstListItem(`app_id="${appId}" && schedule_key="${safeKey}" && active=true`);
+      .getFirstListItem(`schedule_key="${safeKey}" && active=true`);
     const data = (record as { data?: Partial<StorageData> }).data;
     if (!data) return null;
     return {

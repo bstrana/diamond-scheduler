@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "manifestVersion": 2,
 
   "image": {
@@ -25,7 +25,6 @@
     "VITE_KEYCLOAK_URL":       "https://keycloak.example.com",
     "VITE_KEYCLOAK_REALM":     "diamond",
     "VITE_KEYCLOAK_CLIENT_ID": "diamond-scheduler",
-    "VITE_APP_ID":             "scheduler",
 
     "VITE_PB_SCHEDULE_COLLECTION":    "published_schedules",
     "VITE_PB_SCHEDULE_PUBLISH":       "true",
@@ -63,6 +62,7 @@
     "1.0.6": "Fix: embed schedule source dropdown no longer requires a schedule to be loaded first; any published schedule can now be selected directly.",
     "1.0.7": "Fix: Load Published Schedule modal now fetches the schedule list on open instead of relying on the user menu load.",
     "1.0.8": "Fix: forward Keycloak JWT to PocketBase on every storage call (enables @request.auth.* collection rules); support Keycloak Organization Membership mapper for org_id claim; guard localStorage clear to only run when PocketBase schedule publishing is configured; fix loadPublishedScheduleById blocking legacy records with empty org_id.",
-    "1.0.9": "Fix: extract org_id from organization attributes when 'Add organization attributes' is enabled on the Keycloak Organization Membership mapper; fix logout redirect to use registered /logged-out.html URI; prevent Not-authenticated crash and PocketBase 400 when Keycloak token is not yet available."
+    "1.0.9": "Fix: extract org_id from organization attributes when 'Add organization attributes' is enabled on the Keycloak Organization Membership mapper; fix logout redirect to use registered /logged-out.html URI; prevent Not-authenticated crash and PocketBase 400 when Keycloak token is not yet available.",
+    "1.0.10": "Refactor: remove app_id field and filter from all PocketBase queries and payloads; add migration 3 to drop app_id from existing installations (redundant on Cloudron where each app has its own database); fix invalid sort field 'updated' → 'created' in PocketBase list queries."
   }
 }
