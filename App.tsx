@@ -284,6 +284,11 @@ const App: React.FC = () => {
   }, [showUserMenu, userId, orgId]);
 
   useEffect(() => {
+    if (!showScheduleModal) return;
+    loadPublishedSchedules();
+  }, [showScheduleModal, userId, orgId]);
+
+  useEffect(() => {
     if (!showNavMenu) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (navMenuRef.current && !navMenuRef.current.contains(event.target as Node)) {
