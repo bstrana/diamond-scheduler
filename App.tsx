@@ -957,7 +957,7 @@ const App: React.FC = () => {
           <p className="text-xs text-slate-400">Org: {tenant.orgId}</p>
           <button
             className="mt-2 text-sm text-indigo-600 underline hover:text-indigo-800"
-            onClick={() => keycloak.logout({ redirectUri: window.location.origin + '/' })}
+            onClick={() => keycloak.logout({ redirectUri: window.location.origin + '/logged-out.html' })}
           >
             Sign out
           </button>
@@ -1164,7 +1164,7 @@ const App: React.FC = () => {
                           <HelpCircle size={16} />
                         </button>
                         <button
-                          onClick={() => keycloak.logout({ redirectUri: window.location.origin + '/' })}
+                          onClick={() => keycloak.logout({ redirectUri: window.location.origin + '/logged-out.html' })}
                           className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
                         >
                           <span>{t('nav.signOut')}</span>
