@@ -217,8 +217,13 @@ const App: React.FC = () => {
 
       const hasPublishedSchedules = publishedSchedules && publishedSchedules.length > 0;
 
-      // If no published schedules, clear local storage for teams, leagues, and schedule keys
-      if (!hasPublishedSchedules) {
+      // Only clear local state when PocketBase schedule publishing is configured
+      // AND there are no published schedules for this user/org. If PocketBase isn't
+      // configured (scheduleCollection missing or client unavailable), listPublishedSchedules
+      // returns [] silently — clearing localStorage in that case would destroy local data.
+      const schedulePublishConfigured =
+        !!(import.meta.env.VITE_PB_SCHEDULE_COLLECTION && import.meta.env.VITE_PB_URL);
+      if (schedulePublishConfigured && !hasPublishedSchedules) {
         localStorage.removeItem('dsa_leagues');
         localStorage.removeItem('dsa_teams');
         localStorage.removeItem('dsa_games');

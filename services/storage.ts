@@ -460,16 +460,18 @@ export const loadPublishedScheduleById = async (
       .collection(scheduleCollection)
       .getOne(recordId);
     
-    // Verify the schedule belongs to the user's org
+    // Verify the schedule belongs to the user's org.
+    // Records with empty org_id/user_id are legacy (published before auth was
+    // configured) and are treated as belonging to the app, not blocked.
     const safeOrgId = sanitizeFilterValue(context?.orgId);
-    if (safeOrgId && record.org_id !== safeOrgId) {
+    if (safeOrgId && record.org_id !== '' && record.org_id !== safeOrgId) {
       console.warn('Schedule access denied: org_id mismatch');
       return null;
     }
     // If user has userId but no orgId, verify by userId
     if (!safeOrgId && context?.userId) {
       const safeUserId = sanitizeFilterValue(context.userId);
-      if (safeUserId && record.user_id !== safeUserId) {
+      if (safeUserId && record.user_id !== '' && record.user_id !== safeUserId) {
         console.warn('Schedule access denied: user_id mismatch');
         return null;
       }
