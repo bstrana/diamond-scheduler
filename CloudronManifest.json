@@ -25,7 +25,6 @@
     "VITE_KEYCLOAK_URL":       "https://keycloak.example.com",
     "VITE_KEYCLOAK_REALM":     "diamond",
     "VITE_KEYCLOAK_CLIENT_ID": "diamond-scheduler",
-    "VITE_APP_ID":             "scheduler",
 
     "VITE_PB_SCHEDULE_COLLECTION":    "published_schedules",
     "VITE_PB_SCHEDULE_PUBLISH":       "true",
