@@ -96,9 +96,21 @@ const App: React.FC = () => {
     'Signed in';
   const userEmail  = keycloak.tokenParsed?.email as string | undefined;
   const userDomain = window.location.hostname;
-  // Canonical claim — configure the 'org_id' mapper in Keycloak (see KEYCLOAK_INTEGRATION.md §2.4)
+  // Canonical claim — supports both a flat 'org_id' string claim (User Attribute mapper)
+  // and the nested 'organization' claim produced by the Keycloak Organization Membership mapper.
   const userId = (keycloak.tokenParsed as any)?.sub as string | undefined;
-  const orgId  = (keycloak.tokenParsed as any)?.org_id as string | undefined;
+  const orgId: string | undefined = (() => {
+    const token = keycloak.tokenParsed as any;
+    // Flat claim: User Attribute mapper → org_id: "uuid"
+    if (token?.org_id) return token.org_id as string;
+    // Nested claim: Organization Membership mapper → organization: { alias: { id: "uuid" } }
+    const orgs = token?.organization;
+    if (orgs && typeof orgs === 'object') {
+      const first = Object.values(orgs)[0] as any;
+      if (first?.id) return first.id as string;
+    }
+    return undefined;
+  })();
   // Derive a display role from the roles set
   const userRole = ['system_admin', 'tenant_admin', 'scheduler_admin', 'scheduler_editor', 'scheduler_viewer']
     .find(r => realmRolesSet.has(r)) ?? 'viewer';
@@ -217,8 +229,13 @@ const App: React.FC = () => {
 
       const hasPublishedSchedules = publishedSchedules && publishedSchedules.length > 0;
 
-      // If no published schedules, clear local storage for teams, leagues, and schedule keys
-      if (!hasPublishedSchedules) {
+      // Only clear local state when PocketBase schedule publishing is configured
+      // AND there are no published schedules for this user/org. If PocketBase isn't
+      // configured (scheduleCollection missing or client unavailable), listPublishedSchedules
+      // returns [] silently — clearing localStorage in that case would destroy local data.
+      const schedulePublishConfigured =
+        !!(import.meta.env.VITE_PB_SCHEDULE_COLLECTION && import.meta.env.VITE_PB_URL);
+      if (schedulePublishConfigured && !hasPublishedSchedules) {
         localStorage.removeItem('dsa_leagues');
         localStorage.removeItem('dsa_teams');
         localStorage.removeItem('dsa_games');
@@ -254,6 +271,23 @@ const App: React.FC = () => {
       isActive = false;
     };
   }, [userId, orgId]);
+
+  // Sync the Keycloak token into PocketBase so @request.auth.* collection rules work.
+  useEffect(() => {
+    if (keycloak.token) {
+      storageApi.authenticatePocketBase(keycloak.token);
+    }
+  }, [keycloak.token]);
+
+  // Register a refresh callback so storage functions can freshen the token before API calls.
+  useEffect(() => {
+    storageApi.registerKeycloakRefresh(async () => {
+      if (keycloak.isTokenExpired(30)) {
+        await keycloak.updateToken(30);
+        if (keycloak.token) storageApi.authenticatePocketBase(keycloak.token);
+      }
+    });
+  }, [keycloak]);
 
   useEffect(() => {
     if (initialized) return;
