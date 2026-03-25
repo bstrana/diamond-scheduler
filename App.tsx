@@ -127,7 +127,7 @@ const App: React.FC = () => {
 
   const handleLoadSchedule = async () => {
     if (!selectedScheduleId) {
-      alert(t('schedule.selectLeagueToLoad'));
+      alert(t('schedule.selectScheduleToLoad'));
       return;
     }
     const selectedSchedule = publishedSchedules.find((item) => item.id === selectedScheduleId);
@@ -295,7 +295,7 @@ const App: React.FC = () => {
   }, [showNavMenu]);
 
   useEffect(() => {
-    if (!isHydrated) return;
+    if (!isHydrated || !initialized || !keycloak.authenticated) return;
     const timeoutId = window.setTimeout(() => {
       storageApi.persistStorageData(
         {
@@ -310,7 +310,7 @@ const App: React.FC = () => {
       );
     }, 300);
     return () => window.clearTimeout(timeoutId);
-  }, [isHydrated, leagues, teams, games, gamesInHoldingArea]);
+  }, [isHydrated, initialized, keycloak.authenticated, leagues, teams, games, gamesInHoldingArea]);
 
   // Helper to get league IDs from a game (handles both old and new format)
   const getGameLeagueIds = (game: Game): string[] => {
@@ -1871,10 +1871,10 @@ const App: React.FC = () => {
               >
                 <option value="" disabled>
                   {isLoadingSchedules
-                    ? 'Loading schedules...'
+                    ? t('app.loadingSchedules')
                     : publishedSchedules.length === 0
-                      ? 'No schedules found'
-                      : 'Select schedule'}
+                      ? t('app.noSchedulesFound')
+                      : t('app.selectSchedule')}
                 </option>
                 {publishedSchedules.map((item) => (
                   <option key={item.id} value={item.id}>

@@ -266,7 +266,16 @@ const saveScheduleToPocketBase = async (
       }
     }
 
-    await pocketbaseClient.collection(scheduleCollection).update(record.id, payload);
+    // Preserve existing org_id/user_id on update if context doesn't supply them,
+    // so an unauthenticated auto-save never clears ownership fields.
+    const updatePayload: Record<string, unknown> = { ...payload };
+    if (updatePayload.org_id === undefined && record.org_id) {
+      delete updatePayload.org_id;
+    }
+    if (updatePayload.user_id === undefined && record.user_id) {
+      delete updatePayload.user_id;
+    }
+    await pocketbaseClient.collection(scheduleCollection).update(record.id, updatePayload);
     return { ok: true };
   } catch (error) {
     try {
