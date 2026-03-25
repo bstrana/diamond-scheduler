@@ -375,7 +375,7 @@ export const listPublishedSchedules = async (
     try {
       const data = await pocketbaseClient!
         .collection(scheduleCollection!)
-        .getList(1, 200, { filter: scopedFilter, sort: '-updated' });
+        .getList(1, 200, { filter: scopedFilter, sort: '-created' });
       const items = data.items || [];
       return items
         .map((item: any) => ({
@@ -708,7 +708,7 @@ export const listScoreEditsByScheduleKey = async (scheduleKey: string): Promise<
   try {
     const result = await pocketbaseClient
       .collection(scoreEditsCollection)
-      .getList(1, 1000, { filter: `schedule_key="${safeKey}"`, sort: '-updated' });
+      .getList(1, 1000, { filter: `schedule_key="${safeKey}"`, sort: '-created' });
     return (result.items || []).map(scoreEditFromRecord);
   } catch (error) {
     console.warn('listScoreEditsByScheduleKey failed', error);
