@@ -123,6 +123,18 @@ const App: React.FC = () => {
     }
     return undefined;
   })();
+  // Human-readable org name: prefer tenant record, then Keycloak organization claim, then orgId
+  const orgDisplayName: string | undefined = (() => {
+    if (tenant?.name) return tenant.name;
+    const token = keycloak.tokenParsed as any;
+    const orgs = token?.organization;
+    if (orgs && typeof orgs === 'object' && !Array.isArray(orgs)) {
+      const first = Object.values(orgs)[0] as any;
+      if (first?.name) return first.name as string;
+    }
+    return orgId;
+  })();
+
   // Derive a display role from the roles set
   const userRole = ['system_admin', 'tenant_admin', 'scheduler_admin', 'scheduler_editor', 'scheduler_viewer']
     .find(r => realmRolesSet.has(r)) ?? 'viewer';
@@ -1150,8 +1162,11 @@ const App: React.FC = () => {
                     <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
                       <div className="px-3 py-2 border-b border-slate-100">
                         <div className="text-sm font-semibold text-slate-800">{userName}</div>
-                        <div className="text-[11px] text-slate-400 mt-1">
-                          {t('app.orgLabel')}{orgId || 'none'}
+                        {userEmail && userEmail !== userName && (
+                          <div className="text-[11px] text-slate-400">{userEmail}</div>
+                        )}
+                        <div className="text-[11px] text-slate-400 mt-0.5">
+                          {t('app.orgLabel')}{orgDisplayName || 'none'}
                         </div>
                       </div>
                       <div className="py-2">
