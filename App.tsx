@@ -103,48 +103,27 @@ const App: React.FC = () => {
   //      Attributes may also be nested: { alias: { attributes: { org_id: ["value"] } } }
   //   3. Plain Organization Membership mapper (no attributes): falls back to alias key.
   const userId = (keycloak.tokenParsed as any)?.sub as string | undefined;
+  // Use the Keycloak organization alias as orgId — it's the key of the
+  // organization claim and is always present without any custom attribute mapper.
   const orgId: string | undefined = (() => {
-    const token = keycloak.tokenParsed as any;
-    // 1. Flat string claim
-    if (token?.org_id && typeof token.org_id === 'string') return token.org_id;
-    // 2. Nested organization claim — handles all Keycloak mapper variations:
-    //    a) { org_id: "value" }           — direct string attribute
-    //    b) { org_id: ["value"] }         — array attribute (Keycloak default)
-    //    c) { attributes: { org_id: [] }} — older nested attributes format
-    //    d) { id: "uuid" }                — Keycloak-generated org UUID
-    //    e) falls back to the org alias key
-    const orgs = token?.organization;
+    const orgs = (keycloak.tokenParsed as any)?.organization;
     if (orgs && typeof orgs === 'object' && !Array.isArray(orgs)) {
       const alias = Object.keys(orgs)[0];
-      const first = Object.values(orgs)[0] as any;
-      // a) string
-      if (first?.org_id && typeof first.org_id === 'string') return first.org_id;
-      // b) array  ← your Keycloak produces { org_id: ["test-org"] }
-      if (Array.isArray(first?.org_id) && typeof first.org_id[0] === 'string') return first.org_id[0];
-      // c) nested attributes
-      const attrOrgId = first?.attributes?.org_id;
-      if (attrOrgId) return (Array.isArray(attrOrgId) ? attrOrgId[0] : attrOrgId) as string;
-      // d) Keycloak org UUID
-      if (first?.id && typeof first.id === 'string') return first.id;
-      // e) org alias
       if (alias && typeof alias === 'string') return alias;
     }
     return undefined;
   })();
-  // Human-readable org name: prefer tenant record, then org alias, then orgId
+  // Display name: prefer the tenant record name, then org name field, then org alias
   const orgDisplayName: string | undefined = (() => {
     if (tenant?.name && typeof tenant.name === 'string' && tenant.name) return tenant.name;
-    const token = keycloak.tokenParsed as any;
-    const orgs = token?.organization;
+    const orgs = (keycloak.tokenParsed as any)?.organization;
     if (orgs && typeof orgs === 'object' && !Array.isArray(orgs)) {
       const alias = Object.keys(orgs)[0];
       const first = Object.values(orgs)[0] as any;
-      // Use name field if present
       if (first?.name && typeof first.name === 'string') return first.name;
-      // Otherwise use the org alias (e.g. "bstrana") as the display name
       if (alias && typeof alias === 'string') return alias;
     }
-    return typeof orgId === 'string' ? orgId : undefined;
+    return undefined;
   })();
 
   // Derive a display role from the roles set
@@ -283,13 +262,9 @@ const App: React.FC = () => {
         const orgs = (keycloak.tokenParsed as any)?.organization;
         const firstOrg = orgs && typeof orgs === 'object' && !Array.isArray(orgs)
           ? Object.values(orgs)[0] as any : null;
-        const orgAlias = orgs && typeof orgs === 'object' && !Array.isArray(orgs)
-          ? Object.keys(orgs)[0] : undefined;
-        // Name priority: org.name → org alias ("bstrana") → orgId ("test-org") → username
+        // Name: org.name field → org alias (orgId) → fallback
         const orgName: string = (firstOrg?.name && typeof firstOrg.name === 'string' ? firstOrg.name : '')
-          || (orgAlias && typeof orgAlias === 'string' ? orgAlias : '')
           || (typeof orgId === 'string' ? orgId : '')
-          || (keycloak.tokenParsed as any)?.preferred_username
           || 'My Organisation';
         tenantRecord = await storageApi.createTenant({
           orgId: orgId || userId!,
