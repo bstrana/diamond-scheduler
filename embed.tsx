@@ -4,6 +4,7 @@ import EmbeddableCalendar from './components/EmbeddableCalendar';
 import EmbeddableGameBar from './components/EmbeddableGameBar';
 import EmbeddableStandings from './components/EmbeddableStandings';
 import EmbeddableSeries from './components/EmbeddableSeries';
+import EmbeddableTeamGames from './components/EmbeddableTeamGames';
 import './index.css';
 import './i18n';
 import { loadPublishedScheduleByKey, listScoreEditsByScheduleKey, StorageData } from './services/storage';
@@ -25,6 +26,7 @@ const hideStatusFilter = urlParams.get('hide_status_filter') === '1';
 const hideLeagueName = urlParams.get('hide_league_name') === '1';
 const hideGameNumber = urlParams.get('hide_game_number') === '1';
 const standingsInfoText = urlParams.get('info_text') || undefined;
+const orgName = urlParams.get('org_name') || undefined;
 
 // Sanitize CSS property values to prevent CSS injection
 const sanitizeCssColor = (value: unknown, fallback: string): string => {
@@ -223,6 +225,7 @@ if (!rootElement) {
           hideStatusFilter={hideStatusFilter}
           hideLeagueName={hideLeagueName}
           hideGameNumber={hideGameNumber}
+          orgName={orgName}
         />
       );
     }
@@ -252,6 +255,21 @@ if (!rootElement) {
             teams: scheduleData.teams,
             games: scheduleData.games
           } : null}
+        />
+      );
+    }
+
+    if (embedType === 'teamgames') {
+      return (
+        <EmbeddableTeamGames
+          teamId={teamId}
+          height={height}
+          dataOverride={scheduleData ? {
+            leagues: scheduleData.leagues,
+            teams: scheduleData.teams,
+            games: scheduleData.games
+          } : null}
+          orgName={orgName}
         />
       );
     }

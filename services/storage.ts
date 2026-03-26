@@ -741,14 +741,16 @@ export const loadTenant = async (orgId: string): Promise<Tenant | null> => {
   if (!pocketbaseClient || !orgId) return null;
   const safeOrgId = sanitizeFilterValue(orgId);
   if (!safeOrgId) return null;
-  try {
-    const record = await pocketbaseClient
-      .collection(tenantsCollection)
-      .getFirstListItem(`org_id="${safeOrgId}"`);
-    return tenantFromRecord(record);
-  } catch {
-    return null;
-  }
+  return withFreshToken(async () => {
+    try {
+      const record = await pocketbaseClient!
+        .collection(tenantsCollection)
+        .getFirstListItem(`org_id="${safeOrgId}"`);
+      return tenantFromRecord(record);
+    } catch {
+      return null;
+    }
+  });
 };
 
 /**

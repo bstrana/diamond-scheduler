@@ -231,12 +231,30 @@ const App: React.FC = () => {
     let isActive = true;
     const hydrate = async () => {
       // Load tenant record and published schedules in parallel
-      const [tenantRecord, publishedSchedules] = await Promise.all([
+      let [tenantRecord, publishedSchedules] = await Promise.all([
         orgId ? storageApi.loadTenant(orgId) : Promise.resolve(null),
         storageApi.listPublishedSchedules({ userId, orgId }, { onlyActive: false }),
       ]);
 
       if (!isActive) return;
+
+      // Auto-provision a free-plan tenant on first login when an org_id is present
+      // but no record exists yet in PocketBase.
+      if (orgId && !tenantRecord && storageApi.createTenant) {
+        // Derive a human-readable org name from the Keycloak token.
+        // The organization claim is keyed by alias, so check all entries.
+        const orgs = (keycloak.tokenParsed as any)?.organization;
+        const firstOrg = orgs && typeof orgs === 'object' ? Object.values(orgs)[0] as any : null;
+        const orgName: string = firstOrg?.name || (keycloak.tokenParsed as any)?.org_id || orgId;
+        tenantRecord = await storageApi.createTenant({
+          orgId,
+          name: orgName,
+          plan: 'free',
+          limits: PLAN_LIMITS['free'],
+          active: true,
+        });
+      }
+
       setTenant(tenantRecord);
 
       const hasPublishedSchedules = publishedSchedules && publishedSchedules.length > 0;
@@ -1306,6 +1324,7 @@ const App: React.FC = () => {
                 isPublishedScheduleLoaded={!!scheduleKey && scheduleKey.trim() !== ''}
                 userId={userId}
                 orgId={orgId}
+                orgName={tenant?.branding?.orgName || tenant?.name || orgId}
             />
           )}
 
