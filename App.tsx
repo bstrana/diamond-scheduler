@@ -1188,7 +1188,7 @@ const App: React.FC = () => {
                                                              'bg-slate-100 text-slate-500'
                             }`}>{tenant.plan} plan</span>
                             <span className="text-[10px] text-slate-400">
-                              {leagues.length}/{tenant.limits.maxLeagues} leagues · {teams.length}/{tenant.limits.maxTeams} teams
+                              {leagues.length}/{tenant.limits.leagues} leagues · {teams.length}/{tenant.limits.teams} teams
                             </span>
                           </div>
                         )}
