@@ -123,6 +123,18 @@ const App: React.FC = () => {
     }
     return undefined;
   })();
+  // Human-readable org name: prefer tenant record, then Keycloak organization claim, then orgId
+  const orgDisplayName: string | undefined = (() => {
+    if (tenant?.name) return tenant.name;
+    const token = keycloak.tokenParsed as any;
+    const orgs = token?.organization;
+    if (orgs && typeof orgs === 'object' && !Array.isArray(orgs)) {
+      const first = Object.values(orgs)[0] as any;
+      if (first?.name) return first.name as string;
+    }
+    return orgId;
+  })();
+
   // Derive a display role from the roles set
   const userRole = ['system_admin', 'tenant_admin', 'scheduler_admin', 'scheduler_editor', 'scheduler_viewer']
     .find(r => realmRolesSet.has(r)) ?? 'viewer';
@@ -1148,11 +1160,38 @@ const App: React.FC = () => {
                   </button>
                   {showUserMenu && (
                     <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden">
-                      <div className="px-3 py-2 border-b border-slate-100">
-                        <div className="text-sm font-semibold text-slate-800">{userName}</div>
-                        <div className="text-[11px] text-slate-400 mt-1">
-                          {t('app.orgLabel')}{orgId || 'none'}
+                      {/* ── User identity block ── */}
+                      <div className="px-3 py-2.5 border-b border-slate-100 space-y-0.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-sm font-semibold text-slate-800 truncate">{userName}</div>
+                          <span className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                            userRole === 'system_admin'    ? 'bg-red-100 text-red-700' :
+                            userRole === 'tenant_admin'    ? 'bg-purple-100 text-purple-700' :
+                            userRole === 'scheduler_admin' ? 'bg-indigo-100 text-indigo-700' :
+                            userRole === 'scheduler_editor'? 'bg-blue-100 text-blue-700' :
+                                                             'bg-slate-100 text-slate-500'
+                          }`}>{userRole.replace(/_/g, ' ')}</span>
                         </div>
+                        {userEmail && userEmail !== userName && (
+                          <div className="text-[11px] text-slate-400 truncate">{userEmail}</div>
+                        )}
+                        {orgDisplayName && (
+                          <div className="text-[11px] text-slate-500 truncate">
+                            <span className="text-slate-400">{t('app.orgLabel')}</span>{orgDisplayName}
+                          </div>
+                        )}
+                        {tenant && (
+                          <div className="flex items-center gap-2 pt-0.5">
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                              tenant.plan === 'enterprise' ? 'bg-amber-100 text-amber-700' :
+                              tenant.plan === 'pro'        ? 'bg-emerald-100 text-emerald-700' :
+                                                             'bg-slate-100 text-slate-500'
+                            }`}>{tenant.plan} plan</span>
+                            <span className="text-[10px] text-slate-400">
+                              {leagues.length}/{tenant.limits.maxLeagues} leagues · {teams.length}/{tenant.limits.maxTeams} teams
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="py-2">
                         <button

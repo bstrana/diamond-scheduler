@@ -42,16 +42,29 @@ KC_CLIENT_SECRET=replace-with-client-secret
 # VITE_PB_SCORE_LINKS_COLLECTION=score_links
 # VITE_PB_SCORE_EDITS_COLLECTION=score_edits
 # VITE_PB_TENANTS_COLLECTION=tenants
+
+# NOTE: VITE_PB_URL is baked into the SPA at Docker build time as "/_pb".
+# You do NOT need to set it here. Setting it will have no effect on the browser
+# client — the built JS already contains the correct value.
 TEMPLATE
     chmod 644 "${CONFIG_FILE}"
     echo "    Edit it and restart the app to apply your Keycloak settings."
 fi
 
 echo "==> Loading config from ${CONFIG_FILE}"
-set -o allexport
-# shellcheck source=/dev/null
-source "${CONFIG_FILE}"
-set +o allexport
+# Parse config.env manually so that lines with spaces around '=' (e.g. VAR = value)
+# are handled gracefully instead of causing "command not found" errors.
+while IFS= read -r _line || [ -n "${_line}" ]; do
+  # Strip leading/trailing whitespace
+  _line="${_line#"${_line%%[![:space:]]*}"}"
+  _line="${_line%"${_line##*[![:space:]]}"}"
+  # Skip blank lines and comments
+  [[ -z "${_line}" || "${_line}" == \#* ]] && continue
+  # Match VAR=value or VAR = value (optional spaces around '=')
+  if [[ "${_line}" =~ ^([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=[[:space:]]*(.*) ]]; then
+    export "${BASH_REMATCH[1]}"="${BASH_REMATCH[2]}"
+  fi
+done < "${CONFIG_FILE}"
 
 # ── Runtime env vars ──────────────────────────────────────────────────────────
 # PB_URL is the absolute internal URL used by server.js (Node.js ICS endpoint).

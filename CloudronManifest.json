@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.12",
+  "version": "1.0.14",
   "manifestVersion": 2,
 
   "image": {
@@ -65,6 +65,8 @@
     "1.0.9": "Fix: extract org_id from organization attributes when 'Add organization attributes' is enabled on the Keycloak Organization Membership mapper; fix logout redirect to use registered /logged-out.html URI; prevent Not-authenticated crash and PocketBase 400 when Keycloak token is not yet available.",
     "1.0.10": "Refactor: remove app_id field and filter from all PocketBase queries and payloads; add migration 3 to drop app_id from existing installations (redundant on Cloudron where each app has its own database); fix invalid sort field 'updated' → 'created' in PocketBase list queries.",
     "1.0.11": "Fix: remove sort parameter from all PocketBase list queries (system fields 'created'/'updated' rejected by this PocketBase version); schedule list is now sorted alphabetically by name client-side.",
-    "1.0.12": "Feat: new Team Games embed type — table of upcoming/recent games for a single team with fullscreen game card, share popover, and save-as-image; show org name from Keycloak in game card branding footer; fix tenant system (loadTenant token refresh, auto-provision free-plan tenant on first login)."
+    "1.0.12": "Feat: new Team Games embed type — table of upcoming/recent games for a single team with fullscreen game card, share popover, and save-as-image; show org name from Keycloak in game card branding footer; fix tenant system (loadTenant token refresh, auto-provision free-plan tenant on first login).",
+    "1.0.13": "Fix: config.env parser now handles spaces around '=' (e.g. VITE_PB_URL = /_pb) without 'command not found' error; add note that VITE_PB_URL is baked in at build time and need not be set.",
+    "1.0.14": "Feat: enrich user menu with role badge, plan badge, org name, email, and league/team usage counters."
   }
 }
