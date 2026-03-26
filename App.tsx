@@ -1324,6 +1324,7 @@ const App: React.FC = () => {
                 isPublishedScheduleLoaded={!!scheduleKey && scheduleKey.trim() !== ''}
                 userId={userId}
                 orgId={orgId}
+                orgName={tenant?.branding?.orgName || tenant?.name || orgId}
             />
           )}
 

@@ -27,6 +27,8 @@ interface GameBarProps {
   hideGameNumber?: boolean;
   /** Include games from this many days in the past (default 0 = only future games) */
   includePastDays?: number;
+  /** Organisation name shown in the full-screen game card branding footer */
+  orgName?: string;
 }
 
 const GameBar: React.FC<GameBarProps> = ({
@@ -50,6 +52,7 @@ const GameBar: React.FC<GameBarProps> = ({
   hideLeagueName = false,
   hideGameNumber = false,
   includePastDays = 0,
+  orgName,
 }) => {
   const { t, i18n } = useTranslation();
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -446,7 +449,7 @@ const GameBar: React.FC<GameBarProps> = ({
 
           {/* Branding */}
           <div style={{ position: 'relative', textAlign: 'center', padding: '0 16px 14px', color: 'rgba(255,255,255,0.25)', fontSize: '0.6rem', letterSpacing: '0.08em' }}>
-            {(import.meta.env.VITE_ORG_NAME as string | undefined) || 'DIAMOND MANAGER SCHEDULER'}
+            {orgName || (import.meta.env.VITE_ORG_NAME as string | undefined) || 'DIAMOND SCHEDULER'}
           </div>
         </div>
 

@@ -17,6 +17,7 @@ interface EmbeddableGameBarProps {
   hideStatusFilter?: boolean;
   hideLeagueName?: boolean;
   hideGameNumber?: boolean;
+  orgName?: string;
 }
 
 const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
@@ -30,7 +31,8 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
   hideTeamFilter = false,
   hideStatusFilter = false,
   hideLeagueName = false,
-  hideGameNumber = false
+  hideGameNumber = false,
+  orgName,
 }) => {
   // Load data from storage (local storage or PocketBase)
   const [leagues, setLeagues] = useState<League[]>([]);
@@ -147,6 +149,7 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
         hideLeagueName={hideLeagueName}
         hideGameNumber={hideGameNumber}
         includePastDays={30}
+        orgName={orgName}
       />
       </div>
     </div>

@@ -18,6 +18,7 @@ interface EmbedCodeGeneratorProps {
   isPublishedScheduleLoaded: boolean;
   userId?: string;
   orgId?: string;
+  orgName?: string;
 }
 
 const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
@@ -28,7 +29,8 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   loadedScheduleKey,
   isPublishedScheduleLoaded,
   userId,
-  orgId
+  orgId,
+  orgName,
 }) => {
   const { t } = useTranslation();
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('all');
@@ -116,6 +118,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
       if (embedView === 'gamebar' && hideStatusFilter) params.set('hide_status_filter', '1');
       if (embedView === 'gamebar' && hideLeagueName) params.set('hide_league_name', '1');
       if (embedView === 'gamebar' && hideGameNumber) params.set('hide_game_number', '1');
+      if (embedView === 'gamebar' && orgName) params.set('org_name', orgName);
       if (embedView === 'calendar' && viewType !== 'grid') params.set('view', viewType);
     }
     params.set('height', `${height}px`);
