@@ -62,12 +62,18 @@ const App: React.FC = () => {
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
 
-  // ── Role helpers (populated once Keycloak token is available) ──────────────
-  const realmRolesSet = new Set((keycloak.tokenParsed as any)?.realm_access?.roles as string[] ?? []);
-  const isSystemAdmin  = realmRolesSet.has('system_admin');
-  const isTenantAdmin  = realmRolesSet.has('tenant_admin') || isSystemAdmin;
-  const isEditor       = realmRolesSet.has('scheduler_editor') || realmRolesSet.has('scheduler_admin') || isTenantAdmin;
-  const isAdminRole    = realmRolesSet.has('scheduler_admin')  || isTenantAdmin;
+  // ── Role helpers — checks both realm roles and client roles ────────────────
+  const token = keycloak.tokenParsed as any;
+  const clientId = import.meta.env.VITE_KEYCLOAK_CLIENT_ID as string | undefined;
+  const realmRoles  = (token?.realm_access?.roles as string[] | undefined) ?? [];
+  const clientRoles = (clientId
+    ? (token?.resource_access?.[clientId]?.roles as string[] | undefined)
+    : undefined) ?? [];
+  const rolesSet = new Set([...realmRoles, ...clientRoles]);
+  const isSystemAdmin  = rolesSet.has('system_admin');
+  const isTenantAdmin  = rolesSet.has('tenant_admin') || isSystemAdmin;
+  const isEditor       = rolesSet.has('scheduler_editor') || rolesSet.has('scheduler_admin') || isTenantAdmin;
+  const isAdminRole    = rolesSet.has('scheduler_admin')  || isTenantAdmin;
 
   // ── Plan-based limits (tenant record overrides env vars) ──────────────────
   const planLimits     = tenant ? tenant.limits : PLAN_LIMITS['enterprise'];
@@ -128,7 +134,7 @@ const App: React.FC = () => {
 
   // Derive a display role from the roles set
   const userRole = ['system_admin', 'tenant_admin', 'scheduler_admin', 'scheduler_editor', 'scheduler_viewer']
-    .find(r => realmRolesSet.has(r)) ?? 'viewer';
+    .find(r => rolesSet.has(r)) ?? 'viewer';
   const scheduleScopeLabel = tenant?.name
     ? `${tenant.name} · ${tenant.plan}`
     : orgId
