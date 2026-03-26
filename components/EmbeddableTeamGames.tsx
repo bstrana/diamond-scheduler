@@ -45,6 +45,11 @@ const EmbeddableTeamGames: React.FC<EmbeddableTeamGamesProps> = ({
   const cardRef = useRef<HTMLDivElement>(null);
   const [isCapturing, setIsCapturing] = useState(false);
 
+  // Table-level share
+  const tableRef = useRef<HTMLDivElement>(null);
+  const [copiedAll, setCopiedAll] = useState(false);
+  const [isSavingTable, setIsSavingTable] = useState(false);
+
   // ── Data loading ────────────────────────────────────────────────────────────
   useEffect(() => {
     let isActive = true;
@@ -80,6 +85,46 @@ const EmbeddableTeamGames: React.FC<EmbeddableTeamGamesProps> = ({
   const getGameLeagues = (game: Game): League[] => {
     const ids = game.leagueIds?.length ? game.leagueIds : game.leagueId ? [game.leagueId] : [];
     return ids.map(id => leagues.find(l => l.id === id)).filter(Boolean) as League[];
+  };
+
+  // ── Table-level share helpers ────────────────────────────────────────────────
+  const buildAllGamesText = (): string => {
+    if (!selectedTeam) return '';
+    const header = `${selectedTeam.city} ${selectedTeam.name} — Schedule\n${'─'.repeat(44)}`;
+    const lines = filteredGames.map(g => {
+      const home = getTeam(g.homeTeamId);
+      const away = getTeam(g.awayTeamId);
+      if (!home || !away) return '';
+      return buildGameShareText(g, home, away, getGameLeagues(g).map(l => l.shortName || l.name));
+    }).filter(Boolean);
+    return [header, ...lines].join('\n\n');
+  };
+
+  const handleCopyAll = async () => {
+    await copyToClipboard(buildAllGamesText());
+    setCopiedAll(true);
+    setTimeout(() => setCopiedAll(false), 2000);
+  };
+
+  const handleSaveTable = async () => {
+    if (!tableRef.current || isSavingTable) return;
+    setIsSavingTable(true);
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const canvas = await html2canvas(tableRef.current, {
+        useCORS: true,
+        allowTaint: true,
+        scale: 2,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+      const link = document.createElement('a');
+      link.download = `${selectedTeam?.name?.replace(/\s+/g, '-') ?? 'team'}-schedule.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch { /* ignore */ } finally {
+      setIsSavingTable(false);
+    }
   };
 
   // ── Share popover outside-click ─────────────────────────────────────────────
@@ -319,22 +364,61 @@ const EmbeddableTeamGames: React.FC<EmbeddableTeamGamesProps> = ({
   return (
     <div style={{ height, width: '100%', backgroundColor: 'var(--embed-bg, #f8fafc)', display: 'flex', flexDirection: 'column', fontFamily: 'var(--embed-font, Inter, sans-serif)', fontSize: 'var(--embed-font-size, 14px)', color: 'var(--embed-text, #1e293b)', overflow: 'hidden' }}>
 
-      {/* Team header */}
-      {selectedTeam && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderBottom: '1px solid var(--embed-border, #e2e8f0)', flexShrink: 0, backgroundColor: 'var(--embed-card-bg, #ffffff)' }}>
-          {selectedTeam.logoUrl
-            ? <img src={selectedTeam.logoUrl} alt={selectedTeam.name} style={{ width: '32px', height: '32px', objectFit: 'contain', borderRadius: '4px' }} />
-            : <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: selectedTeam.primaryColor || '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>⚾</div>
+      {/* Capture wrapper — everything inside gets captured as the schedule image */}
+      <div ref={tableRef} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+
+      {/* Team header banner with team colors */}
+      <div style={{
+        background: selectedTeam
+          ? `linear-gradient(135deg, ${selectedTeam.primaryColor || '#4f46e5'} 0%, ${selectedTeam.secondaryColor || '#7c3aed'} 100%)`
+          : 'var(--embed-primary, #4f46e5)',
+        padding: '12px 14px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        flexShrink: 0,
+      }}>
+        {/* Logo + name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+          {selectedTeam?.logoUrl
+            ? <img src={selectedTeam.logoUrl} alt={selectedTeam.name} style={{ width: 40, height: 40, objectFit: 'contain', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.4))', flexShrink: 0 }} />
+            : <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>⚾</div>
           }
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '0.95rem', lineHeight: 1.2 }}>{selectedTeam.name}</div>
-            {selectedTeam.city && <div style={{ fontSize: '0.75rem', color: 'rgba(var(--embed-text-rgb, 30,41,59),0.55)' }}>{selectedTeam.city}</div>}
-          </div>
-          <div style={{ marginLeft: 'auto', fontSize: '0.75rem', color: 'rgba(var(--embed-text-rgb, 30,41,59),0.45)' }}>
-            {filteredGames.length} game{filteredGames.length !== 1 ? 's' : ''}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: '1rem', color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {selectedTeam ? `${selectedTeam.city} ${selectedTeam.name}` : 'Team Schedule'}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>
+              {filteredGames.length} game{filteredGames.length !== 1 ? 's' : ''}
+            </div>
           </div>
         </div>
-      )}
+
+        {/* Table-level share toolbar */}
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          <button
+            onClick={handleCopyAll}
+            title="Copy full schedule as text"
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 999, border: 'none', background: 'rgba(255,255,255,0.18)', color: '#fff', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.3)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}
+          >
+            {copiedAll ? <Check size={13} /> : <Copy size={13} />}
+            {copiedAll ? 'Copied!' : 'Copy'}
+          </button>
+          <button
+            onClick={handleSaveTable}
+            disabled={isSavingTable}
+            title="Download schedule as image"
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 999, border: 'none', background: 'rgba(255,255,255,0.18)', color: '#fff', fontSize: '0.75rem', fontWeight: 600, cursor: isSavingTable ? 'default' : 'pointer', whiteSpace: 'nowrap', opacity: isSavingTable ? 0.6 : 1 }}
+            onMouseEnter={e => { if (!isSavingTable) e.currentTarget.style.background = 'rgba(255,255,255,0.3)'; }}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}
+          >
+            <ImageDown size={13} />
+            {isSavingTable ? 'Saving…' : 'Save image'}
+          </button>
+        </div>
+      </div>
 
       {/* Table */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
@@ -376,10 +460,11 @@ const EmbeddableTeamGames: React.FC<EmbeddableTeamGamesProps> = ({
                 const won = myScore !== null && oppScore !== null && myScore > oppScore;
                 const lost = myScore !== null && oppScore !== null && myScore < oppScore;
 
+                const teamPrimary = selectedTeam?.primaryColor || '#4f46e5';
                 const rowBg = isLive
                   ? 'rgba(34,197,94,0.05)'
                   : isToday
-                    ? 'rgba(var(--embed-primary-rgb,79,70,229),0.05)'
+                    ? `${teamPrimary}12`
                     : idx % 2 === 0
                       ? 'var(--embed-card-bg, #ffffff)'
                       : 'var(--embed-bg, #f8fafc)';
@@ -387,14 +472,14 @@ const EmbeddableTeamGames: React.FC<EmbeddableTeamGamesProps> = ({
                 return (
                   <tr
                     key={game.id}
-                    style={{ backgroundColor: rowBg, cursor: 'pointer', transition: 'background-color 0.1s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = 'rgba(var(--embed-primary-rgb,79,70,229),0.08)'; }}
+                    style={{ backgroundColor: rowBg, cursor: 'pointer', transition: 'background-color 0.1s', borderLeft: `3px solid ${isToday || isLive ? teamPrimary : 'transparent'}` }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = `${teamPrimary}15`; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.backgroundColor = rowBg; }}
                     onClick={() => openFullscreen(game)}
                   >
                     {/* Date */}
                     <td style={{ padding: '10px 14px', borderBottom: '1px solid var(--embed-border, #e2e8f0)', whiteSpace: 'nowrap' }}>
-                      <div style={{ fontWeight: isToday ? 700 : 500, fontSize: '0.85rem', color: isToday ? 'var(--embed-primary, #4f46e5)' : 'inherit' }}>{dateParts}</div>
+                      <div style={{ fontWeight: isToday ? 700 : 500, fontSize: '0.85rem', color: isToday ? teamPrimary : 'inherit' }}>{dateParts}</div>
                       <div style={{ fontSize: '0.72rem', color: 'rgba(var(--embed-text-rgb, 30,41,59),0.5)' }}>
                         {weekday}{game.time ? ` · ${game.time}` : ''}
                       </div>
@@ -518,6 +603,13 @@ const EmbeddableTeamGames: React.FC<EmbeddableTeamGamesProps> = ({
           </table>
         )}
       </div>
+
+      {/* Branding footer */}
+      <div style={{ textAlign: 'center', padding: '5px 12px', color: 'rgba(var(--embed-text-rgb,30,41,59),0.3)', fontSize: '0.58rem', letterSpacing: '0.08em', borderTop: '1px solid var(--embed-border, #e2e8f0)', flexShrink: 0 }}>
+        {orgName || (import.meta.env.VITE_ORG_NAME as string | undefined) || 'DIAMOND SCHEDULER'}
+      </div>
+
+      </div>{/* end tableRef capture wrapper */}
 
       {renderStoryOverlay()}
     </div>
