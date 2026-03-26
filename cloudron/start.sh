@@ -70,17 +70,18 @@ done < "${CONFIG_FILE}"
 # PB_URL is the absolute internal URL used by server.js (Node.js ICS endpoint).
 # The browser SPA uses the relative URL /_pb baked in at Docker build time.
 export PB_URL="http://127.0.0.1:8090"
-VITE_PB_COLLECTION="${VITE_PB_COLLECTION:-app_state}"
+export VITE_PB_COLLECTION="${VITE_PB_COLLECTION:-app_state}"
 
 # Default values for all other collection/feature vars.
 # Cloudron injects these from the manifest, but guard against cases where
 # they are absent (e.g. first boot on an older Cloudron version, or a
 # variable not yet configured in the app settings UI).
-VITE_PB_SCHEDULE_PUBLISH="${VITE_PB_SCHEDULE_PUBLISH:-true}"
-VITE_PB_SCHEDULE_COLLECTION="${VITE_PB_SCHEDULE_COLLECTION:-published_schedules}"
-VITE_PB_SCORE_LINKS_COLLECTION="${VITE_PB_SCORE_LINKS_COLLECTION:-score_links}"
-VITE_PB_SCORE_EDITS_COLLECTION="${VITE_PB_SCORE_EDITS_COLLECTION:-score_edits}"
-VITE_PB_TENANTS_COLLECTION="${VITE_PB_TENANTS_COLLECTION:-tenants}"
+# Must be exported so supervisord child processes (node.js) inherit them.
+export VITE_PB_SCHEDULE_PUBLISH="${VITE_PB_SCHEDULE_PUBLISH:-true}"
+export VITE_PB_SCHEDULE_COLLECTION="${VITE_PB_SCHEDULE_COLLECTION:-published_schedules}"
+export VITE_PB_SCORE_LINKS_COLLECTION="${VITE_PB_SCORE_LINKS_COLLECTION:-score_links}"
+export VITE_PB_SCORE_EDITS_COLLECTION="${VITE_PB_SCORE_EDITS_COLLECTION:-score_edits}"
+export VITE_PB_TENANTS_COLLECTION="${VITE_PB_TENANTS_COLLECTION:-tenants}"
 
 # Pass KC_URL through for the server-side ICS token introspection
 export KC_URL="${VITE_KEYCLOAK_URL:-}"
