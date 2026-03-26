@@ -366,7 +366,7 @@ export const listPublishedSchedules = async (
     try {
       const data = await pocketbaseClient!
         .collection(scheduleCollection!)
-        .getList(1, 200, { filter: scopedFilter, sort: '-created' });
+        .getList(1, 200, { filter: scopedFilter });
       const items = data.items || [];
       return items
         .map((item: any) => ({
@@ -375,7 +375,8 @@ export const listPublishedSchedules = async (
           scheduleName: item.schedule_name || undefined,
           active: item.active !== false
         }))
-        .filter((item: PublishedScheduleSummary) => item.scheduleKey);
+        .filter((item: PublishedScheduleSummary) => item.scheduleKey)
+        .sort((a, b) => (a.scheduleName || a.scheduleKey).localeCompare(b.scheduleName || b.scheduleKey));
     } catch (error) {
       console.warn('PocketBase schedule list failed.', error);
       return [];
@@ -570,7 +571,7 @@ export const listScoreLinks = async (
     const filter = filters.join(' && ');
     const result = await pocketbaseClient
       .collection(scoreLinksCollection)
-      .getList(1, 500, { filter, sort: '-created' });
+      .getList(1, 500, { filter });
     return (result.items || []).map(scoreLinkFromRecord);
   } catch (error) {
     console.warn('listScoreLinks failed', error);
@@ -699,7 +700,7 @@ export const listScoreEditsByScheduleKey = async (scheduleKey: string): Promise<
   try {
     const result = await pocketbaseClient
       .collection(scoreEditsCollection)
-      .getList(1, 1000, { filter: `schedule_key="${safeKey}"`, sort: '-created' });
+      .getList(1, 1000, { filter: `schedule_key="${safeKey}"` });
     return (result.items || []).map(scoreEditFromRecord);
   } catch (error) {
     console.warn('listScoreEditsByScheduleKey failed', error);
