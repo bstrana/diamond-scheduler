@@ -283,13 +283,44 @@ const App: React.FC = () => {
       }
 
       // Always start with empty data by default
-      const data = await storageApi.loadStorageData({
+      let data = await storageApi.loadStorageData({
         leagues: [],
         teams: [],
         games: [],
         gamesInHoldingArea: []
       }, { userId, orgId });
       if (!isActive) return;
+
+      // Seed default test league + teams on first install
+      if (data.leagues.length === 0 && data.teams.length === 0 && !localStorage.getItem('dsa_seeded')) {
+        const teamA: import('./types').Team = {
+          id: generateUUID(),
+          name: 'Home Hawks',
+          city: 'Springfield',
+          abbreviation: 'SPH',
+          primaryColor: '#4f46e5',
+          secondaryColor: '#818cf8',
+        };
+        const teamB: import('./types').Team = {
+          id: generateUUID(),
+          name: 'Away Eagles',
+          city: 'Shelbyville',
+          abbreviation: 'SHE',
+          primaryColor: '#0891b2',
+          secondaryColor: '#67e8f9',
+        };
+        const defaultLeague: import('./types').League = {
+          id: generateUUID(),
+          name: 'Test League',
+          shortName: 'TL',
+          category: 'Baseball',
+          teams: [teamA, teamB],
+        };
+        data = { leagues: [defaultLeague], teams: [teamA, teamB], games: [], gamesInHoldingArea: [] };
+        localStorage.setItem('dsa_seeded', '1');
+        await storageApi.persistStorageData(data, { userId, orgId });
+      }
+
       setLeagues(data.leagues);
       setTeams(data.teams);
       setGames(data.games);
