@@ -4,6 +4,7 @@ import EmbeddableCalendar from './components/EmbeddableCalendar';
 import EmbeddableGameBar from './components/EmbeddableGameBar';
 import EmbeddableStandings from './components/EmbeddableStandings';
 import EmbeddableSeries from './components/EmbeddableSeries';
+import EmbeddableTeamGames from './components/EmbeddableTeamGames';
 import './index.css';
 import './i18n';
 import { loadPublishedScheduleByKey, listScoreEditsByScheduleKey, StorageData } from './services/storage';
@@ -254,6 +255,21 @@ if (!rootElement) {
             teams: scheduleData.teams,
             games: scheduleData.games
           } : null}
+        />
+      );
+    }
+
+    if (embedType === 'teamgames') {
+      return (
+        <EmbeddableTeamGames
+          teamId={teamId}
+          height={height}
+          dataOverride={scheduleData ? {
+            leagues: scheduleData.leagues,
+            teams: scheduleData.teams,
+            games: scheduleData.games
+          } : null}
+          orgName={orgName}
         />
       );
     }
