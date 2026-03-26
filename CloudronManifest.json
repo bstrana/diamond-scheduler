@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "manifestVersion": 2,
 
   "image": {
@@ -72,6 +72,7 @@
     "1.0.16": "Fix: React error #31 — add strict typeof guards on all Keycloak token claim extractions so no object can leak into JSX rendering.",
     "1.0.17": "Fix: ICS calendar subscription returning 503 — VITE_PB_SCHEDULE_COLLECTION and related vars were not exported in start.sh so Node.js never received them.",
     "1.0.18": "Fix: org_id extracted correctly from Keycloak array attribute { org_id: ['test-org'] }; tenant auto-provisioned without Keycloak Organizations (falls back to userId); auth token diagnostic logging.",
-    "1.0.19": "Simplify: use Keycloak organization alias directly as orgId — no custom attribute mapper needed; org name from organization.name field or alias."
+    "1.0.19": "Simplify: use Keycloak organization alias directly as orgId — no custom attribute mapper needed; org name from organization.name field or alias.",
+    "1.0.20": "Fix: check both realm and client roles for role badge; fix embed branding footer showing username instead of org name."
   }
 }
