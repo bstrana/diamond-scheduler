@@ -240,28 +240,49 @@ const App: React.FC = () => {
     let isActive = true;
     const hydrate = async () => {
       // Load tenant record and published schedules in parallel
+      const tenantKey = orgId || userId;
       let [tenantRecord, publishedSchedules] = await Promise.all([
-        orgId ? storageApi.loadTenant(orgId) : Promise.resolve(null),
+        tenantKey ? storageApi.loadTenant(tenantKey) : Promise.resolve(null),
         storageApi.listPublishedSchedules({ userId, orgId }, { onlyActive: false }),
       ]);
 
       if (!isActive) return;
 
-      // Auto-provision a free-plan tenant on first login when an org_id is present
-      // but no record exists yet in PocketBase.
-      if (orgId && !tenantRecord && storageApi.createTenant) {
-        // Derive a human-readable org name from the Keycloak token.
-        // The organization claim is keyed by alias, so check all entries.
+      // Diagnostic — log what the token carries so admins can verify claims.
+      if (import.meta.env.DEV || (import.meta.env.VITE_DEBUG_AUTH === 'true')) {
+        const t = keycloak.tokenParsed as any;
+        console.log('[DSA] token claims:', {
+          sub: t?.sub,
+          preferred_username: t?.preferred_username,
+          realm_roles: t?.realm_access?.roles,
+          organization: t?.organization,
+          org_id: t?.org_id,
+        });
+      }
+
+      // Auto-provision a free-plan tenant on first login.
+      // Works with or without Keycloak Organizations:
+      //   • orgId present  → org-scoped tenant (shared across users in the org)
+      //   • orgId absent   → user-scoped tenant keyed by sub (single-user install)
+      if (!tenantRecord && storageApi.createTenant && (orgId || userId)) {
         const orgs = (keycloak.tokenParsed as any)?.organization;
-        const firstOrg = orgs && typeof orgs === 'object' ? Object.values(orgs)[0] as any : null;
-        const orgName: string = firstOrg?.name || (keycloak.tokenParsed as any)?.org_id || orgId;
+        const firstOrg = orgs && typeof orgs === 'object' && !Array.isArray(orgs)
+          ? Object.values(orgs)[0] as any : null;
+        const orgName: string = (firstOrg?.name && typeof firstOrg.name === 'string' ? firstOrg.name : '')
+          || (keycloak.tokenParsed as any)?.preferred_username
+          || orgId || userId || 'My Organisation';
         tenantRecord = await storageApi.createTenant({
-          orgId,
+          orgId: orgId || userId!,
           name: orgName,
           plan: 'free',
           limits: PLAN_LIMITS['free'],
           active: true,
         });
+        if (tenantRecord) {
+          console.log('[DSA] tenant auto-provisioned', tenantRecord);
+        } else {
+          console.warn('[DSA] tenant auto-provisioning failed — check PocketBase "tenants" collection rules');
+        }
       }
 
       setTenant(tenantRecord);
