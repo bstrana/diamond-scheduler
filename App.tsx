@@ -106,33 +106,30 @@ const App: React.FC = () => {
   const orgId: string | undefined = (() => {
     const token = keycloak.tokenParsed as any;
     // 1. Flat claim from a dedicated mapper
-    if (token?.org_id) return token.org_id as string;
+    if (token?.org_id && typeof token.org_id === 'string') return token.org_id;
     // 2. Nested organization claim
     const orgs = token?.organization;
     if (orgs && typeof orgs === 'object' && !Array.isArray(orgs)) {
       const alias = Object.keys(orgs)[0];
       const first = Object.values(orgs)[0] as any;
-      // org_id attribute merged directly into the org entry
-      if (first?.org_id) return first.org_id as string;
-      // org_id attribute nested under attributes (array or scalar)
+      if (first?.org_id && typeof first.org_id === 'string') return first.org_id;
       const attrOrgId = first?.attributes?.org_id;
       if (attrOrgId) return (Array.isArray(attrOrgId) ? attrOrgId[0] : attrOrgId) as string;
-      // Fall back to Keycloak-generated org UUID, then alias
-      if (first?.id) return first.id as string;
-      if (alias) return alias;
+      if (first?.id && typeof first.id === 'string') return first.id;
+      if (alias && typeof alias === 'string') return alias;
     }
     return undefined;
   })();
   // Human-readable org name: prefer tenant record, then Keycloak organization claim, then orgId
   const orgDisplayName: string | undefined = (() => {
-    if (tenant?.name) return tenant.name;
+    if (tenant?.name && typeof tenant.name === 'string' && tenant.name) return tenant.name;
     const token = keycloak.tokenParsed as any;
     const orgs = token?.organization;
     if (orgs && typeof orgs === 'object' && !Array.isArray(orgs)) {
       const first = Object.values(orgs)[0] as any;
-      if (first?.name) return first.name as string;
+      if (first?.name && typeof first.name === 'string') return first.name;
     }
-    return orgId;
+    return typeof orgId === 'string' ? orgId : undefined;
   })();
 
   // Derive a display role from the roles set
@@ -1175,7 +1172,7 @@ const App: React.FC = () => {
                         {userEmail && userEmail !== userName && (
                           <div className="text-[11px] text-slate-400 truncate">{userEmail}</div>
                         )}
-                        {orgDisplayName && (
+                        {typeof orgDisplayName === 'string' && orgDisplayName && (
                           <div className="text-[11px] text-slate-500 truncate">
                             <span className="text-slate-400">{t('app.orgLabel')}</span>{orgDisplayName}
                           </div>
