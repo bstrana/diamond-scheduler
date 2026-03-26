@@ -272,6 +272,7 @@ const App: React.FC = () => {
         localStorage.removeItem('dsa_games_holding');
         localStorage.removeItem('dsa_schedule_publish_key');
         localStorage.removeItem('dsa_schedule_publish_name');
+        localStorage.removeItem('dsa_seeded');
       } else {
         // Restore schedule key from localStorage so the Publish button stays enabled after reload
         const savedKey = localStorage.getItem('dsa_schedule_publish_key') || '';
