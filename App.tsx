@@ -283,9 +283,14 @@ const App: React.FC = () => {
         const orgs = (keycloak.tokenParsed as any)?.organization;
         const firstOrg = orgs && typeof orgs === 'object' && !Array.isArray(orgs)
           ? Object.values(orgs)[0] as any : null;
+        const orgAlias = orgs && typeof orgs === 'object' && !Array.isArray(orgs)
+          ? Object.keys(orgs)[0] : undefined;
+        // Name priority: org.name → org alias ("bstrana") → orgId ("test-org") → username
         const orgName: string = (firstOrg?.name && typeof firstOrg.name === 'string' ? firstOrg.name : '')
+          || (orgAlias && typeof orgAlias === 'string' ? orgAlias : '')
+          || (typeof orgId === 'string' ? orgId : '')
           || (keycloak.tokenParsed as any)?.preferred_username
-          || orgId || userId || 'My Organisation';
+          || 'My Organisation';
         tenantRecord = await storageApi.createTenant({
           orgId: orgId || userId!,
           name: orgName,
