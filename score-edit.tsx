@@ -91,6 +91,7 @@ const ScoreEditApp: React.FC = () => {
   const [balls, setBalls] = useState<number>(0);
   const [strikes, setStrikes] = useState<number>(0);
   const [baseRunners, setBaseRunners] = useState<{ first: boolean; second: boolean; third: boolean }>({ first: false, second: false, third: false });
+  const [recap, setRecap] = useState<string>('');
 
   const homeTotal = innings.reduce((s, i) => s + (i.home ?? 0), 0);
   const awayTotal = innings.reduce((s, i) => s + (i.away ?? 0), 0);
@@ -113,6 +114,7 @@ const ScoreEditApp: React.FC = () => {
 
       // pre-fill current values if already scored
       if (g.status !== 'scheduled') setStatus(g.status);
+      if (g.recap) setRecap(g.recap);
       if (g.scores?.innings?.length) {
         setInnings(g.scores.innings.map(i => ({ home: i.home, away: i.away })));
       }
@@ -154,6 +156,7 @@ const ScoreEditApp: React.FC = () => {
           innings: innings.map(i => ({ home: i.home ?? 0, away: i.away ?? 0 })),
           ...(status === 'live' && { outs, balls, strikes, baseRunners }),
         },
+        recap: recap || undefined,
       });
       setIsSaving(false);
       if (ok) {
@@ -166,7 +169,7 @@ const ScoreEditApp: React.FC = () => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // homeTotal and awayTotal are derived from innings — no need to list them separately
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, innings, outs, balls, strikes, baseRunners]);
+  }, [status, innings, outs, balls, strikes, baseRunners, recap]);
 
   const addInning = () => setInnings(prev => [...prev, { home: null, away: null }]);
   const removeInning = () => setInnings(prev => prev.length > 1 ? prev.slice(0, -1) : prev);
@@ -364,6 +367,20 @@ const ScoreEditApp: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Recap */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Game Recap <span className="text-xs font-normal text-slate-400">(shown scrolling in stream overlay)</span>
+            </label>
+            <textarea
+              value={recap}
+              onChange={e => setRecap(e.target.value)}
+              rows={3}
+              placeholder="e.g. Johnson threw 7 strong innings, striking out 9..."
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+            />
+          </div>
 
           {/* Auto-save indicator */}
           <div className="flex items-center gap-2 text-sm min-h-[2rem]">

@@ -767,7 +767,7 @@ const App: React.FC = () => {
       setGames(prev => prev.map(g => {
         const edit = editMap.get(g.id);
         if (!edit) return g;
-        return { ...g, status: edit.status, scores: edit.scores ?? g.scores };
+        return { ...g, status: edit.status, scores: edit.scores ?? g.scores, ...(edit.recap != null && { recap: edit.recap || undefined }) };
       }));
     };
     // Initial fetch to pick up any edits that arrived before we subscribed

@@ -166,7 +166,7 @@ const StreamOverlayApp: React.FC = () => {
 
       const edit = editMap.get(g.id);
       const finalGame = edit
-        ? { ...g, status: edit.status, scores: edit.scores ?? g.scores }
+        ? { ...g, status: edit.status, scores: edit.scores ?? g.scores, ...(edit.recap != null && { recap: edit.recap || undefined }) }
         : g;
 
       const allTeams: Team[] = [];
@@ -196,7 +196,7 @@ const StreamOverlayApp: React.FC = () => {
 
     const unsub = subscribeScoreEdits(link.scheduleKey, (edit) => {
       if (edit.gameId !== link.gameId) return;
-      setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores } : prev);
+      setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, ...(edit.recap != null && { recap: edit.recap || undefined }) } : prev);
     });
 
     // 15 s fallback poll
@@ -204,7 +204,7 @@ const StreamOverlayApp: React.FC = () => {
       const edits = await listScoreEditsByScheduleKey(link.scheduleKey);
       const edit = edits.find(e => e.gameId === link.gameId);
       if (edit) {
-        setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores } : prev);
+        setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, ...(edit.recap != null && { recap: edit.recap || undefined }) } : prev);
       }
     }, 15_000);
 
@@ -331,6 +331,34 @@ const StreamOverlayApp: React.FC = () => {
         )}
 
       </div>
+
+      {/* Recap ticker — horizontal auto-scroll */}
+      {game.recap && (
+        <div style={{
+          borderTop: `1px solid ${dividerColor}`,
+          overflow: 'hidden',
+          background: isLight ? 'rgba(241,245,249,0.9)' : 'rgba(8,14,26,0.7)',
+          padding: '5px 0',
+        }}>
+          <style>{`
+            @keyframes ticker {
+              0%   { transform: translateX(100%); }
+              100% { transform: translateX(-100%); }
+            }
+          `}</style>
+          <div style={{
+            display: 'inline-block',
+            whiteSpace: 'nowrap',
+            animation: 'ticker 20s linear infinite',
+            fontSize: 12,
+            fontWeight: 500,
+            color: isLight ? '#475569' : 'rgba(226,232,240,0.85)',
+            paddingLeft: '100%',
+          }}>
+            {game.recap}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
