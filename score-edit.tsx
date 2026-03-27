@@ -18,6 +18,56 @@ function hoursLeft(expiresAt: string): number {
   return Math.max(0, Math.round((new Date(expiresAt).getTime() - Date.now()) / 3_600_000));
 }
 
+// ── Interactive base diamond ──────────────────────────────────────────────────
+
+const BaseDiamondInput: React.FC<{
+  value: { first: boolean; second: boolean; third: boolean };
+  onChange: (v: { first: boolean; second: boolean; third: boolean }) => void;
+}> = ({ value, onChange }) => {
+  const toggle = (base: 'first' | 'second' | 'third') =>
+    onChange({ ...value, [base]: !value[base] });
+
+  const W = 110, H = 90;
+  const BS = 26; // rotated square half-diagonal → visual size
+  const bases: { key: 'first' | 'second' | 'third'; cx: number; cy: number; label: string }[] = [
+    { key: 'second', cx: W / 2,     cy: BS,        label: '2B' },
+    { key: 'third',  cx: BS,        cy: H / 2 + 4, label: '3B' },
+    { key: 'first',  cx: W - BS,    cy: H / 2 + 4, label: '1B' },
+  ];
+
+  return (
+    <svg
+      width={W} height={H}
+      viewBox={`0 0 ${W} ${H}`}
+      style={{ touchAction: 'manipulation', userSelect: 'none' }}
+      aria-label="Runners on base"
+    >
+      {bases.map(({ key, cx, cy, label }) => (
+        <g key={key} onClick={() => toggle(key)} style={{ cursor: 'pointer' }}>
+          <rect
+            x={cx - BS / 2} y={cy - BS / 2}
+            width={BS} height={BS}
+            transform={`rotate(45 ${cx} ${cy})`}
+            fill={value[key] ? '#f59e0b' : '#e2e8f0'}
+            stroke={value[key] ? '#d97706' : '#94a3b8'}
+            strokeWidth={1.5}
+            rx={2}
+          />
+          <text
+            x={cx} y={cy}
+            textAnchor="middle" dominantBaseline="central"
+            fontSize={9} fontWeight="700"
+            fill={value[key] ? '#ffffff' : '#64748b'}
+            style={{ pointerEvents: 'none' }}
+          >
+            {label}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+};
+
 // ── Score-entry form ──────────────────────────────────────────────────────────
 
 const ScoreEditApp: React.FC = () => {
@@ -34,6 +84,8 @@ const ScoreEditApp: React.FC = () => {
   const [innings, setInnings] = useState<Array<{ home: number | null; away: number | null }>>([
     { home: null, away: null },
   ]);
+  const [outs, setOuts] = useState<number>(0);
+  const [baseRunners, setBaseRunners] = useState<{ first: boolean; second: boolean; third: boolean }>({ first: false, second: false, third: false });
 
   const homeTotal = innings.reduce((s, i) => s + (i.home ?? 0), 0);
   const awayTotal = innings.reduce((s, i) => s + (i.away ?? 0), 0);
@@ -59,6 +111,12 @@ const ScoreEditApp: React.FC = () => {
       if (g.scores?.innings?.length) {
         setInnings(g.scores.innings.map(i => ({ home: i.home, away: i.away })));
       }
+      if (g.scores?.outs != null) setOuts(g.scores.outs);
+      if (g.scores?.baseRunners) setBaseRunners({
+        first:  !!g.scores.baseRunners.first,
+        second: !!g.scores.baseRunners.second,
+        third:  !!g.scores.baseRunners.third,
+      });
 
       // look up team names from all teams across leagues
       const allTeams: Team[] = [];
@@ -85,6 +143,7 @@ const ScoreEditApp: React.FC = () => {
         home:    homeTotal,
         away:    awayTotal,
         innings: innings.map(i => ({ home: i.home ?? 0, away: i.away ?? 0 })),
+        ...(status === 'live' && { outs, baseRunners }),
       },
     });
     setPhase('form');
@@ -217,6 +276,40 @@ const ScoreEditApp: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {/* Outs + runners — live only */}
+          {status === 'live' && (
+            <div className="space-y-4">
+              {/* Outs */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Outs</label>
+                <div className="flex gap-2">
+                  {[0, 1, 2].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setOuts(n)}
+                      className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                        outs === n
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-slate-100 text-slate-600 active:bg-slate-200'
+                      }`}
+                    >
+                      {n} {n === 1 ? 'out' : 'outs'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Runners on base */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Runners on Base <span className="text-xs font-normal text-slate-400">(tap to toggle)</span></label>
+                <div className="flex justify-center py-1">
+                  <BaseDiamondInput value={baseRunners} onChange={setBaseRunners} />
+                </div>
               </div>
             </div>
           )}

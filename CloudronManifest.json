@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.22",
+  "version": "1.0.23",
   "manifestVersion": 2,
 
   "image": {
@@ -75,6 +75,7 @@
     "1.0.19": "Simplify: use Keycloak organization alias directly as orgId — no custom attribute mapper needed; org name from organization.name field or alias.",
     "1.0.20": "Fix: check both realm and client roles for role badge; fix embed branding footer showing username instead of org name.",
     "1.0.21": "Fix: ICS calendar subscription now works — remove stale app_id filter from PocketBase query (app_id field was removed in v1.0.10).",
-    "1.0.22": "Fix: inning half (top/bottom) derivation was inverted — odd filled slots now correctly show bottom half and even slots show top of next inning; inning number also corrected for the even-count case."
+    "1.0.22": "Fix: inning half (top/bottom) derivation was inverted — odd filled slots now correctly show bottom half and even slots show top of next inning; inning number also corrected for the even-count case.",
+    "1.0.23": "Feat: outs and runners on base in score entry (live only) — tap buttons for 0/1/2 outs and interactive SVG diamond to toggle runners; displayed as dots + mini diamond in GameBar live card and fullscreen overlay."
   }
 }

@@ -278,6 +278,56 @@ const GameBar: React.FC<GameBarProps> = ({
     return null;
   };
 
+  // ── Live situation helpers (outs + base runners) ─────────────────────────
+
+  const renderOutsDots = (outs: number | undefined, dotPx: number, activeColor: string) => {
+    if (outs == null) return null;
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+        {[0, 1, 2].map(i => (
+          <div
+            key={i}
+            style={{
+              width: dotPx, height: dotPx, borderRadius: '50%',
+              backgroundColor: i < outs ? activeColor : 'rgba(148,163,184,0.5)',
+            }}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  const renderBaseDiamond = (
+    runners: { first?: boolean; second?: boolean; third?: boolean } | undefined,
+    size: number,
+    activeColor: string,
+    inactiveColor: string,
+  ) => {
+    if (!runners) return null;
+    const bs = size * 0.32;
+    const cx2 = size / 2, cy2 = bs;
+    const cx3 = bs,        cy3 = size / 2 + size * 0.06;
+    const cx1 = size - bs, cy1 = size / 2 + size * 0.06;
+    const bases = [
+      { key: 'second' as const, cx: cx2, cy: cy2 },
+      { key: 'third'  as const, cx: cx3, cy: cy3 },
+      { key: 'first'  as const, cx: cx1, cy: cy1 },
+    ];
+    return (
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block', flexShrink: 0 }}>
+        {bases.map(({ key, cx, cy }) => (
+          <rect
+            key={key}
+            x={cx - bs / 2} y={cy - bs / 2}
+            width={bs} height={bs}
+            transform={`rotate(45 ${cx} ${cy})`}
+            fill={runners[key] ? activeColor : inactiveColor}
+          />
+        ))}
+      </svg>
+    );
+  };
+
   // ── Inning derivation ─────────────────────────────────────────────────────
   // Count how many score input fields have a value of 0 or higher (not null),
   // divide by 2, then:
@@ -424,8 +474,16 @@ const GameBar: React.FC<GameBarProps> = ({
               </div>
               {/* Inning — sits at abbreviation level */}
               {isLive && overlayInnInfo && overlayInnInfo.inning !== '—' && (
-                <div style={{ color: '#4ade80', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
-                  {overlayInnInfo.inning}{overlayInnInfo.half === 'top' ? ' ▲' : overlayInnInfo.half === 'bottom' ? ' ▼' : ''}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+                  <div style={{ color: '#4ade80', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+                    {overlayInnInfo.inning}{overlayInnInfo.half === 'top' ? ' ▲' : overlayInnInfo.half === 'bottom' ? ' ▼' : ''}
+                  </div>
+                  {(g.scores?.outs != null || g.scores?.baseRunners) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {renderOutsDots(g.scores?.outs, 7, '#fbbf24')}
+                      {renderBaseDiamond(g.scores?.baseRunners, 22, '#fbbf24', 'rgba(148,163,184,0.35)')}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -937,8 +995,16 @@ const GameBar: React.FC<GameBarProps> = ({
                       <div className="flex items-center justify-between">
                         <div>
                           {isLive ? (
-                            <div className="text-sm font-bold leading-tight" style={{ color: '#16a34a' }}>
-                              {t('gameBar.inn', 'Inn')} {innInfo?.inning ?? '—'}{innInfo?.half === 'top' ? ' ▲' : innInfo?.half === 'bottom' ? ' ▼' : ''}
+                            <div>
+                              <div className="text-sm font-bold leading-tight" style={{ color: '#16a34a' }}>
+                                {t('gameBar.inn', 'Inn')} {innInfo?.inning ?? '—'}{innInfo?.half === 'top' ? ' ▲' : innInfo?.half === 'bottom' ? ' ▼' : ''}
+                              </div>
+                              {(game.scores?.outs != null || game.scores?.baseRunners) && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
+                                  {renderOutsDots(game.scores?.outs, 6, '#f59e0b')}
+                                  {renderBaseDiamond(game.scores?.baseRunners, 18, '#f59e0b', 'rgba(148,163,184,0.45)')}
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <>
