@@ -269,7 +269,7 @@ const StreamOverlayApp: React.FC = () => {
     <div style={{ padding: 12, fontFamily: 'Inter, sans-serif', display: 'inline-block' }}>
       <div style={{ ...shellStyle, display: 'flex', userSelect: 'none', minWidth: 220 }}>
 
-        {/* Left: away (top) + home (bottom) */}
+        {/* Col 1: away (top) + home (bottom) */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <TeamRow
             team={awayTeam}
@@ -286,7 +286,7 @@ const StreamOverlayApp: React.FC = () => {
           />
         </div>
 
-        {/* Right: status + live situation */}
+        {/* Col 2: status, inning, outs + count */}
         <div style={{
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
@@ -298,10 +298,7 @@ const StreamOverlayApp: React.FC = () => {
           {statusBadge}
 
           {isLive && innInfo && (
-            <span style={{
-              fontSize: 13, fontWeight: 800, color: '#4ade80', lineHeight: 1,
-              whiteSpace: 'nowrap',
-            }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: '#4ade80', lineHeight: 1, whiteSpace: 'nowrap' }}>
               {innInfo.inning !== '—'
                 ? `${innInfo.inning}${innInfo.half === 'top' ? ' ▲' : innInfo.half === 'bottom' ? ' ▼' : ''}`
                 : '—'}
@@ -313,17 +310,26 @@ const StreamOverlayApp: React.FC = () => {
           )}
 
           {isLive && (game.scores?.balls != null || game.scores?.strikes != null) && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-              <span style={{ color: '#4ade80' }}>{game.scores?.balls ?? 0}</span>
-              <span style={{ color: 'rgba(255,255,255,0.3)' }}>·</span>
-              <span style={{ color: '#f87171' }}>{game.scores?.strikes ?? 0}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ fontSize: 16, fontWeight: 800, color: '#4ade80', lineHeight: 1 }}>{game.scores?.balls ?? 0}</span>
+              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', lineHeight: 1 }}>·</span>
+              <span style={{ fontSize: 16, fontWeight: 800, color: '#f87171', lineHeight: 1 }}>{game.scores?.strikes ?? 0}</span>
             </div>
           )}
-
-          {isLive && game.scores?.baseRunners && (
-            <BaseDiamond runners={game.scores.baseRunners} />
-          )}
         </div>
+
+        {/* Col 3: base diamond */}
+        {isLive && game.scores?.baseRunners && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '8px 10px',
+            borderLeft: `1px solid ${dividerColor}`,
+            flexShrink: 0,
+            background: isLight ? 'rgba(248,250,252,0.8)' : 'rgba(15,23,42,0.5)',
+          }}>
+            <BaseDiamond runners={game.scores.baseRunners} />
+          </div>
+        )}
 
       </div>
     </div>
