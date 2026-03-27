@@ -20,9 +20,6 @@ const icsRateLimiter = rateLimit({
 
 const pbUrl = process.env.PB_URL || process.env.VITE_PB_URL;
 const scheduleCollection = process.env.PB_SCHEDULE_COLLECTION || process.env.VITE_PB_SCHEDULE_COLLECTION;
-const rawAppId = process.env.PB_APP_ID || process.env.VITE_APP_ID || 'scheduler';
-// Sanitize appId so it is safe to embed in PocketBase filter strings
-const appId = rawAppId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 100) || 'scheduler';
 const defaultDurationMinutes = Number.parseInt(process.env.SCHEDULE_EVENT_DURATION_MINUTES || '120', 10);
 
 const pad = (value) => String(value).padStart(2, '0');
@@ -51,7 +48,7 @@ const buildIcs = (data) => {
     const summary = `${away?.name || 'Away'} @ ${home?.name || 'Home'}`;
     return [
       'BEGIN:VEVENT',
-      `UID:${game.id}@${appId}`,
+      `UID:${game.id}@diamond-scheduler`,
       `DTSTAMP:${dtstamp}`,
       `DTSTART:${formatLocalIcsDate(start)}`,
       `DTEND:${formatLocalIcsDate(end)}`,
@@ -112,7 +109,7 @@ app.get('/subscribe.ics', icsRateLimiter, async (req, res) => {
 
   // Only fetch active published schedules - never serve inactive or unpublished schedules
   const params = new URLSearchParams();
-  params.append('filter', `app_id="${appId}" && schedule_key="${sanitizedKey}" && active=true`);
+  params.append('filter', `schedule_key="${sanitizedKey}" && active=true`);
   params.append('perPage', '1');
   const url = `${pbUrl.replace(/\/$/, '')}/api/collections/${scheduleCollection}/records?${params.toString()}`;
 
