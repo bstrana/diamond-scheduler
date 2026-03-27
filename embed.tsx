@@ -187,8 +187,11 @@ if (!rootElement) {
       // Real-time: the base schedule was republished — full reload to pick up game changes
       const unsubSchedule = subscribePublishedSchedule(scheduleKey, () => { reload(); });
 
-      // Fallback poll every 5 min in case SSE drops
-      const interval = setInterval(reload, 5 * 60_000);
+      // Fallback poll every 15 s — covers the case where SSE is unavailable
+      // (e.g. nginx not yet configured for HTTP/1.1 keep-alive proxying).
+      // When SSE is working this poll is essentially a no-op since state is
+      // already up to date.
+      const interval = setInterval(reload, 15_000);
 
       return () => {
         isActive = false;

@@ -810,6 +810,8 @@ export const updateTenant = async (
  * Subscribe to score_edits for a given scheduleKey.
  * Fires callback immediately on create or update for matching records.
  * Returns a cleanup function — call it on unmount.
+ * Silently degrades to no-op if SSE is unavailable (e.g. nginx not yet
+ * configured for HTTP/1.1 keep-alive); callers should use a fallback poll.
  */
 export const subscribeScoreEdits = (
   scheduleKey: string,
@@ -828,7 +830,7 @@ export const subscribeScoreEdits = (
       }
     })
     .then(fn => { unsubFn = fn; })
-    .catch(err => console.warn('subscribeScoreEdits failed to connect', err));
+    .catch(() => { /* SSE unavailable — fallback poll handles updates */ });
   return () => { unsubFn?.(); };
 };
 
@@ -836,6 +838,7 @@ export const subscribeScoreEdits = (
  * Subscribe to published_schedules for a given scheduleKey.
  * Fires callback with fresh StorageData whenever the schedule record is updated.
  * Returns a cleanup function — call it on unmount.
+ * Silently degrades to no-op if SSE is unavailable.
  */
 export const subscribePublishedSchedule = (
   scheduleKey: string,
@@ -865,6 +868,6 @@ export const subscribePublishedSchedule = (
       }
     })
     .then(fn => { unsubFn = fn; })
-    .catch(err => console.warn('subscribePublishedSchedule failed to connect', err));
+    .catch(() => { /* SSE unavailable — fallback poll handles updates */ });
   return () => { unsubFn?.(); };
 };
