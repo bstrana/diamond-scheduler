@@ -53,9 +53,9 @@ const OutsDots: React.FC<{ outs: number }> = ({ outs }) => (
 
 const BaseDiamond: React.FC<{ runners?: { first?: boolean; second?: boolean; third?: boolean } }> = ({ runners }) => {
   const bases = [
-    { key: 'second' as const, cx: 30, cy: 4  },
-    { key: 'third'  as const, cx: 4,  cy: 55 },
-    { key: 'first'  as const, cx: 56, cy: 55 },
+    { key: 'second' as const, cx: 30, cy: 16 },
+    { key: 'third'  as const, cx: 16, cy: 48 },
+    { key: 'first'  as const, cx: 44, cy: 48 },
   ];
   return (
     <svg width={110} height={100} viewBox="-10 -10 80 80" style={{ display: 'block' }}>

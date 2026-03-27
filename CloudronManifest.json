@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.34",
+  "version": "1.0.35",
   "manifestVersion": 2,
 
   "image": {
@@ -87,6 +87,7 @@
     "1.0.31": "Feat: balls & strikes in score entry (live only) and stream overlay; outs display reduced to 2 dots; base diamond bigger in overlay (bs=14); outs/runners removed from GameBar card and fullscreen views.",
     "1.0.32": "Refactor: remove autoSync option — all score edits now applied automatically; 'Sync Remote Scores' banner removed; autoSync field, toggle button, and isWithinAutoSyncWindow logic deleted.",
     "1.0.33": "UX: stream overlay split into 3 columns — teams/scores, status/inning/count (larger B·S digits), base diamond alone on the right.",
-    "1.0.34": "Fix: base diamond SVG adjusted — viewBox -10 -10 80 80, rendered 110×100, 25×25 rects for larger and better-spaced bases."
+    "1.0.34": "Fix: base diamond SVG adjusted — viewBox -10 -10 80 80, rendered 110×100, 25×25 rects for larger and better-spaced bases.",
+    "1.0.35": "Fix: stream overlay base diamond — move bases inward (second cy 4→16, third cx 4→16, first cx 56→44) to prevent corner clipping and reduce spacing."
   }
 }
