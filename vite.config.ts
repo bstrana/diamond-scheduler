@@ -21,9 +21,10 @@ export default defineConfig(({ mode }) => {
       build: {
         rollupOptions: {
           input: {
-            main:       path.resolve(__dirname, 'index.html'),
-            embed:      path.resolve(__dirname, 'embed.html'),
-            scoreEdit:  path.resolve(__dirname, 'score-edit.html'),
+            main:           path.resolve(__dirname, 'index.html'),
+            embed:          path.resolve(__dirname, 'embed.html'),
+            scoreEdit:      path.resolve(__dirname, 'score-edit.html'),
+            streamOverlay:  path.resolve(__dirname, 'stream-overlay.html'),
           }
         }
       }
