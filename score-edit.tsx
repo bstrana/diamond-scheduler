@@ -88,6 +88,8 @@ const ScoreEditApp: React.FC = () => {
     { home: null, away: null },
   ]);
   const [outs, setOuts] = useState<number>(0);
+  const [balls, setBalls] = useState<number>(0);
+  const [strikes, setStrikes] = useState<number>(0);
   const [baseRunners, setBaseRunners] = useState<{ first: boolean; second: boolean; third: boolean }>({ first: false, second: false, third: false });
 
   const homeTotal = innings.reduce((s, i) => s + (i.home ?? 0), 0);
@@ -114,7 +116,9 @@ const ScoreEditApp: React.FC = () => {
       if (g.scores?.innings?.length) {
         setInnings(g.scores.innings.map(i => ({ home: i.home, away: i.away })));
       }
-      if (g.scores?.outs != null) setOuts(g.scores.outs);
+      if (g.scores?.outs     != null) setOuts(g.scores.outs);
+      if (g.scores?.balls    != null) setBalls(g.scores.balls);
+      if (g.scores?.strikes  != null) setStrikes(g.scores.strikes);
       if (g.scores?.baseRunners) setBaseRunners({
         first:  !!g.scores.baseRunners.first,
         second: !!g.scores.baseRunners.second,
@@ -148,7 +152,7 @@ const ScoreEditApp: React.FC = () => {
           home:    homeTotal,
           away:    awayTotal,
           innings: innings.map(i => ({ home: i.home ?? 0, away: i.away ?? 0 })),
-          ...(status === 'live' && { outs, baseRunners }),
+          ...(status === 'live' && { outs, balls, strikes, baseRunners }),
         },
       });
       setIsSaving(false);
@@ -162,7 +166,7 @@ const ScoreEditApp: React.FC = () => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // homeTotal and awayTotal are derived from innings — no need to list them separately
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, innings, outs, baseRunners]);
+  }, [status, innings, outs, balls, strikes, baseRunners]);
 
   const addInning = () => setInnings(prev => [...prev, { home: null, away: null }]);
   const removeInning = () => setInnings(prev => prev.length > 1 ? prev.slice(0, -1) : prev);
@@ -310,6 +314,44 @@ const ScoreEditApp: React.FC = () => {
                       {n} {n === 1 ? 'out' : 'outs'}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Balls & Strikes */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Balls</label>
+                  <div className="flex gap-1.5">
+                    {[0, 1, 2, 3].map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setBalls(n)}
+                        className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          balls === n
+                            ? 'bg-green-500 text-white'
+                            : 'bg-slate-100 text-slate-600 active:bg-slate-200'
+                        }`}
+                      >{n}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Strikes</label>
+                  <div className="flex gap-1.5">
+                    {[0, 1, 2].map(n => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setStrikes(n)}
+                        className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          strikes === n
+                            ? 'bg-red-500 text-white'
+                            : 'bg-slate-100 text-slate-600 active:bg-slate-200'
+                        }`}
+                      >{n}</button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
