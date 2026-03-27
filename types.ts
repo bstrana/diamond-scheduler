@@ -41,6 +41,8 @@ export interface Game {
     away: number;
     innings?: Array<{ home: number | null; away: number | null }>;
     outs?: number;       // 0-2, only meaningful when status=live
+    balls?: number;      // 0-3
+    strikes?: number;    // 0-2
     baseRunners?: { first?: boolean; second?: boolean; third?: boolean };
   };
   recap?: string;
@@ -63,7 +65,6 @@ export interface ScoreLink {
   orgId?: string;
   userId?: string;
   disabled: boolean;
-  autoSync: boolean;    // automatically apply submitted scores without manual sync
   expiresAt: string;    // ISO datetime (48 h from creation)
   created?: string;
 }

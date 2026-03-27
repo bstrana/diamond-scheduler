@@ -38,9 +38,10 @@ const deriveInning = (game: Game): { inning: string; half: 'top' | 'bottom' | nu
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
+// Two dots only — 3rd out resets the count so it never needs to display
 const OutsDots: React.FC<{ outs: number }> = ({ outs }) => (
   <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-    {[0, 1, 2].map(i => (
+    {[0, 1].map(i => (
       <div key={i} style={{
         width: 8, height: 8, borderRadius: '50%',
         backgroundColor: i < outs ? '#fbbf24' : 'rgba(255,255,255,0.2)',
@@ -51,14 +52,14 @@ const OutsDots: React.FC<{ outs: number }> = ({ outs }) => (
 );
 
 const BaseDiamond: React.FC<{ runners?: { first?: boolean; second?: boolean; third?: boolean } }> = ({ runners }) => {
-  const VW = 44, VH = 36, bs = 11;
+  const VW = 48, VH = 40, bs = 14;
   const bases = [
-    { key: 'second' as const, cx: VW / 2, cy: 5 },
-    { key: 'third'  as const, cx: 5,       cy: VH - 5 },
-    { key: 'first'  as const, cx: VW - 5,  cy: VH - 5 },
+    { key: 'second' as const, cx: VW / 2, cy: 6 },
+    { key: 'third'  as const, cx: 6,       cy: VH - 6 },
+    { key: 'first'  as const, cx: VW - 6,  cy: VH - 6 },
   ];
   return (
-    <svg width={36} height={Math.round(36 * VH / VW)} viewBox={`0 0 ${VW} ${VH}`} style={{ display: 'block' }}>
+    <svg width={44} height={Math.round(44 * VH / VW)} viewBox={`0 0 ${VW} ${VH}`} style={{ display: 'block' }}>
       {bases.map(({ key, cx, cy }) => (
         <rect key={key}
           x={cx - bs / 2} y={cy - bs / 2} width={bs} height={bs}
@@ -309,6 +310,14 @@ const StreamOverlayApp: React.FC = () => {
 
           {isLive && game.scores?.outs != null && (
             <OutsDots outs={game.scores.outs} />
+          )}
+
+          {isLive && (game.scores?.balls != null || game.scores?.strikes != null) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ color: '#4ade80' }}>{game.scores?.balls ?? 0}</span>
+              <span style={{ color: 'rgba(255,255,255,0.3)' }}>·</span>
+              <span style={{ color: '#f87171' }}>{game.scores?.strikes ?? 0}</span>
+            </div>
           )}
 
           {isLive && game.scores?.baseRunners && (

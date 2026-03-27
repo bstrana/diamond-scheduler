@@ -526,7 +526,6 @@ const scoreLinkFromRecord = (r: any): ScoreLink => ({
   orgId:       r.org_id || undefined,
   userId:      r.user_id || undefined,
   disabled:    r.disabled === true,
-  autoSync:    r.auto_sync === true,
   expiresAt:   r.expires_at,
   created:     r.created,
 });
@@ -543,7 +542,6 @@ export const createScoreLink = async (
       org_id:       link.orgId || '',
       user_id:      link.userId || '',
       disabled:     false,
-      auto_sync:    link.autoSync ?? false,
       expires_at:   link.expiresAt.replace('T', ' '),
     });
     return scoreLinkFromRecord(record);
@@ -581,7 +579,7 @@ export const listScoreLinks = async (
 
 export const updateScoreLink = async (
   id: string,
-  data: Partial<Pick<ScoreLink, 'disabled' | 'autoSync'>>,
+  data: Partial<Pick<ScoreLink, 'disabled'>>,
   context?: StorageContext
 ): Promise<boolean> => {
   if (!pocketbaseClient) return false;
@@ -602,7 +600,6 @@ export const updateScoreLink = async (
     }
     const payload: Record<string, unknown> = {};
     if (data.disabled !== undefined) payload.disabled = data.disabled;
-    if (data.autoSync !== undefined) payload.auto_sync = data.autoSync;
     await pocketbaseClient.collection(scoreLinksCollection).update(id, payload);
     return true;
   } catch (error) {
