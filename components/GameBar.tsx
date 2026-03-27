@@ -304,17 +304,17 @@ const GameBar: React.FC<GameBarProps> = ({
     inactiveColor: string,
   ) => {
     if (!runners) return null;
-    const bs = size * 0.32;
-    const cx2 = size / 2, cy2 = bs;
-    const cx3 = bs,        cy3 = size / 2 + size * 0.06;
-    const cx1 = size - bs, cy1 = size / 2 + size * 0.06;
+    // Fixed viewBox so spacing is consistent regardless of rendered size.
+    // Bases sit at the three corners of a triangle; each is a small rotated square.
+    const VW = 32, VH = 26, bs = 7;
     const bases = [
-      { key: 'second' as const, cx: cx2, cy: cy2 },
-      { key: 'third'  as const, cx: cx3, cy: cy3 },
-      { key: 'first'  as const, cx: cx1, cy: cy1 },
+      { key: 'second' as const, cx: VW / 2,  cy: 4         },
+      { key: 'third'  as const, cx: 4,        cy: VH - 3   },
+      { key: 'first'  as const, cx: VW - 4,   cy: VH - 3   },
     ];
+    const renderH = Math.round(size * VH / VW);
     return (
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block', flexShrink: 0 }}>
+      <svg width={size} height={renderH} viewBox={`0 0 ${VW} ${VH}`} style={{ display: 'block', flexShrink: 0 }}>
         {bases.map(({ key, cx, cy }) => (
           <rect
             key={key}
@@ -481,7 +481,7 @@ const GameBar: React.FC<GameBarProps> = ({
                   {(g.scores?.outs != null || g.scores?.baseRunners) && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       {renderOutsDots(g.scores?.outs, 7, '#fbbf24')}
-                      {renderBaseDiamond(g.scores?.baseRunners, 22, '#fbbf24', 'rgba(148,163,184,0.35)')}
+                      {renderBaseDiamond(g.scores?.baseRunners, 28, '#fbbf24', 'rgba(148,163,184,0.35)')}
                     </div>
                   )}
                 </div>
@@ -1002,7 +1002,7 @@ const GameBar: React.FC<GameBarProps> = ({
                               {(game.scores?.outs != null || game.scores?.baseRunners) && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
                                   {renderOutsDots(game.scores?.outs, 6, '#f59e0b')}
-                                  {renderBaseDiamond(game.scores?.baseRunners, 18, '#f59e0b', 'rgba(148,163,184,0.45)')}
+                                  {renderBaseDiamond(game.scores?.baseRunners, 24, '#f59e0b', 'rgba(148,163,184,0.45)')}
                                 </div>
                               )}
                             </div>
