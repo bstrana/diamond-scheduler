@@ -40,6 +40,8 @@ export interface Game {
     home: number;
     away: number;
     innings?: Array<{ home: number | null; away: number | null }>;
+    outs?: number;       // 0-2, only meaningful when status=live
+    baseRunners?: { first?: boolean; second?: boolean; third?: boolean };
   };
   recap?: string;
   leagueId?: string; // Deprecated: kept for backward compatibility
