@@ -52,17 +52,16 @@ const OutsDots: React.FC<{ outs: number }> = ({ outs }) => (
 );
 
 const BaseDiamond: React.FC<{ runners?: { first?: boolean; second?: boolean; third?: boolean } }> = ({ runners }) => {
-  const VW = 48, VH = 40, bs = 14;
   const bases = [
-    { key: 'second' as const, cx: VW / 2, cy: 6 },
-    { key: 'third'  as const, cx: 6,       cy: VH - 6 },
-    { key: 'first'  as const, cx: VW - 6,  cy: VH - 6 },
+    { key: 'second' as const, cx: 30, cy: 4  },
+    { key: 'third'  as const, cx: 4,  cy: 55 },
+    { key: 'first'  as const, cx: 56, cy: 55 },
   ];
   return (
-    <svg width={44} height={Math.round(44 * VH / VW)} viewBox={`0 0 ${VW} ${VH}`} style={{ display: 'block' }}>
+    <svg width={110} height={100} viewBox="-10 -10 80 80" style={{ display: 'block' }}>
       {bases.map(({ key, cx, cy }) => (
         <rect key={key}
-          x={cx - bs / 2} y={cy - bs / 2} width={bs} height={bs}
+          x={cx - 12.5} y={cy - 12.5} width={25} height={25}
           transform={`rotate(45 ${cx} ${cy})`}
           fill={runners?.[key] ? '#fbbf24' : 'rgba(255,255,255,0.18)'}
           stroke="rgba(255,255,255,0.4)" strokeWidth={0.9}
