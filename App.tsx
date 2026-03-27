@@ -824,8 +824,8 @@ const App: React.FC = () => {
     check();
     // Real-time: re-run check whenever a score edit arrives for this schedule
     const unsubscribe = storageApi.subscribeScoreEdits(scheduleKey, () => { check(); });
-    // Fallback poll every 5 min in case SSE drops
-    const id = setInterval(check, 5 * 60_000);
+    // Fallback poll every 30 s in case SSE drops or is unavailable
+    const id = setInterval(check, 30_000);
     return () => { clearInterval(id); unsubscribe(); };
   }, [scheduleKey, userId, orgId]);
 
