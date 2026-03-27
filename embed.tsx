@@ -10,8 +10,6 @@ import './i18n';
 import {
   loadPublishedScheduleByKey,
   listScoreEditsByScheduleKey,
-  subscribeScoreEdits,
-  subscribePublishedSchedule,
   StorageData,
 } from './services/storage';
 
@@ -168,35 +166,14 @@ if (!rootElement) {
 
       reload();
 
-      // Real-time: a single score edit arrived — apply it directly to current state
-      const unsubEdits = subscribeScoreEdits(scheduleKey, (edit) => {
-        if (!isActive) return;
-        setScheduleData(prev => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            games: prev.games.map(g =>
-              g.id === edit.gameId
-                ? { ...g, status: edit.status, scores: edit.scores ?? g.scores }
-                : g
-            ),
-          };
-        });
-      });
-
-      // Real-time: the base schedule was republished — full reload to pick up game changes
-      const unsubSchedule = subscribePublishedSchedule(scheduleKey, () => { reload(); });
-
-      // Fallback poll every 15 s — covers the case where SSE is unavailable
-      // (e.g. nginx not yet configured for HTTP/1.1 keep-alive proxying).
-      // When SSE is working this poll is essentially a no-op since state is
-      // already up to date.
+      // Poll every 15 s — sufficient for a public scoreboard display.
+      // SSE is intentionally not used here: the browser logs a native
+      // console error when EventSource gets the wrong MIME type, which
+      // cannot be suppressed from JS even with a .catch() handler.
       const interval = setInterval(reload, 15_000);
 
       return () => {
         isActive = false;
-        unsubEdits();
-        unsubSchedule();
         clearInterval(interval);
       };
     }, [scheduleKey]);
