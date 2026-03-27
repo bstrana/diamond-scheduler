@@ -280,9 +280,17 @@ const GameBar: React.FC<GameBarProps> = ({
 
   // ── Inning derivation ─────────────────────────────────────────────────────
   // Count non-null half-inning slots and derive the current inning number and
-  // half (top/bottom) automatically:
-  //   odd filled count  → top half  (away just scored, home not yet entered)
-  //   even filled count → bottom half (home slot set to 0 when bottom starts)
+  // half (top/bottom) automatically.
+  //
+  // Each filled slot represents one completed half-inning:
+  //   slot 1 = away half of inning 1 done  → now in BOTTOM of inning 1
+  //   slot 2 = home half of inning 1 done  → now in TOP    of inning 2
+  //   slot 3 = away half of inning 2 done  → now in BOTTOM of inning 2
+  //   ...
+  //
+  //   odd count  → bottom half, inning = ceil(filled / 2)
+  //   even count → top    half, inning = filled / 2 + 1
+  //
   // Falls back to game.currentInning / game.inningHalf when no innings data.
   const deriveInningInfo = (game: Game): { inning: string; half: 'top' | 'bottom' | null } => {
     const innings = game.scores?.innings;
@@ -297,8 +305,10 @@ const GameBar: React.FC<GameBarProps> = ({
       0,
     );
     if (filled === 0) return { inning: '—', half: null };
-    const half: 'top' | 'bottom' = filled % 2 !== 0 ? 'top' : 'bottom';
-    return { inning: String(Math.ceil(filled / 2)), half };
+    const isOdd = filled % 2 !== 0;
+    const half: 'top' | 'bottom' = isOdd ? 'bottom' : 'top';
+    const inningNum = isOdd ? Math.ceil(filled / 2) : filled / 2 + 1;
+    return { inning: String(inningNum), half };
   };
 
   // ── Fullscreen story overlay ──────────────────────────────────────────────
