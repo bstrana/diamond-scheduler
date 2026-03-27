@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { CheckCircle, AlertCircle, Plus, Minus } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2, Plus, Minus } from 'lucide-react';
 import './index.css';
 import './i18n';
 import {
@@ -71,9 +71,12 @@ const BaseDiamondInput: React.FC<{
 // ── Score-entry form ──────────────────────────────────────────────────────────
 
 const ScoreEditApp: React.FC = () => {
-  const [phase, setPhase] = useState<'loading' | 'invalid' | 'form' | 'submitting'>('loading');
+  const [phase, setPhase] = useState<'loading' | 'invalid' | 'form'>('loading');
+  const [isSaving, setIsSaving] = useState(false);
   const [savedAt, setSavedAt]   = useState<Date | null>(null);
   const [saveError, setSaveError] = useState(false);
+  const formReadyRef = useRef(false);   // true after initial prefill — skip first effect run
+  const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [link, setLink]   = useState<ScoreLink | null>(null);
   const [game, setGame]   = useState<Game | null>(null);
   const [homeTeam, setHomeTeam] = useState<Team | null>(null);
@@ -124,36 +127,42 @@ const ScoreEditApp: React.FC = () => {
       setHomeTeam(allTeams.find(t => t.id === g.homeTeamId) ?? null);
       setAwayTeam(allTeams.find(t => t.id === g.awayTeamId) ?? null);
 
+      formReadyRef.current = true;
       setPhase('form');
     })();
   }, []);
 
-  // ── submit ──────────────────────────────────────────────────────────────────
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!link || !game) return;
-    setPhase('submitting');
-    setSaveError(false);
-    const ok = await saveScoreEdit({
-      gameId:      game.id,
-      scheduleKey: link.scheduleKey,
-      token:       link.token,
-      status,
-      scores: {
-        home:    homeTotal,
-        away:    awayTotal,
-        innings: innings.map(i => ({ home: i.home ?? 0, away: i.away ?? 0 })),
-        ...(status === 'live' && { outs, baseRunners }),
-      },
-    });
-    setPhase('form');
-    if (ok) {
-      setSavedAt(new Date());
-      setTimeout(() => setSavedAt(null), 4000);
-    } else {
-      setSaveError(true);
-    }
-  };
+  // ── auto-save on any form state change (debounced 900 ms) ────────────────────
+  useEffect(() => {
+    if (!formReadyRef.current || !link || !game) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setIsSaving(true);
+      setSaveError(false);
+      const ok = await saveScoreEdit({
+        gameId:      game.id,
+        scheduleKey: link.scheduleKey,
+        token:       link.token,
+        status,
+        scores: {
+          home:    homeTotal,
+          away:    awayTotal,
+          innings: innings.map(i => ({ home: i.home ?? 0, away: i.away ?? 0 })),
+          ...(status === 'live' && { outs, baseRunners }),
+        },
+      });
+      setIsSaving(false);
+      if (ok) {
+        setSavedAt(new Date());
+        setTimeout(() => setSavedAt(null), 4000);
+      } else {
+        setSaveError(true);
+      }
+    }, 900);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  // homeTotal and awayTotal are derived from innings — no need to list them separately
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, innings, outs, baseRunners]);
 
   const addInning = () => setInnings(prev => [...prev, { home: null, away: null }]);
   const removeInning = () => setInnings(prev => prev.length > 1 ? prev.slice(0, -1) : prev);
@@ -205,7 +214,7 @@ const ScoreEditApp: React.FC = () => {
           )}
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <div className="p-6 space-y-6">
           {/* Status */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Game Status</label>
@@ -314,28 +323,19 @@ const ScoreEditApp: React.FC = () => {
             </div>
           )}
 
-          {savedAt && (
-            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2.5 text-sm text-emerald-800">
-              <CheckCircle size={16} className="text-emerald-500 flex-shrink-0" />
-              <span>Saved at {savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-            </div>
-          )}
-
-          {saveError && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-sm text-red-800">
-              <AlertCircle size={16} className="text-red-500 flex-shrink-0" />
-              <span>Could not save — check your connection and try again.</span>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={phase === 'submitting'}
-            className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-60"
-          >
-            {phase === 'submitting' ? 'Submitting…' : 'Submit Score'}
-          </button>
-        </form>
+          {/* Auto-save indicator */}
+          <div className="flex items-center gap-2 text-sm min-h-[2rem]">
+            {isSaving && (
+              <><Loader2 size={14} className="text-slate-400 animate-spin flex-shrink-0" /><span className="text-slate-400">Saving…</span></>
+            )}
+            {!isSaving && savedAt && (
+              <><CheckCircle size={14} className="text-emerald-500 flex-shrink-0" /><span className="text-emerald-700">Saved {savedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span></>
+            )}
+            {!isSaving && saveError && (
+              <><AlertCircle size={14} className="text-red-500 flex-shrink-0" /><span className="text-red-700">Could not save — check your connection.</span></>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
