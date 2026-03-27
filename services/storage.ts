@@ -803,3 +803,68 @@ export const updateTenant = async (
     return null;
   }
 };
+
+// ─── Real-time subscriptions ──────────────────────────────────────────────────
+
+/**
+ * Subscribe to score_edits for a given scheduleKey.
+ * Fires callback immediately on create or update for matching records.
+ * Returns a cleanup function — call it on unmount.
+ */
+export const subscribeScoreEdits = (
+  scheduleKey: string,
+  callback: (edit: ScoreEdit) => void,
+): (() => void) => {
+  if (!pocketbaseClient || !scoreEditsCollection) return () => {};
+  let unsubFn: (() => Promise<void>) | null = null;
+  pocketbaseClient
+    .collection(scoreEditsCollection)
+    .subscribe('*', (e) => {
+      if (
+        (e.action === 'create' || e.action === 'update') &&
+        e.record.schedule_key === scheduleKey
+      ) {
+        callback(scoreEditFromRecord(e.record));
+      }
+    })
+    .then(fn => { unsubFn = fn; })
+    .catch(err => console.warn('subscribeScoreEdits failed to connect', err));
+  return () => { unsubFn?.(); };
+};
+
+/**
+ * Subscribe to published_schedules for a given scheduleKey.
+ * Fires callback with fresh StorageData whenever the schedule record is updated.
+ * Returns a cleanup function — call it on unmount.
+ */
+export const subscribePublishedSchedule = (
+  scheduleKey: string,
+  callback: (data: StorageData) => void,
+): (() => void) => {
+  if (!pocketbaseClient || !scheduleCollection) return () => {};
+  const safeKey = sanitizeFilterValue(scheduleKey);
+  if (!safeKey) return () => {};
+  let unsubFn: (() => Promise<void>) | null = null;
+  pocketbaseClient
+    .collection(scheduleCollection)
+    .subscribe('*', (e) => {
+      if (
+        e.action === 'update' &&
+        e.record.schedule_key === safeKey &&
+        e.record.active === true
+      ) {
+        const data = (e.record as any).data as Partial<StorageData> | undefined;
+        if (data) {
+          callback({
+            leagues: data.leagues || [],
+            teams:   data.teams   || [],
+            games:   data.games   || [],
+            gamesInHoldingArea: [],
+          });
+        }
+      }
+    })
+    .then(fn => { unsubFn = fn; })
+    .catch(err => console.warn('subscribePublishedSchedule failed to connect', err));
+  return () => { unsubFn?.(); };
+};

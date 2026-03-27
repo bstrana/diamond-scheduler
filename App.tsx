@@ -788,7 +788,7 @@ const App: React.FC = () => {
     return now >= gameMs - 60 * 60_000 && now <= gameMs + 4 * 60 * 60_000;
   };
 
-  // Poll remote edit count when a scheduleKey is loaded; auto-apply edits from autoSync links
+  // Real-time score-edit subscriptions + fallback poll every 5 min
   useEffect(() => {
     if (!scheduleKey) return;
     const check = async () => {
@@ -820,9 +820,13 @@ const App: React.FC = () => {
       const manualEdits = edits.filter(e => !autoSyncTokens.has(e.token));
       setRemoteEditCount(manualEdits.length);
     };
+    // Initial fetch to pick up any edits that arrived before we subscribed
     check();
-    const id = setInterval(check, 60_000);
-    return () => clearInterval(id);
+    // Real-time: re-run check whenever a score edit arrives for this schedule
+    const unsubscribe = storageApi.subscribeScoreEdits(scheduleKey, () => { check(); });
+    // Fallback poll every 5 min in case SSE drops
+    const id = setInterval(check, 5 * 60_000);
+    return () => { clearInterval(id); unsubscribe(); };
   }, [scheduleKey, userId, orgId]);
 
   // ─────────────────────────────────────────────────────────────────────────────

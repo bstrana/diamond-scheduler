@@ -7,7 +7,13 @@ import EmbeddableSeries from './components/EmbeddableSeries';
 import EmbeddableTeamGames from './components/EmbeddableTeamGames';
 import './index.css';
 import './i18n';
-import { loadPublishedScheduleByKey, listScoreEditsByScheduleKey, StorageData } from './services/storage';
+import {
+  loadPublishedScheduleByKey,
+  listScoreEditsByScheduleKey,
+  subscribeScoreEdits,
+  subscribePublishedSchedule,
+  StorageData,
+} from './services/storage';
 
 // Get URL parameters
 const urlParams = new URLSearchParams(window.location.search);
@@ -134,52 +140,63 @@ if (!rootElement) {
         setIsLoading(false);
         return;
       }
-      let isActive = true;
-      const loadSchedule = async () => {
-        const [data, scoreEdits] = await Promise.all([
-          loadPublishedScheduleByKey(scheduleKey),
-          listScoreEditsByScheduleKey(scheduleKey),
-        ]);
-        if (!isActive) return;
-        if (data && scoreEdits.length > 0) {
-          const editMap = new Map(scoreEdits.map(e => [e.gameId, e]));
-          data.games = data.games.map(g => {
+
+      const applyEditsOverlay = (data: StorageData, scoreEdits: Awaited<ReturnType<typeof listScoreEditsByScheduleKey>>) => {
+        const editMap = new Map(scoreEdits.map(e => [e.gameId, e]));
+        return {
+          ...data,
+          games: data.games.map(g => {
             const edit = editMap.get(g.id);
             if (!edit) return g;
             return { ...g, status: edit.status, scores: edit.scores ?? g.scores };
-          });
-        }
-        setScheduleData(data);
-        setIsLoading(false);
+          }),
+        };
       };
-      loadSchedule();
-      return () => {
-        isActive = false;
-      };
-    }, [scheduleKey]);
 
-    // Poll for updates every 60 seconds for all embed types
-    useEffect(() => {
-      if (!scheduleKey) return;
-      const interval = setInterval(async () => {
+      let isActive = true;
+
+      // Full reload — re-fetches both base schedule and all current score edits
+      const reload = async () => {
         const [data, scoreEdits] = await Promise.all([
           loadPublishedScheduleByKey(scheduleKey),
           listScoreEditsByScheduleKey(scheduleKey),
         ]);
-        if (data) {
-          if (scoreEdits.length > 0) {
-            const editMap = new Map(scoreEdits.map(e => [e.gameId, e]));
-            data.games = data.games.map(g => {
-              const edit = editMap.get(g.id);
-              if (!edit) return g;
-              return { ...g, status: edit.status, scores: edit.scores ?? g.scores };
-            });
-          }
-          setScheduleData(data);
-        }
-      }, 60000);
-      return () => clearInterval(interval);
-    }, []);
+        if (!isActive || !data) return;
+        setScheduleData(applyEditsOverlay(data, scoreEdits));
+        setIsLoading(false);
+      };
+
+      reload();
+
+      // Real-time: a single score edit arrived — apply it directly to current state
+      const unsubEdits = subscribeScoreEdits(scheduleKey, (edit) => {
+        if (!isActive) return;
+        setScheduleData(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            games: prev.games.map(g =>
+              g.id === edit.gameId
+                ? { ...g, status: edit.status, scores: edit.scores ?? g.scores }
+                : g
+            ),
+          };
+        });
+      });
+
+      // Real-time: the base schedule was republished — full reload to pick up game changes
+      const unsubSchedule = subscribePublishedSchedule(scheduleKey, () => { reload(); });
+
+      // Fallback poll every 5 min in case SSE drops
+      const interval = setInterval(reload, 5 * 60_000);
+
+      return () => {
+        isActive = false;
+        unsubEdits();
+        unsubSchedule();
+        clearInterval(interval);
+      };
+    }, [scheduleKey]);
 
     // Require schedule_key - show error if missing
     if (!scheduleKey) {
