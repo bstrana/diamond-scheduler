@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Link2, Copy, Check, Ban, Clock, RefreshCw, AlertCircle, RefreshCcw, Tv2 } from 'lucide-react';
+import { Link2, Copy, Check, Ban, Clock, RefreshCw, AlertCircle, Tv2 } from 'lucide-react';
 import { ScoreLink, Game, Team, League } from '../types';
 import * as storageApi from '../services/storage';
 
@@ -45,7 +45,6 @@ const ScoreLinksManager: React.FC<ScoreLinksManagerProps> = ({
   const [copiedToken, setCopiedToken]         = useState<string | null>(null);
   const [copiedOverlayToken, setCopiedOverlayToken] = useState<string | null>(null);
   const [disabling, setDisabling]             = useState<string | null>(null);
-  const [togglingSync, setTogglingSync]       = useState<string | null>(null);
 
   // flatten all teams from leagues + prop
   const allTeams: Team[] = React.useMemo(() => {
@@ -85,15 +84,6 @@ const ScoreLinksManager: React.FC<ScoreLinksManagerProps> = ({
     await storageApi.updateScoreLink(link.id, { disabled: true }, { userId, orgId });
     setLinks(prev => prev.map(l => l.id === link.id ? { ...l, disabled: true } : l));
     setDisabling(null);
-  };
-
-  const handleToggleAutoSync = async (link: ScoreLink) => {
-    if (!link.id) return;
-    setTogglingSync(link.id);
-    const next = !link.autoSync;
-    await storageApi.updateScoreLink(link.id, { autoSync: next }, { userId, orgId });
-    setLinks(prev => prev.map(l => l.id === link.id ? { ...l, autoSync: next } : l));
-    setTogglingSync(null);
   };
 
   // separate active vs disabled/expired
@@ -151,19 +141,6 @@ const ScoreLinksManager: React.FC<ScoreLinksManagerProps> = ({
                 >
                   {copiedOverlayToken === link.token ? <Check size={13} /> : <Tv2 size={13} />}
                   {copiedOverlayToken === link.token ? 'Copied' : 'Overlay'}
-                </button>
-                <button
-                  onClick={() => handleToggleAutoSync(link)}
-                  disabled={togglingSync === link.id}
-                  title={link.autoSync ? 'Auto-sync on: submitted scores apply automatically' : 'Auto-sync off: use Sync Remote Scores to apply'}
-                  className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-40 ${
-                    link.autoSync
-                      ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                  }`}
-                >
-                  <RefreshCcw size={13} className={togglingSync === link.id ? 'animate-spin' : ''} />
-                  {link.autoSync ? 'Auto' : 'Manual'}
                 </button>
                 <button
                   onClick={() => handleDisable(link)}
@@ -227,7 +204,7 @@ const ScoreLinksManager: React.FC<ScoreLinksManagerProps> = ({
         <ul className="list-disc list-inside space-y-0.5 text-blue-700 text-xs">
           <li>Each link gives access to the score-entry form for one game — no login required.</li>
           <li>Links expire after 48 hours. Generate new ones when needed.</li>
-          <li>Submissions are stored as a separate overlay. Use <strong>Sync Remote Scores</strong> in the calendar to absorb them, or enable <strong>Auto</strong> on a link to apply scores automatically every 60 seconds — active 1 hour before game time through 4 hours after.</li>
+          <li>Scores saved via the entry form are applied automatically in real time — no manual sync needed.</li>
           <li>Disable a link at any time to immediately revoke access.</li>
         </ul>
       </div>

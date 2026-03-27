@@ -65,7 +65,6 @@ export interface ScoreLink {
   orgId?: string;
   userId?: string;
   disabled: boolean;
-  autoSync: boolean;    // automatically apply submitted scores without manual sync
   expiresAt: string;    // ISO datetime (48 h from creation)
   created?: string;
 }

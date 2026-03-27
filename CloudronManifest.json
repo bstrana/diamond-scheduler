@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.31",
+  "version": "1.0.32",
   "manifestVersion": 2,
 
   "image": {
@@ -84,6 +84,7 @@
     "1.0.28": "Feat: stream overlay page (/stream-overlay.html?token=…) — compact live scoreboard for OBS browser source; transparent background by default; SSE real-time + 15 s fallback; 'Overlay' button added to Score Links manager.",
     "1.0.29": "Feat: redesign stream overlay — vertical away-on-top / home-on-bottom scorebug layout; per-team color gradient rows; team logo display; larger base diamond squares; compact right column for inning/outs/runners.",
     "1.0.30": "UX: score-edit auto-saves on state change (900 ms debounce) — Submit button removed; inline Saving/Saved/Error indicator shown instead.",
-    "1.0.31": "Feat: balls & strikes in score entry (live only) and stream overlay; outs display reduced to 2 dots; base diamond bigger in overlay (bs=14); outs/runners removed from GameBar card and fullscreen views."
+    "1.0.31": "Feat: balls & strikes in score entry (live only) and stream overlay; outs display reduced to 2 dots; base diamond bigger in overlay (bs=14); outs/runners removed from GameBar card and fullscreen views.",
+    "1.0.32": "Refactor: remove autoSync option — all score edits now applied automatically; 'Sync Remote Scores' banner removed; autoSync field, toggle button, and isWithinAutoSyncWindow logic deleted."
   }
 }

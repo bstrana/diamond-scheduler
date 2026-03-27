@@ -28,7 +28,6 @@ import {
   GitBranch,
   Menu,
   Link2,
-  Download,
   Building2,
 } from 'lucide-react';
 import LeagueBuilder from './components/LeagueBuilder';
@@ -221,8 +220,6 @@ const App: React.FC = () => {
   
   // Game Holding Area State (for games in edit mode)
   const [gamesInHoldingArea, setGamesInHoldingArea] = useState<Game[]>([]);
-  const [remoteEditCount, setRemoteEditCount] = useState(0);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [generatingLinkFor, setGeneratingLinkFor] = useState<string | null>(null);
   const [generatedLinkUrl, setGeneratedLinkUrl] = useState<string | null>(null);
 
@@ -760,65 +757,18 @@ const App: React.FC = () => {
     alert(`Generated ${created.length} score link(s). View and copy them from Score Links in the user menu.`);
   };
 
-  const handleSyncRemoteScores = async () => {
-    if (!scheduleKey) return;
-    setIsSyncing(true);
-    const edits = await storageApi.listScoreEditsByScheduleKey(scheduleKey);
-    if (edits.length === 0) {
-      setRemoteEditCount(0);
-      setIsSyncing(false);
-      return;
-    }
-    const editMap = new Map(edits.map(e => [e.gameId, e]));
-    setGames(prev => prev.map(g => {
-      const edit = editMap.get(g.id);
-      if (!edit) return g;
-      return { ...g, status: edit.status, scores: edit.scores ?? g.scores };
-    }));
-    setRemoteEditCount(0);
-    setIsSyncing(false);
-  };
-
-  // Returns true if now is within 1 hour before → 4 hours after the game's scheduled time
-  const isWithinAutoSyncWindow = (game: Game): boolean => {
-    if (!game.date || !game.time) return false;
-    const gameMs = new Date(`${game.date}T${game.time}`).getTime();
-    if (Number.isNaN(gameMs)) return false;
-    const now = Date.now();
-    return now >= gameMs - 60 * 60_000 && now <= gameMs + 4 * 60 * 60_000;
-  };
-
   // Real-time score-edit subscriptions + fallback poll every 5 min
   useEffect(() => {
     if (!scheduleKey) return;
     const check = async () => {
-      const [edits, scoreLinks] = await Promise.all([
-        storageApi.listScoreEditsByScheduleKey(scheduleKey),
-        storageApi.listScoreLinks({ userId, orgId }, scheduleKey),
-      ]);
-      // Build a map of token → gameId for auto-sync links that are within their game window
-      const autoSyncTokens = new Set<string>();
-      const currentGames = gamesRef.current;
-      for (const link of scoreLinks) {
-        if (!link.autoSync || link.disabled) continue;
-        const game = currentGames.find(g => g.id === link.gameId);
-        if (game && isWithinAutoSyncWindow(game)) {
-          autoSyncTokens.add(link.token);
-        }
-      }
-      if (autoSyncTokens.size > 0) {
-        const autoSyncEdits = edits.filter(e => autoSyncTokens.has(e.token));
-        if (autoSyncEdits.length > 0) {
-          const autoSyncMap = new Map(autoSyncEdits.map(e => [e.gameId, e]));
-          setGames(prev => prev.map(g => {
-            const edit = autoSyncMap.get(g.id);
-            if (!edit) return g;
-            return { ...g, status: edit.status, scores: edit.scores ?? g.scores };
-          }));
-        }
-      }
-      const manualEdits = edits.filter(e => !autoSyncTokens.has(e.token));
-      setRemoteEditCount(manualEdits.length);
+      const edits = await storageApi.listScoreEditsByScheduleKey(scheduleKey);
+      if (edits.length === 0) return;
+      const editMap = new Map(edits.map(e => [e.gameId, e]));
+      setGames(prev => prev.map(g => {
+        const edit = editMap.get(g.id);
+        if (!edit) return g;
+        return { ...g, status: edit.status, scores: edit.scores ?? g.scores };
+      }));
     };
     // Initial fetch to pick up any edits that arrived before we subscribed
     check();
@@ -1311,21 +1261,6 @@ const App: React.FC = () => {
                   onGameClick={handleGameClick}
                 />
               </div>
-              {remoteEditCount > 0 && (
-                <div className="mb-3 flex items-center justify-between gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 text-sm">
-                  <div className="flex items-center gap-2 text-indigo-800">
-                    <Download size={15} className="text-indigo-500 flex-shrink-0" />
-                    <span><strong>{remoteEditCount}</strong> remote score update{remoteEditCount !== 1 ? 's' : ''} waiting — submitted via score links.</span>
-                  </div>
-                  <button
-                    onClick={handleSyncRemoteScores}
-                    disabled={isSyncing}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60 flex-shrink-0"
-                  >
-                    {isSyncing ? 'Syncing…' : 'Sync Remote Scores'}
-                  </button>
-                </div>
-              )}
               <Calendar
                 currentDate={currentDate}
                 days={days} // Contains filtered games for Grid
