@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Link2, Copy, Check, Ban, Clock, RefreshCw, AlertCircle, RefreshCcw } from 'lucide-react';
+import { Link2, Copy, Check, Ban, Clock, RefreshCw, AlertCircle, RefreshCcw, Tv2 } from 'lucide-react';
 import { ScoreLink, Game, Team, League } from '../types';
 import * as storageApi from '../services/storage';
 
@@ -20,6 +20,10 @@ function scoreEditUrl(token: string): string {
   return `${window.location.origin}/score-edit.html?token=${token}`;
 }
 
+function streamOverlayUrl(token: string): string {
+  return `${window.location.origin}/stream-overlay.html?token=${token}`;
+}
+
 function gameLabel(game: Game, teams: Team[]): string {
   const home = teams.find(t => t.id === game.homeTeamId);
   const away = teams.find(t => t.id === game.awayTeamId);
@@ -38,9 +42,10 @@ const ScoreLinksManager: React.FC<ScoreLinksManagerProps> = ({
 }) => {
   const [links, setLinks]           = useState<ScoreLink[]>([]);
   const [loading, setLoading]       = useState(false);
-  const [copiedToken, setCopiedToken]     = useState<string | null>(null);
-  const [disabling, setDisabling]         = useState<string | null>(null);
-  const [togglingSync, setTogglingSync]   = useState<string | null>(null);
+  const [copiedToken, setCopiedToken]         = useState<string | null>(null);
+  const [copiedOverlayToken, setCopiedOverlayToken] = useState<string | null>(null);
+  const [disabling, setDisabling]             = useState<string | null>(null);
+  const [togglingSync, setTogglingSync]       = useState<string | null>(null);
 
   // flatten all teams from leagues + prop
   const allTeams: Team[] = React.useMemo(() => {
@@ -63,6 +68,14 @@ const ScoreLinksManager: React.FC<ScoreLinksManagerProps> = ({
       await navigator.clipboard.writeText(scoreEditUrl(token));
       setCopiedToken(token);
       setTimeout(() => setCopiedToken(null), 2000);
+    } catch { /* ignore */ }
+  };
+
+  const handleCopyOverlay = async (token: string) => {
+    try {
+      await navigator.clipboard.writeText(streamOverlayUrl(token));
+      setCopiedOverlayToken(token);
+      setTimeout(() => setCopiedOverlayToken(null), 2000);
     } catch { /* ignore */ }
   };
 
@@ -125,10 +138,19 @@ const ScoreLinksManager: React.FC<ScoreLinksManagerProps> = ({
               <>
                 <button
                   onClick={() => handleCopy(link.token)}
+                  title="Copy score-entry link"
                   className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
                 >
                   {isCopied ? <Check size={13} /> : <Copy size={13} />}
                   {isCopied ? 'Copied' : 'Copy link'}
+                </button>
+                <button
+                  onClick={() => handleCopyOverlay(link.token)}
+                  title="Copy stream overlay URL (use as OBS Browser Source)"
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors"
+                >
+                  {copiedOverlayToken === link.token ? <Check size={13} /> : <Tv2 size={13} />}
+                  {copiedOverlayToken === link.token ? 'Copied' : 'Overlay'}
                 </button>
                 <button
                   onClick={() => handleToggleAutoSync(link)}
