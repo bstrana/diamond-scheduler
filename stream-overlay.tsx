@@ -39,35 +39,101 @@ const deriveInning = (game: Game): { inning: string; half: 'top' | 'bottom' | nu
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 const OutsDots: React.FC<{ outs: number }> = ({ outs }) => (
-  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+  <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
     {[0, 1, 2].map(i => (
       <div key={i} style={{
-        width: 9, height: 9, borderRadius: '50%',
-        backgroundColor: i < outs ? '#fbbf24' : 'rgba(255,255,255,0.25)',
-        border: '1px solid rgba(255,255,255,0.3)',
+        width: 8, height: 8, borderRadius: '50%',
+        backgroundColor: i < outs ? '#fbbf24' : 'rgba(255,255,255,0.2)',
+        border: '1px solid rgba(255,255,255,0.35)',
       }} />
     ))}
   </div>
 );
 
 const BaseDiamond: React.FC<{ runners?: { first?: boolean; second?: boolean; third?: boolean } }> = ({ runners }) => {
-  const VW = 32, VH = 26, bs = 7;
+  const VW = 44, VH = 36, bs = 11;
   const bases = [
-    { key: 'second' as const, cx: VW / 2, cy: 4 },
-    { key: 'third'  as const, cx: 4,       cy: VH - 3 },
-    { key: 'first'  as const, cx: VW - 4,  cy: VH - 3 },
+    { key: 'second' as const, cx: VW / 2, cy: 5 },
+    { key: 'third'  as const, cx: 5,       cy: VH - 5 },
+    { key: 'first'  as const, cx: VW - 5,  cy: VH - 5 },
   ];
   return (
-    <svg width={28} height={Math.round(28 * VH / VW)} viewBox={`0 0 ${VW} ${VH}`} style={{ display: 'block' }}>
+    <svg width={36} height={Math.round(36 * VH / VW)} viewBox={`0 0 ${VW} ${VH}`} style={{ display: 'block' }}>
       {bases.map(({ key, cx, cy }) => (
         <rect key={key}
           x={cx - bs / 2} y={cy - bs / 2} width={bs} height={bs}
           transform={`rotate(45 ${cx} ${cy})`}
-          fill={runners?.[key] ? '#fbbf24' : 'rgba(255,255,255,0.25)'}
-          stroke="rgba(255,255,255,0.3)" strokeWidth={0.8}
+          fill={runners?.[key] ? '#fbbf24' : 'rgba(255,255,255,0.18)'}
+          stroke="rgba(255,255,255,0.4)" strokeWidth={0.9}
         />
       ))}
     </svg>
+  );
+};
+
+// Team row: gradient background, logo, abbreviation + city, score
+const TeamRow: React.FC<{
+  team: Team | null;
+  score: number | null;
+  showScore: boolean;
+  isLight: boolean;
+}> = ({ team, score, showScore, isLight }) => {
+  const primaryColor = team?.primaryColor || '#334155';
+  const secondaryColor = team?.secondaryColor || primaryColor;
+  const abbr = team ? (team.abbreviation || team.name.slice(0, 3).toUpperCase()) : '???';
+  const city = team?.city || '';
+
+  const rowBg = isLight
+    ? `linear-gradient(to right, ${primaryColor}dd 0%, ${primaryColor}55 50%, rgba(240,244,248,0.0) 100%)`
+    : `linear-gradient(to right, ${primaryColor}ee 0%, ${primaryColor}77 50%, rgba(10,17,30,0.0) 100%)`;
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 9,
+      padding: '9px 14px',
+      background: rowBg,
+    }}>
+      {team?.logoUrl ? (
+        <img
+          src={team.logoUrl}
+          alt={abbr}
+          style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.55))' }}
+        />
+      ) : (
+        <div style={{
+          width: 32, height: 32, borderRadius: '50%',
+          background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
+          flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 15, border: '2px solid rgba(255,255,255,0.25)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+        }}>⚾</div>
+      )}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <span style={{
+          fontSize: 14, fontWeight: 800, color: '#fff',
+          textTransform: 'uppercase', letterSpacing: '0.07em', lineHeight: 1,
+          textShadow: '0 1px 4px rgba(0,0,0,0.7)',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>{abbr}</span>
+        {city && (
+          <span style={{
+            fontSize: 10, color: 'rgba(255,255,255,0.6)', lineHeight: 1,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>{city}</span>
+        )}
+      </div>
+      {showScore && score !== null && (
+        <span style={{
+          fontSize: 28, fontWeight: 900, color: '#fff', lineHeight: 1,
+          textShadow: '0 2px 8px rgba(0,0,0,0.65)',
+          fontVariantNumeric: 'tabular-nums',
+          flexShrink: 0, minWidth: 30, textAlign: 'right',
+        }}>{score}</span>
+      )}
+    </div>
   );
 };
 
@@ -94,7 +160,6 @@ const StreamOverlayApp: React.FC = () => {
       ]);
       if (!isActive || !schedule) return;
 
-      // Apply any pending score edits
       const editMap = new Map(edits.map(e => [e.gameId, e]));
       const g = schedule.games.find(x => x.id === gameId);
       if (!g) { setPhase('invalid'); return; }
@@ -134,7 +199,7 @@ const StreamOverlayApp: React.FC = () => {
       setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores } : prev);
     });
 
-    // 15 s fallback poll — covers SSE unavailability
+    // 15 s fallback poll
     const interval = setInterval(async () => {
       const edits = await listScoreEditsByScheduleKey(link.scheduleKey);
       const edit = edits.find(e => e.gameId === link.gameId);
@@ -146,21 +211,21 @@ const StreamOverlayApp: React.FC = () => {
     return () => { unsub(); clearInterval(interval); };
   }, [link]);
 
-  // ── Styles based on bg param ────────────────────────────────────────────────
-  const cardStyle: React.CSSProperties = bg === 'light'
-    ? { background: 'rgba(255,255,255,0.95)', color: '#0f172a', borderRadius: 12, boxShadow: '0 4px 24px rgba(0,0,0,0.18)' }
-    : { background: 'rgba(15,23,42,0.88)', color: '#f1f5f9', borderRadius: 12, boxShadow: '0 4px 24px rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' };
+  const isLight = bg === 'light';
 
-  const textMain = bg === 'light' ? '#0f172a' : '#f1f5f9';
-  const textMuted = bg === 'light' ? '#475569' : 'rgba(241,245,249,0.6)';
-  const divider = bg === 'light' ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.12)';
+  // ── Loading / invalid states ────────────────────────────────────────────────
+  const shellStyle: React.CSSProperties = isLight
+    ? { background: 'rgba(240,244,248,0.96)', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', overflow: 'hidden' }
+    : { background: 'rgba(10,17,30,0.86)', borderRadius: 12, boxShadow: '0 4px 24px rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', overflow: 'hidden' };
+
+  const mutedColor = isLight ? '#64748b' : 'rgba(241,245,249,0.55)';
 
   if (phase === 'loading') {
     return (
-      <div style={{ padding: 16, fontFamily: 'Inter, sans-serif' }}>
-        <div style={{ ...cardStyle, padding: '10px 20px', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ padding: 12, fontFamily: 'Inter, sans-serif', display: 'inline-block' }}>
+        <div style={{ ...shellStyle, padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#94a3b8', animation: 'pulse 1.5s infinite' }} />
-          <span style={{ fontSize: 13, color: textMuted }}>Loading…</span>
+          <span style={{ fontSize: 13, color: mutedColor }}>Loading…</span>
         </div>
       </div>
     );
@@ -168,8 +233,8 @@ const StreamOverlayApp: React.FC = () => {
 
   if (phase === 'invalid') {
     return (
-      <div style={{ padding: 16, fontFamily: 'Inter, sans-serif' }}>
-        <div style={{ ...cardStyle, padding: '10px 20px', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ padding: 12, fontFamily: 'Inter, sans-serif', display: 'inline-block' }}>
+        <div style={{ ...shellStyle, padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 13, color: '#f87171' }}>Invalid or expired link</span>
         </div>
       </div>
@@ -178,74 +243,79 @@ const StreamOverlayApp: React.FC = () => {
 
   if (!game) return null;
 
-  const isLive     = game.status === 'live';
-  const isFinal    = game.status === 'final';
+  const isLive      = game.status === 'live';
+  const isFinal     = game.status === 'final';
   const isPostponed = game.status === 'postponed';
-  const hasScore   = game.scores != null && (game.scores.home !== 0 || game.scores.away !== 0 || isFinal);
+  const hasScore    = game.scores != null && (game.scores.home !== 0 || game.scores.away !== 0 || isFinal);
 
   const innInfo = isLive ? deriveInning(game) : null;
-  const awayName = awayTeam ? (awayTeam.abbreviation || awayTeam.name) : 'AWAY';
-  const homeName = homeTeam ? (homeTeam.abbreviation || homeTeam.name) : 'HOME';
-  const awayFull = awayTeam ? `${awayTeam.city} ${awayTeam.name}`.trim() : 'Away';
-  const homeFull = homeTeam ? `${homeTeam.city} ${homeTeam.name}`.trim() : 'Home';
 
   // Status badge
   const statusBadge = isLive
-    ? <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+    ? <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
         <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 6px #4ade80' }} />
         LIVE
       </span>
     : isFinal
-    ? <span style={{ fontSize: 11, fontWeight: 700, color: textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>FINAL</span>
+    ? <span style={{ fontSize: 11, fontWeight: 700, color: mutedColor, textTransform: 'uppercase', letterSpacing: '0.06em' }}>FINAL</span>
     : isPostponed
     ? <span style={{ fontSize: 11, fontWeight: 700, color: '#fb923c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>PPD</span>
-    : <span style={{ fontSize: 11, fontWeight: 700, color: textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{game.time || '—'}</span>;
+    : <span style={{ fontSize: 11, fontWeight: 700, color: mutedColor, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{game.time || '—'}</span>;
+
+  const dividerColor = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)';
 
   return (
     <div style={{ padding: 12, fontFamily: 'Inter, sans-serif', display: 'inline-block' }}>
-      <div style={{ ...cardStyle, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 14, userSelect: 'none' }}>
+      <div style={{ ...shellStyle, display: 'flex', userSelect: 'none', minWidth: 220 }}>
 
-        {/* Status */}
-        <div style={{ flexShrink: 0, minWidth: 42 }}>{statusBadge}</div>
+        {/* Left: away (top) + home (bottom) */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <TeamRow
+            team={awayTeam}
+            score={hasScore || isFinal ? (game.scores?.away ?? 0) : null}
+            showScore={hasScore || isFinal}
+            isLight={isLight}
+          />
+          <div style={{ height: 1, background: dividerColor }} />
+          <TeamRow
+            team={homeTeam}
+            score={hasScore || isFinal ? (game.scores?.home ?? 0) : null}
+            showScore={hasScore || isFinal}
+            isLight={isLight}
+          />
+        </div>
 
-        <div style={{ width: 1, height: 28, background: divider, flexShrink: 0 }} />
+        {/* Right: status + live situation */}
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: 5, padding: '8px 12px',
+          borderLeft: `1px solid ${dividerColor}`,
+          flexShrink: 0, minWidth: 54,
+          background: isLight ? 'rgba(248,250,252,0.8)' : 'rgba(15,23,42,0.5)',
+        }}>
+          {statusBadge}
 
-        {/* Away team */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>{awayFull}</span>
-          {(hasScore || isFinal) && (
-            <span style={{ fontSize: 22, fontWeight: 800, color: textMain, lineHeight: 1 }}>{game.scores?.away ?? 0}</span>
+          {isLive && innInfo && (
+            <span style={{
+              fontSize: 13, fontWeight: 800, color: '#4ade80', lineHeight: 1,
+              whiteSpace: 'nowrap',
+            }}>
+              {innInfo.inning !== '—'
+                ? `${innInfo.inning}${innInfo.half === 'top' ? ' ▲' : innInfo.half === 'bottom' ? ' ▼' : ''}`
+                : '—'}
+            </span>
+          )}
+
+          {isLive && game.scores?.outs != null && (
+            <OutsDots outs={game.scores.outs} />
+          )}
+
+          {isLive && game.scores?.baseRunners && (
+            <BaseDiamond runners={game.scores.baseRunners} />
           )}
         </div>
 
-        {/* Centre separator */}
-        <span style={{ fontSize: 18, fontWeight: 700, color: textMuted, flexShrink: 0 }}>
-          {hasScore || isFinal ? '—' : '@'}
-        </span>
-
-        {/* Home team */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>{homeFull}</span>
-          {(hasScore || isFinal) && (
-            <span style={{ fontSize: 22, fontWeight: 800, color: textMain, lineHeight: 1 }}>{game.scores?.home ?? 0}</span>
-          )}
-        </div>
-
-        {/* Live situation — inning / outs / runners */}
-        {isLive && innInfo && (
-          <>
-            <div style={{ width: 1, height: 28, background: divider, flexShrink: 0 }} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
-              <span style={{ fontSize: 13, fontWeight: 800, color: '#4ade80', lineHeight: 1, whiteSpace: 'nowrap' }}>
-                {innInfo.inning !== '—' ? `${innInfo.inning}${innInfo.half === 'top' ? ' ▲' : innInfo.half === 'bottom' ? ' ▼' : ''}` : '—'}
-              </span>
-              {game.scores?.outs != null && <OutsDots outs={game.scores.outs} />}
-            </div>
-            {game.scores?.baseRunners && (
-              <BaseDiamond runners={game.scores.baseRunners} />
-            )}
-          </>
-        )}
       </div>
     </div>
   );
