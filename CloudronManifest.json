@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.29",
+  "version": "1.0.30",
   "manifestVersion": 2,
 
   "image": {
@@ -82,6 +82,7 @@
     "1.0.26": "Fix: SSE connection errors are now silent — graceful degradation to fallback polling (embed 15 s, admin 30 s) when realtime is unavailable; nginx HTTP/1.1 fix already in place for when SSE does work.",
     "1.0.27": "Fix: remove SSE subscription attempts from embed — browser-native EventSource MIME-type error cannot be suppressed from JS; embed now uses 15 s polling only.",
     "1.0.28": "Feat: stream overlay page (/stream-overlay.html?token=…) — compact live scoreboard for OBS browser source; transparent background by default; SSE real-time + 15 s fallback; 'Overlay' button added to Score Links manager.",
-    "1.0.29": "Feat: redesign stream overlay — vertical away-on-top / home-on-bottom scorebug layout; per-team color gradient rows; team logo display; larger base diamond squares; compact right column for inning/outs/runners."
+    "1.0.29": "Feat: redesign stream overlay — vertical away-on-top / home-on-bottom scorebug layout; per-team color gradient rows; team logo display; larger base diamond squares; compact right column for inning/outs/runners.",
+    "1.0.30": "UX: score-edit auto-saves on state change (900 ms debounce) — Submit button removed; inline Saving/Saved/Error indicator shown instead."
   }
 }
