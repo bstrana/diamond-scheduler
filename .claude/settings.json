@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/user/diamond-scheduler/.claude/sync-cloudron-versions.sh",
+            "statusMessage": "Syncing CloudronVersions.json…"
+          }
+        ]
+      }
+    ]
+  }
+}

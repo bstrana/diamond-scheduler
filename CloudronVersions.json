@@ -21,7 +21,12 @@
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -54,7 +59,12 @@
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -87,7 +97,12 @@
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -113,12 +128,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.3",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -144,12 +166,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.4",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -175,12 +204,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.5",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -206,12 +242,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.6",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -237,12 +280,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.7",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -268,12 +318,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.8",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -299,12 +356,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.9",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -330,12 +394,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.10",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -361,12 +432,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.11",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -392,12 +470,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.12",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -423,12 +508,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.13",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -454,12 +546,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.14",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -485,12 +584,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.15",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -516,12 +622,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.16",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -547,12 +660,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.17",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -578,12 +698,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.18",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -609,12 +736,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.19",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -640,12 +774,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.20",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -671,12 +812,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.21",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -702,12 +850,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.22",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -733,12 +888,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.24",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -764,12 +926,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.25",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -795,12 +964,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.26",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -826,12 +1002,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.27",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -857,12 +1040,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.28",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -888,12 +1078,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.30",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -919,12 +1116,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.31",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -950,12 +1154,19 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.32",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
@@ -981,16 +1192,61 @@
         "healthCheckPath": "/health",
         "httpPort": 8000,
         "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.33",
-        "addons": { "localstorage": {} },
+        "addons": {
+          "localstorage": {}
+        },
         "manifestVersion": 2,
         "minBoxVersion": "9.1.0",
         "icon": "file://appicon.png",
         "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": ["sports", "scheduling", "calendar", "league"],
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
         "changelog": "UX: stream overlay split into 3 columns — teams/scores, status/inning/count (larger B·S digits), base diamond alone on the right.",
+        "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
+        "packagerName": "bstrana",
+        "packagerUrl": "https://github.com/bstrana"
+      },
+      "creationDate": "Fri, 27 Mar 2026 00:00:00 GMT",
+      "ts": "Fri, 27 Mar 2026 00:00:00 GMT",
+      "publishState": "published"
+    },
+    "1.0.34": {
+      "manifest": {
+        "id": "io.github.bstrana.diamond-scheduler",
+        "title": "Diamond Scheduler",
+        "author": "bstrana",
+        "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
+        "tagline": "Baseball & multi-sport league scheduling",
+        "version": "1.0.34",
+        "website": "https://github.com/bstrana/diamond-scheduler",
+        "contactEmail": "support@example.com",
+        "healthCheckPath": "/health",
+        "httpPort": 8000,
+        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.34",
+        "addons": {
+          "localstorage": {}
+        },
+        "manifestVersion": 2,
+        "minBoxVersion": "9.1.0",
+        "icon": "file://appicon.png",
+        "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
+        "mediaLinks": [
+          "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
+        ],
+        "changelog": "Fix: base diamond SVG adjusted — viewBox -10 -10 80 80, rendered 110×100, 25×25 rects for larger and better-spaced bases.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
