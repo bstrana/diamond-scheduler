@@ -1,10 +1,31 @@
-import React, { useState, useMemo } from 'react';
-import { generateRoundRobinSchedule, calculateStandings } from '../utils';
+import React, { useState, useMemo, useCallback } from 'react';
+import { generateRoundRobinSchedule, generateSingleEliminationBracket, generateDoubleEliminationBracket, generatePoolKnockout, calculateStandings } from '../utils';
 import { Team, Game, League } from '../types';
-import { Wand2, Loader2, Calendar as CalIcon, Clock, Layers, Info, Plus, X, Trophy } from 'lucide-react';
+import { Wand2, Loader2, Calendar as CalIcon, Clock, Layers, Info, Plus, X, Trophy, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from 'lucide-react';
 import { formatDate } from '../utils';
 import { WEEKDAYS } from '../constants';
 import { useTranslation } from 'react-i18next';
+
+interface SchedulerTemplate {
+  id: string;
+  name: string;
+  leagueId: string;
+  config: {
+    startDate: string;
+    gamesPerTeam: number;
+    selectedDays: string[];
+    dayTimes: Record<string, string>;
+    doubleHeaderMode: string;
+    bestOf: number;
+    seriesGameMode: string;
+    roundGapDays: number;
+    poolSize: number;
+    advancingPerPool: number;
+  };
+  savedAt: string;
+}
+
+const TEMPLATES_KEY = 'ds_sched_templates';
 
 interface ScheduleGeneratorProps {
   leagues: League[];

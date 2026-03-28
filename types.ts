@@ -35,7 +35,9 @@ export interface Game {
   date: string; // ISO String YYYY-MM-DD
   time: string; // HH:MM 24h format
   location: string;
-  status: 'scheduled' | 'live' | 'final' | 'postponed';
+  status: 'scheduled' | 'live' | 'final' | 'postponed' | 'exhibition' | 'forfeit';
+  bracketRound?: number;    // 1=QF, 2=SF, 3=Final etc.
+  bracketPosition?: number; // position within the round (for ordering)
   scores?: {
     home: number;
     away: number;

@@ -309,8 +309,9 @@ function getGameLeagueIds(game: Game): string[] {
 
 export function calculateStandings(league: League, games: Game[]): StandingsRow[] {
   const completedGames = games.filter(game => {
-    const isCompleted = game.status === 'final' || (game.status as string) === 'completed';
-    return isCompleted && game.scores != null && getGameLeagueIds(game).includes(league.id);
+    const isCompleted = game.status === 'final' || (game.status as string) === 'completed' || game.status === 'forfeit';
+    const isExhibition = game.status === 'exhibition';
+    return isCompleted && !isExhibition && game.scores != null && getGameLeagueIds(game).includes(league.id);
   });
 
   const stats = new Map<string, { w: number; l: number; rs: number; ra: number }>();
@@ -349,13 +350,444 @@ export function calculateStandings(league: League, games: Game[]): StandingsRow[
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── Bracket / Tournament helpers ────────────────────────────────────────────
+
+function nextPowerOf2(n: number): number {
+  let p = 1;
+  while (p < n) p *= 2;
+  return p;
+}
+
+function getBracketRoundNames(totalRounds: number): string[] {
+  if (totalRounds === 1) return ['Final'];
+  if (totalRounds === 2) return ['Semifinal', 'Final'];
+  if (totalRounds === 3) return ['Quarterfinal', 'Semifinal', 'Final'];
+  if (totalRounds === 4) return ['Round of 16', 'Quarterfinal', 'Semifinal', 'Final'];
+  // 5+: Round 1, Round 2, ..., Semifinal, Final
+  const names: string[] = [];
+  for (let i = 1; i <= totalRounds - 2; i++) names.push(`Round ${i}`);
+  names.push('Semifinal');
+  names.push('Final');
+  return names;
+}
+
+/** Given a date string and roundGapDays, return a new date string that is roundGapDays after it */
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/** Get the day name (Mon/Tue/...) for a date string */
+function getDayNameFromStr(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  const jsDay = d.getDay();
+  const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const idx = jsDay === 0 ? 6 : jsDay - 1;
+  return weekdays[idx];
+}
+
+/** Advance dateStr forward until it lands on an allowed day */
+function nextAllowedDate(dateStr: string, allowedDays: string[]): string {
+  let cur = dateStr;
+  for (let safety = 0; safety < 365; safety++) {
+    if (allowedDays.includes(getDayNameFromStr(cur))) return cur;
+    cur = addDays(cur, 1);
+  }
+  return cur;
+}
+
+/**
+ * Schedule `gamesCount` games for a given matchup starting from `startDate`,
+ * on consecutive allowed days. Returns { games, lastDate }.
+ */
+function scheduleMatchupGames(
+  homeId: string,
+  awayId: string,
+  homeLocation: string,
+  startDate: string,
+  allowedDays: string[],
+  dayTimes: Record<string, string>,
+  gamesCount: number,
+  seriesNameStr: string,
+  bracketRound: number,
+  bracketPosition: number,
+  leagueGames: Game[]
+): { games: Game[]; lastDate: string } {
+  const result: Game[] = [];
+  let cur = nextAllowedDate(startDate, allowedDays);
+  for (let i = 0; i < gamesCount; i++) {
+    const dayName = getDayNameFromStr(cur);
+    const time = dayTimes[dayName] || '15:00';
+    result.push({
+      id: generateUUID(),
+      homeTeamId: homeId,
+      awayTeamId: awayId,
+      date: cur,
+      time,
+      location: homeLocation,
+      status: 'scheduled',
+      gameNumber: String(leagueGames.length + result.length + 1),
+      seriesName: seriesNameStr,
+      bracketRound,
+      bracketPosition,
+    });
+    // Advance to next allowed day
+    cur = nextAllowedDate(addDays(cur, 1), allowedDays);
+  }
+  const lastDate = result.length > 0 ? result[result.length - 1].date : startDate;
+  return { games: result, lastDate };
+}
+
+export const generateSingleEliminationBracket = (
+  teams: Team[],
+  startDate: string,
+  allowedDays: string[],
+  dayTimes: Record<string, string>,
+  bestOf: number = 1,
+  seeding: string[] = [],
+  roundGapDays: number = 3
+): Game[] => {
+  if (teams.length < 2) return [];
+
+  // Build seed order: use provided seeding or teams in order
+  const seedIds: (string | null)[] = seeding.length > 0
+    ? seeding.slice()
+    : teams.map(t => t.id);
+
+  // Pad to next power of 2 with nulls (BYEs)
+  const bracketSize = nextPowerOf2(seedIds.length);
+  while (seedIds.length < bracketSize) seedIds.push(null);
+
+  const totalRounds = Math.log2(bracketSize);
+  const roundNames = getBracketRoundNames(totalRounds);
+
+  const allGames: Game[] = [];
+  let roundStartDate = nextAllowedDate(startDate, allowedDays);
+  let lastDateOfRound = roundStartDate;
+
+  for (let round = 0; round < totalRounds; round++) {
+    const numMatchups = bracketSize / Math.pow(2, round + 1);
+    const rName = roundNames[round];
+    const isFirstRound = round === 0;
+
+    // Standard seeding: seed 1 vs last, seed 2 vs second-to-last, etc.
+    const matchups: { home: string | null; away: string | null }[] = [];
+    if (isFirstRound) {
+      for (let i = 0; i < numMatchups; i++) {
+        const topSeed = seedIds[i];
+        const bottomSeed = seedIds[bracketSize - 1 - i];
+        matchups.push({ home: topSeed, away: bottomSeed });
+      }
+    } else {
+      // TBD placeholders for subsequent rounds
+      for (let i = 0; i < numMatchups; i++) {
+        matchups.push({
+          home: `__tbd_r${round + 1}_p${i * 2}__`,
+          away: `__tbd_r${round + 1}_p${i * 2 + 1}__`,
+        });
+      }
+    }
+
+    let roundLastDate = roundStartDate;
+
+    for (let mi = 0; mi < matchups.length; mi++) {
+      const { home, away } = matchups[mi];
+
+      // Skip BYE matchups (either slot null in round 1)
+      if (home === null || away === null) continue;
+
+      const homeTeam = teams.find(t => t.id === home);
+      const homeLocation = homeTeam ? (homeTeam.field || `${homeTeam.city} Field`) : 'TBD Field';
+
+      const { games: mGames, lastDate } = scheduleMatchupGames(
+        home,
+        away,
+        homeLocation,
+        roundStartDate,
+        allowedDays,
+        dayTimes,
+        bestOf,
+        rName,
+        round + 1,
+        mi + 1,
+        allGames
+      );
+      allGames.push(...mGames);
+      if (lastDate > roundLastDate) roundLastDate = lastDate;
+    }
+
+    lastDateOfRound = roundLastDate;
+    // Next round starts roundGapDays after the last game of this round
+    roundStartDate = nextAllowedDate(addDays(lastDateOfRound, roundGapDays), allowedDays);
+  }
+
+  return allGames;
+};
+
+export const generateDoubleEliminationBracket = (
+  teams: Team[],
+  startDate: string,
+  allowedDays: string[],
+  dayTimes: Record<string, string>,
+  bestOf: number = 1,
+  seeding: string[] = [],
+  roundGapDays: number = 3
+): Game[] => {
+  if (teams.length < 2) return [];
+
+  const seedIds: (string | null)[] = seeding.length > 0
+    ? seeding.slice()
+    : teams.map(t => t.id);
+
+  const bracketSize = nextPowerOf2(seedIds.length);
+  while (seedIds.length < bracketSize) seedIds.push(null);
+
+  const wbTotalRounds = Math.log2(bracketSize);
+
+  // WB round names
+  const getWBName = (roundIdx: number): string => {
+    if (wbTotalRounds === 1) return 'WB Final';
+    if (wbTotalRounds === 2) return roundIdx === 0 ? 'WB Semifinal' : 'WB Final';
+    if (wbTotalRounds === 3) {
+      return ['WB Quarterfinal', 'WB Semifinal', 'WB Final'][roundIdx] ?? `WB Round ${roundIdx + 1}`;
+    }
+    if (roundIdx === wbTotalRounds - 1) return 'WB Final';
+    if (roundIdx === wbTotalRounds - 2) return 'WB Semifinal';
+    if (roundIdx === wbTotalRounds - 3) return 'WB Quarterfinal';
+    return `WB Round ${roundIdx + 1}`;
+  };
+
+  const allGames: Game[] = [];
+  let currentDate = nextAllowedDate(startDate, allowedDays);
+  let bracketRoundCounter = 0;
+
+  // Schedule WB and LB rounds in interleaved fashion
+  // For each WB round i (0-indexed), schedule WB round i then LB round i
+  const lbRoundCount = wbTotalRounds > 1 ? (wbTotalRounds - 1) * 2 : 0;
+
+  for (let wbRound = 0; wbRound < wbTotalRounds; wbRound++) {
+    bracketRoundCounter++;
+    const numWBMatchups = bracketSize / Math.pow(2, wbRound + 1);
+    const wbName = getWBName(wbRound);
+    let roundLastDate = currentDate;
+
+    for (let mi = 0; mi < numWBMatchups; mi++) {
+      let homeId: string;
+      let awayId: string;
+
+      if (wbRound === 0) {
+        // Use actual seeding for first round
+        const topSeed = seedIds[mi];
+        const bottomSeed = seedIds[bracketSize - 1 - mi];
+        if (topSeed === null || bottomSeed === null) continue;
+        homeId = topSeed;
+        awayId = bottomSeed;
+      } else {
+        homeId = `__tbd_wb_r${wbRound + 1}_p${mi * 2}__`;
+        awayId = `__tbd_wb_r${wbRound + 1}_p${mi * 2 + 1}__`;
+      }
+
+      const homeTeam = teams.find(t => t.id === homeId);
+      const homeLocation = homeTeam ? (homeTeam.field || `${homeTeam.city} Field`) : 'TBD Field';
+
+      const { games: mGames, lastDate } = scheduleMatchupGames(
+        homeId, awayId, homeLocation,
+        currentDate, allowedDays, dayTimes,
+        bestOf, wbName, bracketRoundCounter, mi + 1, allGames
+      );
+      allGames.push(...mGames);
+      if (lastDate > roundLastDate) roundLastDate = lastDate;
+    }
+
+    currentDate = nextAllowedDate(addDays(roundLastDate, roundGapDays), allowedDays);
+
+    // Schedule corresponding LB round after each WB round (except the last WB round)
+    if (wbRound < wbTotalRounds - 1) {
+      bracketRoundCounter++;
+      const lbRoundIdx = wbRound * 2; // LB has 2 rounds per WB round (drop-in + consolidation)
+      const lbName = `LB Round ${lbRoundIdx + 1}`;
+      const numLBMatchups = Math.max(1, numWBMatchups / 2);
+      let lbRoundLastDate = currentDate;
+
+      for (let mi = 0; mi < numLBMatchups; mi++) {
+        const lbHomeId = `__tbd_lb_r${lbRoundIdx + 1}_p${mi * 2}__`;
+        const lbAwayId = `__tbd_lb_r${lbRoundIdx + 1}_p${mi * 2 + 1}__`;
+
+        const { games: lbGames, lastDate: lbLastDate } = scheduleMatchupGames(
+          lbHomeId, lbAwayId, 'TBD Field',
+          currentDate, allowedDays, dayTimes,
+          bestOf, lbName, bracketRoundCounter, mi + 1, allGames
+        );
+        allGames.push(...lbGames);
+        if (lbLastDate > lbRoundLastDate) lbRoundLastDate = lbLastDate;
+      }
+
+      currentDate = nextAllowedDate(addDays(lbRoundLastDate, roundGapDays), allowedDays);
+
+      // Second LB round (consolidation) for rounds after the first WB round
+      if (wbRound > 0) {
+        bracketRoundCounter++;
+        const lbName2 = `LB Round ${lbRoundIdx + 2}`;
+        let lb2RoundLastDate = currentDate;
+
+        for (let mi = 0; mi < numLBMatchups; mi++) {
+          const lb2HomeId = `__tbd_lb_r${lbRoundIdx + 2}_p${mi * 2}__`;
+          const lb2AwayId = `__tbd_lb_r${lbRoundIdx + 2}_p${mi * 2 + 1}__`;
+
+          const { games: lb2Games, lastDate: lb2LastDate } = scheduleMatchupGames(
+            lb2HomeId, lb2AwayId, 'TBD Field',
+            currentDate, allowedDays, dayTimes,
+            bestOf, lbName2, bracketRoundCounter, mi + 1, allGames
+          );
+          allGames.push(...lb2Games);
+          if (lb2LastDate > lb2RoundLastDate) lb2RoundLastDate = lb2LastDate;
+        }
+
+        currentDate = nextAllowedDate(addDays(lb2RoundLastDate, roundGapDays), allowedDays);
+      }
+    }
+  }
+
+  // Championship game
+  bracketRoundCounter++;
+  const { games: champGames } = scheduleMatchupGames(
+    '__tbd_champ_home__',
+    '__tbd_champ_away__',
+    'TBD Field',
+    currentDate, allowedDays, dayTimes,
+    bestOf, 'Championship', bracketRoundCounter, 1, allGames
+  );
+  allGames.push(...champGames);
+
+  return allGames;
+};
+
+export const generatePoolKnockout = (
+  teams: Team[],
+  poolSize: number,
+  advancingPerPool: number,
+  startDate: string,
+  allowedDays: string[],
+  dayTimes: Record<string, string>,
+  bestOf: number = 1,
+  roundGapDays: number = 3
+): Game[] => {
+  if (teams.length < 2) return [];
+
+  const allGames: Game[] = [];
+  const poolNames = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+  // Divide teams into pools
+  const pools: Team[][] = [];
+  for (let i = 0; i < teams.length; i += poolSize) {
+    pools.push(teams.slice(i, i + poolSize));
+  }
+
+  let currentDate = nextAllowedDate(startDate, allowedDays);
+  let poolPhaseLastDate = currentDate;
+
+  // Pool round-robin games
+  pools.forEach((poolTeams, poolIdx) => {
+    const poolLabel = `Pool ${poolNames[poolIdx] ?? poolIdx + 1}`;
+    // All pairs play once
+    for (let i = 0; i < poolTeams.length; i++) {
+      for (let j = i + 1; j < poolTeams.length; j++) {
+        const homeTeam = poolTeams[i];
+        const awayTeam = poolTeams[j];
+        const homeLocation = homeTeam.field || `${homeTeam.city} Field`;
+        const dayName = getDayNameFromStr(currentDate);
+        const time = dayTimes[dayName] || '15:00';
+
+        allGames.push({
+          id: generateUUID(),
+          homeTeamId: homeTeam.id,
+          awayTeamId: awayTeam.id,
+          date: currentDate,
+          time,
+          location: homeLocation,
+          status: 'scheduled',
+          gameNumber: String(allGames.length + 1),
+          seriesName: poolLabel,
+          bracketRound: 0,
+          bracketPosition: allGames.length + 1,
+        });
+
+        if (currentDate > poolPhaseLastDate) poolPhaseLastDate = currentDate;
+        currentDate = nextAllowedDate(addDays(currentDate, 1), allowedDays);
+      }
+    }
+  });
+
+  // Bracket phase with TBD team IDs
+  const numAdvancing = pools.length * advancingPerPool;
+  if (numAdvancing < 2) return allGames;
+
+  const bracketStartDate = nextAllowedDate(addDays(poolPhaseLastDate, roundGapDays), allowedDays);
+
+  const bracketSize = nextPowerOf2(numAdvancing);
+  const totalBracketRounds = Math.log2(bracketSize);
+  const roundNames = getBracketRoundNames(totalBracketRounds);
+
+  // Build TBD seed slots for bracket
+  const tbdSeeds: string[] = [];
+  for (let i = 0; i < numAdvancing; i++) {
+    tbdSeeds.push(`__tbd_pool_seed${i + 1}__`);
+  }
+  // Pad with nulls for BYEs
+  const bracketSlots: (string | null)[] = [...tbdSeeds];
+  while (bracketSlots.length < bracketSize) bracketSlots.push(null);
+
+  let roundStartDate = bracketStartDate;
+  let lastDateOfRound = bracketStartDate;
+
+  for (let round = 0; round < totalBracketRounds; round++) {
+    const numMatchups = bracketSize / Math.pow(2, round + 1);
+    const rName = roundNames[round];
+    let roundLastDate = roundStartDate;
+
+    for (let mi = 0; mi < numMatchups; mi++) {
+      let homeId: string | null;
+      let awayId: string | null;
+
+      if (round === 0) {
+        homeId = bracketSlots[mi];
+        awayId = bracketSlots[bracketSize - 1 - mi];
+      } else {
+        homeId = `__tbd_bracket_r${round + 1}_p${mi * 2}__`;
+        awayId = `__tbd_bracket_r${round + 1}_p${mi * 2 + 1}__`;
+      }
+
+      if (homeId === null || awayId === null) continue;
+
+      const { games: mGames, lastDate } = scheduleMatchupGames(
+        homeId, awayId, 'TBD Field',
+        roundStartDate, allowedDays, dayTimes,
+        bestOf, rName, round + 1, mi + 1, allGames
+      );
+      allGames.push(...mGames);
+      if (lastDate > roundLastDate) roundLastDate = lastDate;
+    }
+
+    lastDateOfRound = roundLastDate;
+    roundStartDate = nextAllowedDate(addDays(lastDateOfRound, roundGapDays), allowedDays);
+  }
+
+  return allGames;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const generateRoundRobinSchedule = (
   teams: Team[],
   startDateStr: string,
   gamesPerTeam: number,
   allowedDays: string[],
   dayTimes: Record<string, string>,
-  doubleHeaderMode: 'none' | 'same_day' | 'consecutive' | 'series',
+  doubleHeaderMode: 'none' | 'same_day' | 'consecutive' | 'series' | 'single_elim' | 'double_elim' | 'pool_bracket',
   bestOf: number = 3,
   seriesMatchups?: Array<{team1Id: string, team2Id: string, seriesName?: string}>,
   seriesGameMode: 'alternate' | 'back_to_back' = 'alternate'
