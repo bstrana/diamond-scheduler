@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.38",
+  "version": "1.0.39",
   "manifestVersion": 2,
 
   "image": {
@@ -91,6 +91,7 @@
     "1.0.35": "Fix: stream overlay base diamond — move bases inward (second cy 4→16, third cx 4→16, first cx 56→44) to prevent corner clipping and reduce spacing.",
     "1.0.36": "Feat: game recap in score entry (textarea, auto-saved) and stream overlay (horizontal ticker scrolling from right to left at the bottom of the card).",
     "1.0.37": "Fix: stream overlay base diamond spacing (bases no longer overlap); ticker now clipped by card border-radius; score-edit base positions corrected.",
-    "1.0.38": "UX: team rows now stretch to fill full card height; outs dots and balls·strikes digits enlarged in stream overlay."
+    "1.0.38": "UX: team rows now stretch to fill full card height; outs dots and balls·strikes digits enlarged in stream overlay.",
+    "1.0.39": "Fix: bases closer together in stream overlay; ticker bar now hides correctly when recap is cleared."
   }
 }
