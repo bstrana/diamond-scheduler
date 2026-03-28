@@ -635,6 +635,8 @@ const scoreEditFromRecord = (r: any): ScoreEdit => ({
   scores:      r.scores || undefined,
   recap:       r.recap || undefined,
   linescore:   !!r.linescore,
+  hits:        { away: r.hits_away   ?? null, home: r.hits_home   ?? null },
+  errors:      { away: r.errors_away ?? null, home: r.errors_home ?? null },
   updated:     r.updated,
 });
 
@@ -681,6 +683,10 @@ export const saveScoreEdit = async (edit: Omit<ScoreEdit, 'id' | 'updated'>): Pr
       scores:       edit.scores ?? null,
       recap:        edit.recap ?? '',
       linescore:    edit.linescore ?? false,
+      hits_away:    edit.hits?.away   ?? null,
+      hits_home:    edit.hits?.home   ?? null,
+      errors_away:  edit.errors?.away ?? null,
+      errors_home:  edit.errors?.home ?? null,
     };
     if (existingId) {
       await pocketbaseClient.collection(scoreEditsCollection).update(existingId, payload);

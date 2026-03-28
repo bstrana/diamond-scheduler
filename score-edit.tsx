@@ -95,6 +95,8 @@ const ScoreEditApp: React.FC = () => {
   const [baseRunners, setBaseRunners] = useState<{ first: boolean; second: boolean; third: boolean }>({ first: false, second: false, third: false });
   const [recap, setRecap] = useState<string>('');
   const [linescore, setLinescore] = useState<boolean>(false);
+  const [hits,   setHits]   = useState<{ away: number | null; home: number | null }>({ away: null, home: null });
+  const [errors, setErrors] = useState<{ away: number | null; home: number | null }>({ away: null, home: null });
 
   const homeTotal = innings.reduce((s, i) => s + (i.home ?? 0), 0);
   const awayTotal = innings.reduce((s, i) => s + (i.away ?? 0), 0);
@@ -134,6 +136,8 @@ const ScoreEditApp: React.FC = () => {
       const existingEdits = await listScoreEditsByScheduleKey(validated.scheduleKey);
       const existingEdit = existingEdits.find(e => e.gameId === g.id);
       if (existingEdit?.linescore) setLinescore(true);
+      if (existingEdit?.hits)   setHits(existingEdit.hits);
+      if (existingEdit?.errors) setErrors(existingEdit.errors);
 
       // look up team names from all teams across leagues
       const allTeams: Team[] = [];
@@ -166,6 +170,8 @@ const ScoreEditApp: React.FC = () => {
         },
         recap: recap || undefined,
         linescore,
+        hits,
+        errors,
       });
       setIsSaving(false);
       if (ok) {
@@ -178,7 +184,7 @@ const ScoreEditApp: React.FC = () => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // homeTotal and awayTotal are derived from innings — no need to list them separately
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, innings, outs, balls, strikes, baseRunners, recap, linescore]);
+  }, [status, innings, outs, balls, strikes, baseRunners, recap, linescore, hits, errors]);
 
   // ── collapse header on scroll ────────────────────────────────────────────────
   useEffect(() => {
@@ -293,6 +299,8 @@ const ScoreEditApp: React.FC = () => {
                         <th key={i} className="text-center text-xs text-slate-500 font-medium pb-1 px-1 min-w-[2.5rem]">{i + 1}</th>
                       ))}
                       <th className="text-center text-xs text-slate-700 font-bold pb-1 pl-2 min-w-[2.5rem]">R</th>
+                      <th className="text-center text-xs text-slate-700 font-bold pb-1 pl-1 min-w-[2.5rem]">H</th>
+                      <th className="text-center text-xs text-slate-700 font-bold pb-1 pl-1 min-w-[2.5rem]">E</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -315,6 +323,26 @@ const ScoreEditApp: React.FC = () => {
                         ))}
                         <td className="py-1 pl-2 text-center font-bold text-slate-800 text-sm">
                           {side === 'away' ? awayTotal : homeTotal}
+                        </td>
+                        <td className="py-1 pl-1">
+                          <input
+                            type="number"
+                            min="0"
+                            max="99"
+                            value={hits[side] ?? ''}
+                            onChange={e => setHits(prev => ({ ...prev, [side]: e.target.value === '' ? null : parseInt(e.target.value, 10) }))}
+                            className="w-10 text-center border border-slate-200 rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                          />
+                        </td>
+                        <td className="py-1 pl-1">
+                          <input
+                            type="number"
+                            min="0"
+                            max="99"
+                            value={errors[side] ?? ''}
+                            onChange={e => setErrors(prev => ({ ...prev, [side]: e.target.value === '' ? null : parseInt(e.target.value, 10) }))}
+                            className="w-10 text-center border border-slate-200 rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                          />
                         </td>
                       </tr>
                     ))}

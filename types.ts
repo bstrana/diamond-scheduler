@@ -78,6 +78,8 @@ export interface ScoreEdit {
   scores?: Game['scores'];
   recap?: string;
   linescore?: boolean;
+  hits?: { away: number | null; home: number | null };
+  errors?: { away: number | null; home: number | null };
   updated?: string;
 }
 

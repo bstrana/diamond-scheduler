@@ -142,6 +142,8 @@ const StreamOverlayApp: React.FC = () => {
   const [homeTeam, setHomeTeam] = useState<Team | null>(null);
   const [awayTeam, setAwayTeam] = useState<Team | null>(null);
   const [showLinescore, setShowLinescore] = useState(false);
+  const [gameHits,   setGameHits]   = useState<{ away: number | null; home: number | null } | null>(null);
+  const [gameErrors, setGameErrors] = useState<{ away: number | null; home: number | null } | null>(null);
   const gameRef = useRef<Game | null>(null);
   gameRef.current = game;
 
@@ -171,7 +173,11 @@ const StreamOverlayApp: React.FC = () => {
         if (!allTeams.find(x => x.id === t.id)) allTeams.push(t);
       }));
 
-      if (edit) setShowLinescore(!!edit.linescore);
+      if (edit) {
+        setShowLinescore(!!edit.linescore);
+        setGameHits(edit.hits ?? null);
+        setGameErrors(edit.errors ?? null);
+      }
       setGame(finalGame);
       setHomeTeam(allTeams.find(t => t.id === g.homeTeamId) ?? null);
       setAwayTeam(allTeams.find(t => t.id === g.awayTeamId) ?? null);
@@ -196,6 +202,8 @@ const StreamOverlayApp: React.FC = () => {
       if (edit.gameId !== link.gameId) return;
       setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, recap: edit.recap?.trim() || undefined } : prev);
       setShowLinescore(!!edit.linescore);
+      setGameHits(edit.hits ?? null);
+      setGameErrors(edit.errors ?? null);
     });
 
     // 15 s fallback poll
@@ -205,6 +213,8 @@ const StreamOverlayApp: React.FC = () => {
       if (edit) {
         setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, recap: edit.recap?.trim() || undefined } : prev);
         setShowLinescore(!!edit.linescore);
+        setGameHits(edit.hits ?? null);
+        setGameErrors(edit.errors ?? null);
       }
     }, 15_000);
 
@@ -360,6 +370,8 @@ const StreamOverlayApp: React.FC = () => {
                     <div key={i} style={cellStyle()}>{i + 1}</div>
                   ))}
                   <div style={{ ...cellStyle(true), minWidth: 26, borderLeft: `1px solid ${dividerColor}`, paddingLeft: 4 }}>R</div>
+                  <div style={{ ...cellStyle(true), minWidth: 22, borderLeft: `1px solid ${dividerColor}`, paddingLeft: 4 }}>H</div>
+                  <div style={{ ...cellStyle(true), minWidth: 22, paddingLeft: 4 }}>E</div>
                 </div>
                 {/* Away row */}
                 <div style={{ display: 'flex', gap: 2, marginBottom: 1 }}>
@@ -370,6 +382,12 @@ const StreamOverlayApp: React.FC = () => {
                   <div style={{ ...cellStyle(true), minWidth: 26, borderLeft: `1px solid ${dividerColor}`, paddingLeft: 4 }}>
                     {inn.reduce((s, e) => s + (e.away ?? 0), 0)}
                   </div>
+                  <div style={{ ...cellStyle(true), minWidth: 22, borderLeft: `1px solid ${dividerColor}`, paddingLeft: 4 }}>
+                    {gameHits?.away != null ? gameHits.away : <span style={{ opacity: 0.35 }}>—</span>}
+                  </div>
+                  <div style={{ ...cellStyle(true), minWidth: 22, paddingLeft: 4 }}>
+                    {gameErrors?.away != null ? gameErrors.away : <span style={{ opacity: 0.35 }}>—</span>}
+                  </div>
                 </div>
                 {/* Home row */}
                 <div style={{ display: 'flex', gap: 2 }}>
@@ -379,6 +397,12 @@ const StreamOverlayApp: React.FC = () => {
                   ))}
                   <div style={{ ...cellStyle(true), minWidth: 26, borderLeft: `1px solid ${dividerColor}`, paddingLeft: 4 }}>
                     {inn.reduce((s, e) => s + (e.home ?? 0), 0)}
+                  </div>
+                  <div style={{ ...cellStyle(true), minWidth: 22, borderLeft: `1px solid ${dividerColor}`, paddingLeft: 4 }}>
+                    {gameHits?.home != null ? gameHits.home : <span style={{ opacity: 0.35 }}>—</span>}
+                  </div>
+                  <div style={{ ...cellStyle(true), minWidth: 22, paddingLeft: 4 }}>
+                    {gameErrors?.home != null ? gameErrors.home : <span style={{ opacity: 0.35 }}>—</span>}
                   </div>
                 </div>
               </div>
