@@ -1,5 +1,5 @@
 {
-  "stable": true,
+  "stable": "1.0.36",
   "versions": {
     "1.0.0": {
       "manifest": {
@@ -1322,7 +1322,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "",
+        "changelog": "Feat: game recap field in score-entry form with auto-scrolling ticker in stream overlay. Score-entry header now collapses to a compact sticky bar when scrolling down.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
