@@ -31,7 +31,7 @@ const deriveInning = (game: Game): { inning: string; half: 'top' | 'bottom' | nu
     (n, inn) => n + (inn.away != null ? 1 : 0) + (inn.home != null ? 1 : 0),
     0,
   );
-  if (filled === 0) return { inning: '—', half: null };
+  if (filled === 0) return { inning: '1', half: 'top' };
   const isOdd = filled % 2 !== 0;
   return { inning: String(Math.floor(filled / 2) + 1), half: isOdd ? 'bottom' : 'top' };
 };
