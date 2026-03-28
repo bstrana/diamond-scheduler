@@ -53,12 +53,12 @@ const OutsDots: React.FC<{ outs: number }> = ({ outs }) => (
 
 const BaseDiamond: React.FC<{ runners?: { first?: boolean; second?: boolean; third?: boolean } }> = ({ runners }) => {
   const bases = [
-    { key: 'second' as const, cx: 30, cy: 16 },
-    { key: 'third'  as const, cx: 16, cy: 48 },
-    { key: 'first'  as const, cx: 44, cy: 48 },
+    { key: 'second' as const, cx: 30, cy: 6  },
+    { key: 'third'  as const, cx: 5,  cy: 50 },
+    { key: 'first'  as const, cx: 55, cy: 50 },
   ];
   return (
-    <svg width={110} height={100} viewBox="-10 -10 80 80" style={{ display: 'block' }}>
+    <svg width={110} height={100} viewBox="-15 -15 90 90" style={{ display: 'block' }}>
       {bases.map(({ key, cx, cy }) => (
         <rect key={key}
           x={cx - 12.5} y={cy - 12.5} width={25} height={25}
@@ -266,7 +266,8 @@ const StreamOverlayApp: React.FC = () => {
 
   return (
     <div style={{ padding: 12, fontFamily: 'Inter, sans-serif', display: 'inline-block' }}>
-      <div style={{ ...shellStyle, display: 'flex', userSelect: 'none', minWidth: 220 }}>
+      <div style={{ ...shellStyle, display: 'flex', flexDirection: 'column', userSelect: 'none', minWidth: 220 }}>
+      <div style={{ display: 'flex' }}>
 
         {/* Col 1: away (top) + home (bottom) */}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -331,8 +332,9 @@ const StreamOverlayApp: React.FC = () => {
         )}
 
       </div>
+      </div>
 
-      {/* Recap ticker — horizontal auto-scroll */}
+      {/* Recap ticker — inside shell so border-radius clips it */}
       {game.recap && (
         <div style={{
           borderTop: `1px solid ${dividerColor}`,
@@ -359,6 +361,7 @@ const StreamOverlayApp: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

@@ -28,11 +28,11 @@ const BaseDiamondInput: React.FC<{
     onChange({ ...value, [base]: !value[base] });
 
   const W = 110, H = 90;
-  const BS = 26; // rotated square half-diagonal → visual size
+  const BS = 26; // rect size (rotated 45°); half-diagonal ≈ 18.4 → need >36.8 between centers
   const bases: { key: 'first' | 'second' | 'third'; cx: number; cy: number; label: string }[] = [
-    { key: 'second', cx: W / 2,     cy: BS,        label: '2B' },
-    { key: 'third',  cx: BS,        cy: H / 2 + 4, label: '3B' },
-    { key: 'first',  cx: W - BS,    cy: H / 2 + 4, label: '1B' },
+    { key: 'second', cx: 55, cy: 20, label: '2B' },
+    { key: 'third',  cx: 33, cy: 58, label: '3B' },
+    { key: 'first',  cx: 77, cy: 58, label: '1B' },
   ];
 
   return (
