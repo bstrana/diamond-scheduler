@@ -27,13 +27,8 @@ const deriveInning = (game: Game): { inning: string; half: 'top' | 'bottom' | nu
       half: game.inningHalf ?? null,
     };
   }
-  const filled = innings.reduce(
-    (n, inn) => n + (inn.away != null ? 1 : 0) + (inn.home != null ? 1 : 0),
-    0,
-  );
-  if (filled === 0) return { inning: '1', half: 'top' };
-  const isOdd = filled % 2 !== 0;
-  return { inning: String(Math.floor(filled / 2) + 1), half: isOdd ? 'bottom' : 'top' };
+  const last = innings[innings.length - 1];
+  return { inning: String(innings.length), half: last?.home != null ? 'bottom' : 'top' };
 };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
