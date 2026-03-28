@@ -343,7 +343,7 @@ const StreamOverlayApp: React.FC = () => {
 
         {/* Col 4: linescore — slides in from right */}
         <div style={{
-          maxWidth: showLinescore ? 240 : 0,
+          maxWidth: showLinescore ? `${28 + ((game.scores?.innings?.length ?? 0) * 24) + 26 + 22 + 22 + 20}px` : 0,
           overflow: 'hidden',
           transition: 'max-width 0.35s ease',
           borderLeft: showLinescore ? `1px solid ${dividerColor}` : 'none',
