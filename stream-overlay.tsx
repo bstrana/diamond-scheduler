@@ -141,6 +141,7 @@ const StreamOverlayApp: React.FC = () => {
   const [game, setGame] = useState<Game | null>(null);
   const [homeTeam, setHomeTeam] = useState<Team | null>(null);
   const [awayTeam, setAwayTeam] = useState<Team | null>(null);
+  const [showLinescore, setShowLinescore] = useState(false);
   const gameRef = useRef<Game | null>(null);
   gameRef.current = game;
 
@@ -170,6 +171,7 @@ const StreamOverlayApp: React.FC = () => {
         if (!allTeams.find(x => x.id === t.id)) allTeams.push(t);
       }));
 
+      if (edit) setShowLinescore(!!edit.linescore);
       setGame(finalGame);
       setHomeTeam(allTeams.find(t => t.id === g.homeTeamId) ?? null);
       setAwayTeam(allTeams.find(t => t.id === g.awayTeamId) ?? null);
@@ -193,6 +195,7 @@ const StreamOverlayApp: React.FC = () => {
     const unsub = subscribeScoreEdits(link.scheduleKey, (edit) => {
       if (edit.gameId !== link.gameId) return;
       setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, recap: edit.recap?.trim() || undefined } : prev);
+      setShowLinescore(!!edit.linescore);
     });
 
     // 15 s fallback poll
@@ -201,6 +204,7 @@ const StreamOverlayApp: React.FC = () => {
       const edit = edits.find(e => e.gameId === link.gameId);
       if (edit) {
         setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, recap: edit.recap?.trim() || undefined } : prev);
+        setShowLinescore(!!edit.linescore);
       }
     }, 15_000);
 
@@ -326,6 +330,61 @@ const StreamOverlayApp: React.FC = () => {
             <BaseDiamond runners={game.scores.baseRunners} />
           </div>
         )}
+
+        {/* Col 4: linescore — slides in from right */}
+        <div style={{
+          maxWidth: showLinescore ? 240 : 0,
+          overflow: 'hidden',
+          transition: 'max-width 0.35s ease',
+          borderLeft: showLinescore ? `1px solid ${dividerColor}` : 'none',
+          background: isLight ? 'rgba(248,250,252,0.8)' : 'rgba(15,23,42,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+        }}>
+          {(() => {
+            const inn = game.scores?.innings ?? [];
+            const awayAbbr = awayTeam ? (awayTeam.abbreviation || awayTeam.name.slice(0, 3).toUpperCase()) : 'AWY';
+            const homeAbbr = homeTeam ? (homeTeam.abbreviation || homeTeam.name.slice(0, 3).toUpperCase()) : 'HOM';
+            const cellStyle = (bold?: boolean): React.CSSProperties => ({
+              minWidth: 22, textAlign: 'center', fontSize: 11,
+              fontWeight: bold ? 800 : 500, lineHeight: 1.4,
+              color: bold ? (isLight ? '#1e293b' : '#f8fafc') : (isLight ? '#475569' : 'rgba(226,232,240,0.7)'),
+              fontVariantNumeric: 'tabular-nums',
+            });
+            return (
+              <div style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                {/* Header row */}
+                <div style={{ display: 'flex', gap: 2, marginBottom: 2 }}>
+                  <div style={{ ...cellStyle(), minWidth: 28, textAlign: 'left' }} />
+                  {inn.map((_, i) => (
+                    <div key={i} style={cellStyle()}>{i + 1}</div>
+                  ))}
+                  <div style={{ ...cellStyle(true), minWidth: 26, borderLeft: `1px solid ${dividerColor}`, paddingLeft: 4 }}>R</div>
+                </div>
+                {/* Away row */}
+                <div style={{ display: 'flex', gap: 2, marginBottom: 1 }}>
+                  <div style={{ ...cellStyle(true), minWidth: 28, textAlign: 'left' }}>{awayAbbr}</div>
+                  {inn.map((entry, i) => (
+                    <div key={i} style={cellStyle()}>{entry.away != null ? entry.away : <span style={{ opacity: 0.35 }}>—</span>}</div>
+                  ))}
+                  <div style={{ ...cellStyle(true), minWidth: 26, borderLeft: `1px solid ${dividerColor}`, paddingLeft: 4 }}>
+                    {inn.reduce((s, e) => s + (e.away ?? 0), 0)}
+                  </div>
+                </div>
+                {/* Home row */}
+                <div style={{ display: 'flex', gap: 2 }}>
+                  <div style={{ ...cellStyle(true), minWidth: 28, textAlign: 'left' }}>{homeAbbr}</div>
+                  {inn.map((entry, i) => (
+                    <div key={i} style={cellStyle()}>{entry.home != null ? entry.home : <span style={{ opacity: 0.35 }}>—</span>}</div>
+                  ))}
+                  <div style={{ ...cellStyle(true), minWidth: 26, borderLeft: `1px solid ${dividerColor}`, paddingLeft: 4 }}>
+                    {inn.reduce((s, e) => s + (e.home ?? 0), 0)}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
 
       </div>
 

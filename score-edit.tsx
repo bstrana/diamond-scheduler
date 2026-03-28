@@ -6,6 +6,7 @@ import './i18n';
 import {
   validateScoreLink,
   loadPublishedScheduleByKey,
+  listScoreEditsByScheduleKey,
   saveScoreEdit,
 } from './services/storage';
 import { ScoreLink, Game, Team } from './types';
@@ -93,6 +94,7 @@ const ScoreEditApp: React.FC = () => {
   const [strikes, setStrikes] = useState<number>(0);
   const [baseRunners, setBaseRunners] = useState<{ first: boolean; second: boolean; third: boolean }>({ first: false, second: false, third: false });
   const [recap, setRecap] = useState<string>('');
+  const [linescore, setLinescore] = useState<boolean>(false);
 
   const homeTotal = innings.reduce((s, i) => s + (i.home ?? 0), 0);
   const awayTotal = innings.reduce((s, i) => s + (i.away ?? 0), 0);
@@ -128,6 +130,11 @@ const ScoreEditApp: React.FC = () => {
         third:  !!g.scores.baseRunners.third,
       });
 
+      // pre-fill linescore toggle from existing score edit
+      const existingEdits = await listScoreEditsByScheduleKey(validated.scheduleKey);
+      const existingEdit = existingEdits.find(e => e.gameId === g.id);
+      if (existingEdit?.linescore) setLinescore(true);
+
       // look up team names from all teams across leagues
       const allTeams: Team[] = [];
       schedule.leagues.forEach(l => l.teams.forEach(t => { if (!allTeams.find(x => x.id === t.id)) allTeams.push(t); }));
@@ -158,6 +165,7 @@ const ScoreEditApp: React.FC = () => {
           ...(status === 'live' && { outs, balls, strikes, baseRunners }),
         },
         recap: recap || undefined,
+        linescore,
       });
       setIsSaving(false);
       if (ok) {
@@ -170,7 +178,7 @@ const ScoreEditApp: React.FC = () => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // homeTotal and awayTotal are derived from innings — no need to list them separately
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, innings, outs, balls, strikes, baseRunners, recap]);
+  }, [status, innings, outs, balls, strikes, baseRunners, recap, linescore]);
 
   // ── collapse header on scroll ────────────────────────────────────────────────
   useEffect(() => {
@@ -400,6 +408,18 @@ const ScoreEditApp: React.FC = () => {
               placeholder="e.g. Johnson threw 7 strong innings, striking out 9..."
               className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
             />
+          </div>
+
+          {/* Linescore toggle */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Overlay Settings</label>
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <div className="relative flex-shrink-0" onClick={() => setLinescore(v => !v)}>
+                <div className={`w-10 h-6 rounded-full transition-colors duration-200 ${linescore ? 'bg-indigo-500' : 'bg-slate-300'}`} />
+                <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${linescore ? 'translate-x-4' : ''}`} />
+              </div>
+              <span className="text-sm text-slate-700">Show line score by inning in overlay</span>
+            </label>
           </div>
 
           {/* Auto-save indicator */}

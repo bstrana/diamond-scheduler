@@ -77,6 +77,7 @@ export interface ScoreEdit {
   status: Game['status'];
   scores?: Game['scores'];
   recap?: string;
+  linescore?: boolean;
   updated?: string;
 }
 

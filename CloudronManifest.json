@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.43",
+  "version": "1.0.44",
   "manifestVersion": 2,
 
   "image": {
@@ -96,6 +96,7 @@
     "1.0.40": "UX: bigger team logos and names in overlay; tighter base diamond; ticker now uppercase and bold; inning half derivation fixed; score-edit inning table uses team abbreviations.",
     "1.0.41": "Fix: stream overlay now correctly shows top of 1st inning when game is live but no innings scored yet.",
     "1.0.42": "Fix: null innings preserved in save payload — overlay inning count no longer starts at top of 2nd due to blank rows being saved as 0.",
-    "1.0.43": "Fix: overlay inning half now based on home score only — top half stays ▲ while away is scoring; ▼ only when home field has a value entered."
+    "1.0.43": "Fix: overlay inning half now based on home score only — top half stays ▲ while away is scoring; ▼ only when home field has a value entered.",
+    "1.0.44": "Feat: linescore toggle in score-edit — when enabled, overlay slides in inning-by-inning scores to the right of the base diamond; PocketBase migration adds linescore bool field."
   }
 }

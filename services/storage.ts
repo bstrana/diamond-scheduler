@@ -634,6 +634,7 @@ const scoreEditFromRecord = (r: any): ScoreEdit => ({
   status:      r.status,
   scores:      r.scores || undefined,
   recap:       r.recap || undefined,
+  linescore:   !!r.linescore,
   updated:     r.updated,
 });
 
@@ -679,6 +680,7 @@ export const saveScoreEdit = async (edit: Omit<ScoreEdit, 'id' | 'updated'>): Pr
       status:       edit.status,
       scores:       edit.scores ?? null,
       recap:        edit.recap ?? '',
+      linescore:    edit.linescore ?? false,
     };
     if (existingId) {
       await pocketbaseClient.collection(scoreEditsCollection).update(existingId, payload);
