@@ -6,6 +6,7 @@ import './i18n';
 import {
   validateScoreLink,
   loadPublishedScheduleByKey,
+  listScoreEditsByScheduleKey,
   saveScoreEdit,
 } from './services/storage';
 import { ScoreLink, Game, Team } from './types';
@@ -28,11 +29,11 @@ const BaseDiamondInput: React.FC<{
     onChange({ ...value, [base]: !value[base] });
 
   const W = 110, H = 90;
-  const BS = 26; // rotated square half-diagonal → visual size
+  const BS = 26; // rect size (rotated 45°); half-diagonal ≈ 18.4 → need >36.8 between centers
   const bases: { key: 'first' | 'second' | 'third'; cx: number; cy: number; label: string }[] = [
-    { key: 'second', cx: W / 2,     cy: BS,        label: '2B' },
-    { key: 'third',  cx: BS,        cy: H / 2 + 4, label: '3B' },
-    { key: 'first',  cx: W - BS,    cy: H / 2 + 4, label: '1B' },
+    { key: 'second', cx: 55, cy: 20, label: '2B' },
+    { key: 'third',  cx: 33, cy: 58, label: '3B' },
+    { key: 'first',  cx: 77, cy: 58, label: '1B' },
   ];
 
   return (
@@ -75,6 +76,7 @@ const ScoreEditApp: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [savedAt, setSavedAt]   = useState<Date | null>(null);
   const [saveError, setSaveError] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const formReadyRef = useRef(false);   // true after initial prefill — skip first effect run
   const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [link, setLink]   = useState<ScoreLink | null>(null);
@@ -91,6 +93,8 @@ const ScoreEditApp: React.FC = () => {
   const [balls, setBalls] = useState<number>(0);
   const [strikes, setStrikes] = useState<number>(0);
   const [baseRunners, setBaseRunners] = useState<{ first: boolean; second: boolean; third: boolean }>({ first: false, second: false, third: false });
+  const [recap, setRecap] = useState<string>('');
+  const [linescore, setLinescore] = useState<boolean>(false);
 
   const homeTotal = innings.reduce((s, i) => s + (i.home ?? 0), 0);
   const awayTotal = innings.reduce((s, i) => s + (i.away ?? 0), 0);
@@ -113,6 +117,7 @@ const ScoreEditApp: React.FC = () => {
 
       // pre-fill current values if already scored
       if (g.status !== 'scheduled') setStatus(g.status);
+      if (g.recap) setRecap(g.recap);
       if (g.scores?.innings?.length) {
         setInnings(g.scores.innings.map(i => ({ home: i.home, away: i.away })));
       }
@@ -124,6 +129,11 @@ const ScoreEditApp: React.FC = () => {
         second: !!g.scores.baseRunners.second,
         third:  !!g.scores.baseRunners.third,
       });
+
+      // pre-fill linescore toggle from existing score edit
+      const existingEdits = await listScoreEditsByScheduleKey(validated.scheduleKey);
+      const existingEdit = existingEdits.find(e => e.gameId === g.id);
+      if (existingEdit?.linescore) setLinescore(true);
 
       // look up team names from all teams across leagues
       const allTeams: Team[] = [];
@@ -151,9 +161,11 @@ const ScoreEditApp: React.FC = () => {
         scores: {
           home:    homeTotal,
           away:    awayTotal,
-          innings: innings.map(i => ({ home: i.home ?? 0, away: i.away ?? 0 })),
+          innings: innings.map(i => ({ home: i.home, away: i.away })),
           ...(status === 'live' && { outs, balls, strikes, baseRunners }),
         },
+        recap: recap || undefined,
+        linescore,
       });
       setIsSaving(false);
       if (ok) {
@@ -166,7 +178,14 @@ const ScoreEditApp: React.FC = () => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // homeTotal and awayTotal are derived from innings — no need to list them separately
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, innings, outs, balls, strikes, baseRunners]);
+  }, [status, innings, outs, balls, strikes, baseRunners, recap, linescore]);
+
+  // ── collapse header on scroll ────────────────────────────────────────────────
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const addInning = () => setInnings(prev => [...prev, { home: null, away: null }]);
   const removeInning = () => setInnings(prev => prev.length > 1 ? prev.slice(0, -1) : prev);
@@ -199,25 +218,37 @@ const ScoreEditApp: React.FC = () => {
   // ── main form ────────────────────────────────────────────────────────────────
   const homeName = homeTeam ? `${homeTeam.city} ${homeTeam.name}` : 'Home';
   const awayName = awayTeam ? `${awayTeam.city} ${awayTeam.name}` : 'Away';
+  const homeAbbr = homeTeam?.abbreviation || (homeTeam ? homeTeam.name.slice(0, 3).toUpperCase() : 'HOM');
+  const awayAbbr = awayTeam?.abbreviation || (awayTeam ? awayTeam.name.slice(0, 3).toUpperCase() : 'AWY');
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-start py-8 px-4">
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 w-full max-w-md overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 text-white">
-          <div className="text-xs font-semibold uppercase tracking-wider opacity-70 mb-1">Score Entry</div>
-          <div className="text-xl font-bold">{awayName} @ {homeName}</div>
-          {game && (
-            <div className="text-sm opacity-80 mt-1">
-              {game.date} · {game.time}{game.location ? ` · ${game.location}` : ''}
-              {game.gameNumber ? ` · Game #${game.gameNumber}` : ''}
-            </div>
-          )}
-          {link && (
-            <div className="text-xs opacity-60 mt-2">Link expires in {hoursLeft(link.expiresAt)}h</div>
-          )}
-        </div>
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-start pt-8 px-4">
+      {/* Sticky collapsible header */}
+      <div className="sticky top-0 z-10 w-full max-w-md bg-gradient-to-r from-indigo-600 to-purple-600 text-white transition-all duration-200"
+        style={{ borderRadius: scrolled ? '0 0 12px 12px' : '12px 12px 0 0', padding: scrolled ? '8px 20px' : '20px 24px' }}>
+        {scrolled ? (
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider opacity-70">Score Entry</span>
+            <span className="text-sm font-bold">{awayAbbr} @ {homeAbbr}</span>
+          </div>
+        ) : (
+          <>
+            <div className="text-xs font-semibold uppercase tracking-wider opacity-70 mb-1">Score Entry</div>
+            <div className="text-xl font-bold">{awayName} @ {homeName}</div>
+            {game && (
+              <div className="text-sm opacity-80 mt-1">
+                {game.date} · {game.time}{game.location ? ` · ${game.location}` : ''}
+                {game.gameNumber ? ` · Game #${game.gameNumber}` : ''}
+              </div>
+            )}
+            {link && (
+              <div className="text-xs opacity-60 mt-2">Link expires in {hoursLeft(link.expiresAt)}h</div>
+            )}
+          </>
+        )}
+      </div>
 
+      <div className="bg-white rounded-b-xl shadow-sm border border-slate-200 border-t-0 w-full max-w-md mb-8">
         <div className="p-6 space-y-6">
           {/* Status */}
           <div>
@@ -268,7 +299,7 @@ const ScoreEditApp: React.FC = () => {
                     {(['away', 'home'] as const).map(side => (
                       <tr key={side}>
                         <td className="py-1 pr-2 text-xs font-medium text-slate-600 truncate max-w-[6rem]">
-                          {side === 'away' ? awayName : homeName}
+                          {side === 'away' ? awayAbbr : homeAbbr}
                         </td>
                         {innings.map((inn, i) => (
                           <td key={i} className="py-1 px-1">
@@ -364,6 +395,32 @@ const ScoreEditApp: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Recap */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Game Recap <span className="text-xs font-normal text-slate-400">(shown scrolling in stream overlay)</span>
+            </label>
+            <textarea
+              value={recap}
+              onChange={e => setRecap(e.target.value)}
+              rows={3}
+              placeholder="e.g. Johnson threw 7 strong innings, striking out 9..."
+              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+            />
+          </div>
+
+          {/* Linescore toggle */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Overlay Settings</label>
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <div className="relative flex-shrink-0" onClick={() => setLinescore(v => !v)}>
+                <div className={`w-10 h-6 rounded-full transition-colors duration-200 ${linescore ? 'bg-indigo-500' : 'bg-slate-300'}`} />
+                <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${linescore ? 'translate-x-4' : ''}`} />
+              </div>
+              <span className="text-sm text-slate-700">Show line score by inning in overlay</span>
+            </label>
+          </div>
 
           {/* Auto-save indicator */}
           <div className="flex items-center gap-2 text-sm min-h-[2rem]">

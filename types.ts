@@ -76,6 +76,8 @@ export interface ScoreEdit {
   token: string;       // link token used (for audit)
   status: Game['status'];
   scores?: Game['scores'];
+  recap?: string;
+  linescore?: boolean;
   updated?: string;
 }
 

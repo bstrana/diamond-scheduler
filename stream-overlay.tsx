@@ -27,42 +27,36 @@ const deriveInning = (game: Game): { inning: string; half: 'top' | 'bottom' | nu
       half: game.inningHalf ?? null,
     };
   }
-  const filled = innings.reduce(
-    (n, inn) => n + (inn.away != null ? 1 : 0) + (inn.home != null ? 1 : 0),
-    0,
-  );
-  if (filled === 0) return { inning: '—', half: null };
-  const isOdd = filled % 2 !== 0;
-  return { inning: String(Math.ceil(filled / 2)), half: isOdd ? 'top' : 'bottom' };
+  const last = innings[innings.length - 1];
+  return { inning: String(innings.length), half: last?.home != null ? 'bottom' : 'top' };
 };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 // Two dots only — 3rd out resets the count so it never needs to display
 const OutsDots: React.FC<{ outs: number }> = ({ outs }) => (
-  <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+  <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
     {[0, 1].map(i => (
       <div key={i} style={{
-        width: 8, height: 8, borderRadius: '50%',
+        width: 13, height: 13, borderRadius: '50%',
         backgroundColor: i < outs ? '#fbbf24' : 'rgba(255,255,255,0.2)',
-        border: '1px solid rgba(255,255,255,0.35)',
+        border: '1.5px solid rgba(255,255,255,0.35)',
       }} />
     ))}
   </div>
 );
 
 const BaseDiamond: React.FC<{ runners?: { first?: boolean; second?: boolean; third?: boolean } }> = ({ runners }) => {
-  const VW = 48, VH = 40, bs = 14;
   const bases = [
-    { key: 'second' as const, cx: VW / 2, cy: 6 },
-    { key: 'third'  as const, cx: 6,       cy: VH - 6 },
-    { key: 'first'  as const, cx: VW - 6,  cy: VH - 6 },
+    { key: 'second' as const, cx: 30, cy: 12 },
+    { key: 'third'  as const, cx: 12, cy: 44 },
+    { key: 'first'  as const, cx: 48, cy: 44 },
   ];
   return (
-    <svg width={44} height={Math.round(44 * VH / VW)} viewBox={`0 0 ${VW} ${VH}`} style={{ display: 'block' }}>
+    <svg width={96} height={88} viewBox="-15 -15 90 90" style={{ display: 'block' }}>
       {bases.map(({ key, cx, cy }) => (
         <rect key={key}
-          x={cx - bs / 2} y={cy - bs / 2} width={bs} height={bs}
+          x={cx - 11} y={cy - 11} width={22} height={22}
           transform={`rotate(45 ${cx} ${cy})`}
           fill={runners?.[key] ? '#fbbf24' : 'rgba(255,255,255,0.18)'}
           stroke="rgba(255,255,255,0.4)" strokeWidth={0.9}
@@ -91,6 +85,7 @@ const TeamRow: React.FC<{
   return (
     <div style={{
       display: 'flex',
+      flex: 1,
       alignItems: 'center',
       gap: 9,
       padding: '9px 14px',
@@ -100,28 +95,28 @@ const TeamRow: React.FC<{
         <img
           src={team.logoUrl}
           alt={abbr}
-          style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.55))' }}
+          style={{ width: 42, height: 42, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.55))' }}
         />
       ) : (
         <div style={{
-          width: 32, height: 32, borderRadius: '50%',
+          width: 42, height: 42, borderRadius: '50%',
           background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
           flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 15, border: '2px solid rgba(255,255,255,0.25)',
+          fontSize: 18, border: '2px solid rgba(255,255,255,0.25)',
           boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
         }}>⚾</div>
       )}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <span style={{
-          fontSize: 14, fontWeight: 800, color: '#fff',
+          fontSize: 17, fontWeight: 800, color: '#fff',
           textTransform: 'uppercase', letterSpacing: '0.07em', lineHeight: 1,
           textShadow: '0 1px 4px rgba(0,0,0,0.7)',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>{abbr}</span>
         {city && (
           <span style={{
-            fontSize: 10, color: 'rgba(255,255,255,0.6)', lineHeight: 1,
+            fontSize: 11, color: 'rgba(255,255,255,0.6)', lineHeight: 1,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>{city}</span>
         )}
@@ -146,6 +141,7 @@ const StreamOverlayApp: React.FC = () => {
   const [game, setGame] = useState<Game | null>(null);
   const [homeTeam, setHomeTeam] = useState<Team | null>(null);
   const [awayTeam, setAwayTeam] = useState<Team | null>(null);
+  const [showLinescore, setShowLinescore] = useState(false);
   const gameRef = useRef<Game | null>(null);
   gameRef.current = game;
 
@@ -167,7 +163,7 @@ const StreamOverlayApp: React.FC = () => {
 
       const edit = editMap.get(g.id);
       const finalGame = edit
-        ? { ...g, status: edit.status, scores: edit.scores ?? g.scores }
+        ? { ...g, status: edit.status, scores: edit.scores ?? g.scores, recap: edit.recap?.trim() || undefined }
         : g;
 
       const allTeams: Team[] = [];
@@ -175,6 +171,7 @@ const StreamOverlayApp: React.FC = () => {
         if (!allTeams.find(x => x.id === t.id)) allTeams.push(t);
       }));
 
+      if (edit) setShowLinescore(!!edit.linescore);
       setGame(finalGame);
       setHomeTeam(allTeams.find(t => t.id === g.homeTeamId) ?? null);
       setAwayTeam(allTeams.find(t => t.id === g.awayTeamId) ?? null);
@@ -197,7 +194,8 @@ const StreamOverlayApp: React.FC = () => {
 
     const unsub = subscribeScoreEdits(link.scheduleKey, (edit) => {
       if (edit.gameId !== link.gameId) return;
-      setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores } : prev);
+      setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, recap: edit.recap?.trim() || undefined } : prev);
+      setShowLinescore(!!edit.linescore);
     });
 
     // 15 s fallback poll
@@ -205,7 +203,8 @@ const StreamOverlayApp: React.FC = () => {
       const edits = await listScoreEditsByScheduleKey(link.scheduleKey);
       const edit = edits.find(e => e.gameId === link.gameId);
       if (edit) {
-        setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores } : prev);
+        setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, recap: edit.recap?.trim() || undefined } : prev);
+        setShowLinescore(!!edit.linescore);
       }
     }, 15_000);
 
@@ -267,10 +266,11 @@ const StreamOverlayApp: React.FC = () => {
 
   return (
     <div style={{ padding: 12, fontFamily: 'Inter, sans-serif', display: 'inline-block' }}>
-      <div style={{ ...shellStyle, display: 'flex', userSelect: 'none', minWidth: 220 }}>
+      <div style={{ ...shellStyle, display: 'flex', flexDirection: 'column', userSelect: 'none', minWidth: 220 }}>
+      <div style={{ display: 'flex' }}>
 
         {/* Col 1: away (top) + home (bottom) */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <TeamRow
             team={awayTeam}
             score={hasScore || isFinal ? (game.scores?.away ?? 0) : null}
@@ -289,16 +289,16 @@ const StreamOverlayApp: React.FC = () => {
         {/* Col 2: status, inning, outs + count */}
         <div style={{
           display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          gap: 5, padding: '8px 12px',
+          alignItems: 'center', justifyContent: 'space-evenly',
+          padding: '8px 12px',
           borderLeft: `1px solid ${dividerColor}`,
-          flexShrink: 0, minWidth: 54,
+          flexShrink: 0, minWidth: 60,
           background: isLight ? 'rgba(248,250,252,0.8)' : 'rgba(15,23,42,0.5)',
         }}>
           {statusBadge}
 
           {isLive && innInfo && (
-            <span style={{ fontSize: 13, fontWeight: 800, color: '#4ade80', lineHeight: 1, whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#4ade80', lineHeight: 1, whiteSpace: 'nowrap' }}>
               {innInfo.inning !== '—'
                 ? `${innInfo.inning}${innInfo.half === 'top' ? ' ▲' : innInfo.half === 'bottom' ? ' ▼' : ''}`
                 : '—'}
@@ -310,10 +310,10 @@ const StreamOverlayApp: React.FC = () => {
           )}
 
           {isLive && (game.scores?.balls != null || game.scores?.strikes != null) && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontVariantNumeric: 'tabular-nums' }}>
-              <span style={{ fontSize: 16, fontWeight: 800, color: '#4ade80', lineHeight: 1 }}>{game.scores?.balls ?? 0}</span>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', lineHeight: 1 }}>·</span>
-              <span style={{ fontSize: 16, fontWeight: 800, color: '#f87171', lineHeight: 1 }}>{game.scores?.strikes ?? 0}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ fontSize: 22, fontWeight: 800, color: '#4ade80', lineHeight: 1 }}>{game.scores?.balls ?? 0}</span>
+              <span style={{ fontSize: 16, color: 'rgba(255,255,255,0.3)', lineHeight: 1 }}>·</span>
+              <span style={{ fontSize: 22, fontWeight: 800, color: '#f87171', lineHeight: 1 }}>{game.scores?.strikes ?? 0}</span>
             </div>
           )}
         </div>
@@ -331,9 +331,96 @@ const StreamOverlayApp: React.FC = () => {
           </div>
         )}
 
+        {/* Col 4: linescore — slides in from right */}
+        <div style={{
+          maxWidth: showLinescore ? 240 : 0,
+          overflow: 'hidden',
+          transition: 'max-width 0.35s ease',
+          borderLeft: showLinescore ? `1px solid ${dividerColor}` : 'none',
+          background: isLight ? 'rgba(248,250,252,0.8)' : 'rgba(15,23,42,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+        }}>
+          {(() => {
+            const inn = game.scores?.innings ?? [];
+            const awayAbbr = awayTeam ? (awayTeam.abbreviation || awayTeam.name.slice(0, 3).toUpperCase()) : 'AWY';
+            const homeAbbr = homeTeam ? (homeTeam.abbreviation || homeTeam.name.slice(0, 3).toUpperCase()) : 'HOM';
+            const cellStyle = (bold?: boolean): React.CSSProperties => ({
+              minWidth: 22, textAlign: 'center', fontSize: 11,
+              fontWeight: bold ? 800 : 500, lineHeight: 1.4,
+              color: bold ? (isLight ? '#1e293b' : '#f8fafc') : (isLight ? '#475569' : 'rgba(226,232,240,0.7)'),
+              fontVariantNumeric: 'tabular-nums',
+            });
+            return (
+              <div style={{ padding: '6px 10px', whiteSpace: 'nowrap' }}>
+                {/* Header row */}
+                <div style={{ display: 'flex', gap: 2, marginBottom: 2 }}>
+                  <div style={{ ...cellStyle(), minWidth: 28, textAlign: 'left' }} />
+                  {inn.map((_, i) => (
+                    <div key={i} style={cellStyle()}>{i + 1}</div>
+                  ))}
+                  <div style={{ ...cellStyle(true), minWidth: 26, borderLeft: `1px solid ${dividerColor}`, paddingLeft: 4 }}>R</div>
+                </div>
+                {/* Away row */}
+                <div style={{ display: 'flex', gap: 2, marginBottom: 1 }}>
+                  <div style={{ ...cellStyle(true), minWidth: 28, textAlign: 'left' }}>{awayAbbr}</div>
+                  {inn.map((entry, i) => (
+                    <div key={i} style={cellStyle()}>{entry.away != null ? entry.away : <span style={{ opacity: 0.35 }}>—</span>}</div>
+                  ))}
+                  <div style={{ ...cellStyle(true), minWidth: 26, borderLeft: `1px solid ${dividerColor}`, paddingLeft: 4 }}>
+                    {inn.reduce((s, e) => s + (e.away ?? 0), 0)}
+                  </div>
+                </div>
+                {/* Home row */}
+                <div style={{ display: 'flex', gap: 2 }}>
+                  <div style={{ ...cellStyle(true), minWidth: 28, textAlign: 'left' }}>{homeAbbr}</div>
+                  {inn.map((entry, i) => (
+                    <div key={i} style={cellStyle()}>{entry.home != null ? entry.home : <span style={{ opacity: 0.35 }}>—</span>}</div>
+                  ))}
+                  <div style={{ ...cellStyle(true), minWidth: 26, borderLeft: `1px solid ${dividerColor}`, paddingLeft: 4 }}>
+                    {inn.reduce((s, e) => s + (e.home ?? 0), 0)}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+      </div>
+
+      {/* Recap ticker — inside shell so border-radius clips it */}
+      {game.recap?.trim() && (
+        <div style={{
+          borderTop: `1px solid ${dividerColor}`,
+          overflow: 'hidden',
+          background: isLight ? 'rgba(241,245,249,0.9)' : 'rgba(8,14,26,0.7)',
+          padding: '5px 0',
+        }}>
+          <style>{`
+            @keyframes ticker {
+              0%   { transform: translateX(100%); }
+              100% { transform: translateX(-100%); }
+            }
+          `}</style>
+          <div style={{
+            display: 'inline-block',
+            whiteSpace: 'nowrap',
+            animation: 'ticker 20s linear infinite',
+            fontSize: 14,
+            fontWeight: 700,
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.06em',
+            color: isLight ? '#475569' : 'rgba(226,232,240,0.85)',
+            paddingLeft: '100%',
+          }}>
+            {game.recap}
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
+
 };
 
 ReactDOM.createRoot(document.getElementById('stream-overlay-root')!).render(
