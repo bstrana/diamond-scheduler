@@ -75,6 +75,7 @@ const ScoreEditApp: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [savedAt, setSavedAt]   = useState<Date | null>(null);
   const [saveError, setSaveError] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const formReadyRef = useRef(false);   // true after initial prefill — skip first effect run
   const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [link, setLink]   = useState<ScoreLink | null>(null);
@@ -171,6 +172,13 @@ const ScoreEditApp: React.FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, innings, outs, balls, strikes, baseRunners, recap]);
 
+  // ── collapse header on scroll ────────────────────────────────────────────────
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   const addInning = () => setInnings(prev => [...prev, { home: null, away: null }]);
   const removeInning = () => setInnings(prev => prev.length > 1 ? prev.slice(0, -1) : prev);
   const setInningVal = (idx: number, team: 'home' | 'away', val: string) => {
@@ -202,25 +210,37 @@ const ScoreEditApp: React.FC = () => {
   // ── main form ────────────────────────────────────────────────────────────────
   const homeName = homeTeam ? `${homeTeam.city} ${homeTeam.name}` : 'Home';
   const awayName = awayTeam ? `${awayTeam.city} ${awayTeam.name}` : 'Away';
+  const homeAbbr = homeTeam?.abbreviation || (homeTeam ? homeTeam.name.slice(0, 3).toUpperCase() : 'HOM');
+  const awayAbbr = awayTeam?.abbreviation || (awayTeam ? awayTeam.name.slice(0, 3).toUpperCase() : 'AWY');
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-start py-8 px-4">
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 w-full max-w-md overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 text-white">
-          <div className="text-xs font-semibold uppercase tracking-wider opacity-70 mb-1">Score Entry</div>
-          <div className="text-xl font-bold">{awayName} @ {homeName}</div>
-          {game && (
-            <div className="text-sm opacity-80 mt-1">
-              {game.date} · {game.time}{game.location ? ` · ${game.location}` : ''}
-              {game.gameNumber ? ` · Game #${game.gameNumber}` : ''}
-            </div>
-          )}
-          {link && (
-            <div className="text-xs opacity-60 mt-2">Link expires in {hoursLeft(link.expiresAt)}h</div>
-          )}
-        </div>
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-start pt-8 px-4">
+      {/* Sticky collapsible header */}
+      <div className="sticky top-0 z-10 w-full max-w-md bg-gradient-to-r from-indigo-600 to-purple-600 text-white transition-all duration-200"
+        style={{ borderRadius: scrolled ? '0 0 12px 12px' : '12px 12px 0 0', padding: scrolled ? '8px 20px' : '20px 24px' }}>
+        {scrolled ? (
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider opacity-70">Score Entry</span>
+            <span className="text-sm font-bold">{awayAbbr} @ {homeAbbr}</span>
+          </div>
+        ) : (
+          <>
+            <div className="text-xs font-semibold uppercase tracking-wider opacity-70 mb-1">Score Entry</div>
+            <div className="text-xl font-bold">{awayName} @ {homeName}</div>
+            {game && (
+              <div className="text-sm opacity-80 mt-1">
+                {game.date} · {game.time}{game.location ? ` · ${game.location}` : ''}
+                {game.gameNumber ? ` · Game #${game.gameNumber}` : ''}
+              </div>
+            )}
+            {link && (
+              <div className="text-xs opacity-60 mt-2">Link expires in {hoursLeft(link.expiresAt)}h</div>
+            )}
+          </>
+        )}
+      </div>
 
+      <div className="bg-white rounded-b-xl shadow-sm border border-slate-200 border-t-0 w-full max-w-md mb-8">
         <div className="p-6 space-y-6">
           {/* Status */}
           <div>
