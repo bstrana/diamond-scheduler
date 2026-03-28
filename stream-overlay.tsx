@@ -332,7 +332,6 @@ const StreamOverlayApp: React.FC = () => {
         )}
 
       </div>
-      </div>
 
       {/* Recap ticker — inside shell so border-radius clips it */}
       {game.recap && (
@@ -364,6 +363,7 @@ const StreamOverlayApp: React.FC = () => {
       </div>
     </div>
   );
+
 };
 
 ReactDOM.createRoot(document.getElementById('stream-overlay-root')!).render(
