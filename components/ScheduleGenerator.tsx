@@ -42,19 +42,32 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conflicts, setConflicts] = useState<string[]>([]);
-  
+
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>('');
-  
+
   // Schedule Gen State
   const [startDate, setStartDate] = useState(formatDate(new Date()));
   const [gamesPerTeam, setGamesPerTeam] = useState(10);
   const [selectedDays, setSelectedDays] = useState<string[]>(['Sat']); // Default to weekend for series logic
-  const [doubleHeaderMode, setDoubleHeaderMode] = useState<'none' | 'same_day' | 'consecutive' | 'series'>('none');
+  const [doubleHeaderMode, setDoubleHeaderMode] = useState<'none' | 'same_day' | 'consecutive' | 'series' | 'single_elim' | 'double_elim' | 'pool_bracket'>('none');
   const [bestOf, setBestOf] = useState<number>(3); // For series format
   const [seriesMatchups, setSeriesMatchups] = useState<Array<{team1Id: string, team2Id: string, seriesName?: string}>>([]); // For series format
   const [seriesGameMode, setSeriesGameMode] = useState<'alternate' | 'back_to_back'>('alternate'); // For series format
   const [matchupMode, setMatchupMode] = useState<'manual' | 'standings'>('manual'); // For series format
   const [appendMode, setAppendMode] = useState<'replace' | 'append'>('replace');
+
+  // Tournament-specific state
+  const [seedingMode, setSeedingMode] = useState<'standings' | 'manual'>('standings');
+  const [manualSeedOrder, setManualSeedOrder] = useState<string[]>([]);
+  const [roundGapDays, setRoundGapDays] = useState<number>(3);
+  const [poolSize, setPoolSize] = useState<number>(4);
+  const [advancingPerPool, setAdvancingPerPool] = useState<number>(2);
+
+  // Templates state
+  const [templatesExpanded, setTemplatesExpanded] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateSavedMsg, setTemplateSavedMsg] = useState(false);
+  const [templatesTick, setTemplatesTick] = useState(0); // bump to re-read localStorage
 
   // Time config per day
   const [dayTimes, setDayTimes] = useState<Record<string, string>>({
@@ -72,6 +85,13 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
     onLeagueSelected(id);
     // Reset series matchups when league changes
     setSeriesMatchups([]);
+    // Reset manual seed order to the new league's team order
+    const league = leagues.find(l => l.id === id);
+    if (league) {
+      setManualSeedOrder(league.teams.map(t => t.id));
+    } else {
+      setManualSeedOrder([]);
+    }
   };
 
   const handleGenerateSchedule = async () => {
@@ -123,18 +143,40 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
     // Slight delay to simulate processing for UX
     setTimeout(() => {
         try {
-            const newGames = generateRoundRobinSchedule(
-                selectedLeague.teams,
-                startDate,
-                gamesPerTeam,
-                selectedDays,
-                dayTimes,
-                doubleHeaderMode,
-                bestOf,
-                resolvedMatchups,
-                seriesGameMode
-            );
-            
+            let newGames: Game[];
+
+            if (doubleHeaderMode === 'single_elim') {
+                const seedOrder = seedingMode === 'standings'
+                    ? currentStandings.map(r => r.team.id)
+                    : manualSeedOrder;
+                newGames = generateSingleEliminationBracket(
+                    selectedLeague.teams, startDate, selectedDays, dayTimes, bestOf, seedOrder, roundGapDays
+                );
+            } else if (doubleHeaderMode === 'double_elim') {
+                const seedOrder = seedingMode === 'standings'
+                    ? currentStandings.map(r => r.team.id)
+                    : manualSeedOrder;
+                newGames = generateDoubleEliminationBracket(
+                    selectedLeague.teams, startDate, selectedDays, dayTimes, bestOf, seedOrder, roundGapDays
+                );
+            } else if (doubleHeaderMode === 'pool_bracket') {
+                newGames = generatePoolKnockout(
+                    selectedLeague.teams, poolSize, advancingPerPool, startDate, selectedDays, dayTimes, bestOf, roundGapDays
+                );
+            } else {
+                newGames = generateRoundRobinSchedule(
+                    selectedLeague.teams,
+                    startDate,
+                    gamesPerTeam,
+                    selectedDays,
+                    dayTimes,
+                    doubleHeaderMode,
+                    bestOf,
+                    resolvedMatchups,
+                    seriesGameMode
+                );
+            }
+
             // Inject League ID (as array for multi-league support)
             const gamesWithMeta = newGames.map(g => ({
                 ...g,
@@ -145,10 +187,12 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
                 setError(t('scheduler.noGamesGenerated'));
             } else {
                 // Conflict detection: flag any team scheduled twice on the same date
+                // Skip TBD placeholder teams from conflict detection
                 const teamDateMap = new Map<string, Set<string>>();
                 const detectedConflicts: string[] = [];
                 gamesWithMeta.forEach(g => {
                     [g.homeTeamId, g.awayTeamId].forEach(tid => {
+                        if (tid.startsWith('__tbd_')) return;
                         if (!teamDateMap.has(tid)) teamDateMap.set(tid, new Set());
                         const dates = teamDateMap.get(tid)!;
                         if (dates.has(g.date)) {
@@ -215,6 +259,85 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
     if (!league) return [];
     return calculateStandings(league, games);
   }, [selectedLeagueId, leagues, games]);
+
+  // Templates — read from localStorage, refresh on templatesTick
+  const savedTemplates = useMemo((): SchedulerTemplate[] => {
+    try {
+      const raw = localStorage.getItem(TEMPLATES_KEY);
+      if (!raw) return [];
+      return JSON.parse(raw) as SchedulerTemplate[];
+    } catch {
+      return [];
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templatesTick]);
+
+  const leagueTemplates = useMemo(
+    () => savedTemplates.filter(tpl => tpl.leagueId === selectedLeagueId),
+    [savedTemplates, selectedLeagueId]
+  );
+
+  const handleSaveTemplate = useCallback(() => {
+    if (!templateName.trim() || !selectedLeagueId) return;
+    const all = (() => {
+      try { return JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]') as SchedulerTemplate[]; } catch { return []; }
+    })();
+    const newTpl: SchedulerTemplate = {
+      id: crypto.randomUUID(),
+      name: templateName.trim(),
+      leagueId: selectedLeagueId,
+      config: {
+        startDate,
+        gamesPerTeam,
+        selectedDays,
+        dayTimes,
+        doubleHeaderMode,
+        bestOf,
+        seriesGameMode,
+        roundGapDays,
+        poolSize,
+        advancingPerPool,
+      },
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify([...all, newTpl]));
+    setTemplateName('');
+    setTemplateSavedMsg(true);
+    setTemplatesTick(v => v + 1);
+    setTimeout(() => setTemplateSavedMsg(false), 2500);
+  }, [templateName, selectedLeagueId, startDate, gamesPerTeam, selectedDays, dayTimes, doubleHeaderMode, bestOf, seriesGameMode, roundGapDays, poolSize, advancingPerPool]);
+
+  const handleDeleteTemplate = useCallback((id: string) => {
+    const all = (() => {
+      try { return JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]') as SchedulerTemplate[]; } catch { return []; }
+    })();
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(all.filter(t => t.id !== id)));
+    setTemplatesTick(v => v + 1);
+  }, []);
+
+  const handleLoadTemplate = useCallback((tpl: SchedulerTemplate) => {
+    setStartDate(tpl.config.startDate);
+    setGamesPerTeam(tpl.config.gamesPerTeam);
+    setSelectedDays(tpl.config.selectedDays);
+    setDayTimes(tpl.config.dayTimes);
+    setDoubleHeaderMode(tpl.config.doubleHeaderMode as any);
+    setBestOf(tpl.config.bestOf);
+    setSeriesGameMode(tpl.config.seriesGameMode as any);
+    setRoundGapDays(tpl.config.roundGapDays);
+    setPoolSize(tpl.config.poolSize);
+    setAdvancingPerPool(tpl.config.advancingPerPool);
+  }, []);
+
+  // Manual seed order helpers
+  const moveSeed = useCallback((idx: number, dir: -1 | 1) => {
+    const newOrder = [...manualSeedOrder];
+    const target = idx + dir;
+    if (target < 0 || target >= newOrder.length) return;
+    [newOrder[idx], newOrder[target]] = [newOrder[target], newOrder[idx]];
+    setManualSeedOrder(newOrder);
+  }, [manualSeedOrder]);
+
+  const selectedLeague = leagues.find(l => l.id === selectedLeagueId);
 
   return (
     <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -321,6 +444,9 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
                     <option value="same_day">{t('scheduler.doubleHeader')}</option>
                     <option value="consecutive">{t('scheduler.backToBackSeries')}</option>
                     <option value="series">{t('scheduler.playoffSeries')}</option>
+                    <option value="single_elim">{t('scheduler.singleElimTournament')}</option>
+                    <option value="double_elim">{t('scheduler.doubleElimTournament')}</option>
+                    <option value="pool_bracket">{t('scheduler.poolStageBracket')}</option>
                 </select>
                 <Layers size={18} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none" />
              </div>
@@ -522,6 +648,173 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
                     </div>
                 );
              })()}
+
+             {/* Single / Double Elimination controls */}
+             {(doubleHeaderMode === 'single_elim' || doubleHeaderMode === 'double_elim') && (
+               <div className="mt-3 space-y-4">
+                 <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 p-2 rounded flex items-start gap-1.5">
+                   <Info size={14} className="mt-0.5 shrink-0" />
+                   <span>{t('scheduler.eliminationNote')}</span>
+                 </div>
+
+                 {/* Best Of */}
+                 <div className="grid grid-cols-2 gap-3">
+                   <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.bestOf')}</label>
+                     <select
+                       value={bestOf}
+                       onChange={(e) => setBestOf(Number(e.target.value))}
+                       className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                     >
+                       <option value={1}>{t('scheduler.bestOf1')}</option>
+                       <option value={3}>{t('scheduler.bestOf3')}</option>
+                       <option value={5}>{t('scheduler.bestOf5')}</option>
+                       <option value={7}>{t('scheduler.bestOf7')}</option>
+                     </select>
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.roundGapDays')}</label>
+                     <input
+                       type="number"
+                       min={1}
+                       max={7}
+                       value={roundGapDays}
+                       onChange={(e) => setRoundGapDays(Math.max(1, Math.min(7, Number(e.target.value))))}
+                       className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                     />
+                   </div>
+                 </div>
+
+                 {/* Seeding */}
+                 <div>
+                   <div className="flex items-center justify-between mb-2">
+                     <label className="block text-sm font-medium text-slate-700">{t('scheduler.tournamentSeeding')}</label>
+                     <div className="flex rounded-md border border-slate-200 overflow-hidden text-xs font-medium">
+                       <button
+                         onClick={() => setSeedingMode('standings')}
+                         className={`px-2.5 py-1 flex items-center gap-1 transition-colors ${seedingMode === 'standings' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                       >
+                         <Trophy size={11} />
+                         {t('scheduler.seedingByStandings')}
+                       </button>
+                       <button
+                         onClick={() => {
+                           setSeedingMode('manual');
+                           if (selectedLeague && manualSeedOrder.length === 0) {
+                             setManualSeedOrder(selectedLeague.teams.map(t => t.id));
+                           }
+                         }}
+                         className={`px-2.5 py-1 transition-colors ${seedingMode === 'manual' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                       >
+                         {t('scheduler.seedingManual')}
+                       </button>
+                     </div>
+                   </div>
+
+                   {seedingMode === 'standings' && (
+                     <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 p-2 rounded">
+                       {t('scheduler.matchupByStandingsNote')}
+                     </div>
+                   )}
+
+                   {seedingMode === 'manual' && selectedLeague && (
+                     <div className="space-y-1">
+                       <p className="text-xs text-slate-500 mb-2">{t('scheduler.seedingManualNote')}</p>
+                       {manualSeedOrder.map((teamId, idx) => {
+                         const team = selectedLeague.teams.find(t => t.id === teamId);
+                         if (!team) return null;
+                         return (
+                           <div key={teamId} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded px-2 py-1.5">
+                             <span className="text-xs font-bold text-slate-400 w-5 text-right">{idx + 1}</span>
+                             <span
+                               className="w-3 h-3 rounded-full flex-shrink-0"
+                               style={{ backgroundColor: team.primaryColor ?? '#94a3b8' }}
+                             />
+                             <span className="flex-1 text-sm text-slate-700">{team.city} {team.name}</span>
+                             <button
+                               onClick={() => moveSeed(idx, -1)}
+                               disabled={idx === 0}
+                               className="p-0.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                               title="Move up"
+                             >
+                               <ArrowUp size={14} />
+                             </button>
+                             <button
+                               onClick={() => moveSeed(idx, 1)}
+                               disabled={idx === manualSeedOrder.length - 1}
+                               className="p-0.5 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                               title="Move down"
+                             >
+                               <ArrowDown size={14} />
+                             </button>
+                           </div>
+                         );
+                       })}
+                     </div>
+                   )}
+                 </div>
+               </div>
+             )}
+
+             {/* Pool + Bracket controls */}
+             {doubleHeaderMode === 'pool_bracket' && (
+               <div className="mt-3 space-y-4">
+                 <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-200 p-2 rounded flex items-start gap-1.5">
+                   <Info size={14} className="mt-0.5 shrink-0" />
+                   <span>{t('scheduler.poolNote')}</span>
+                 </div>
+                 <div className="grid grid-cols-2 gap-3">
+                   <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.poolSize')}</label>
+                     <input
+                       type="number"
+                       min={2}
+                       max={8}
+                       value={poolSize}
+                       onChange={(e) => setPoolSize(Math.max(2, Math.min(8, Number(e.target.value))))}
+                       className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.advancingPerPool')}</label>
+                     <input
+                       type="number"
+                       min={1}
+                       max={4}
+                       value={advancingPerPool}
+                       onChange={(e) => setAdvancingPerPool(Math.max(1, Math.min(4, Number(e.target.value))))}
+                       className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                     />
+                   </div>
+                 </div>
+                 <div className="grid grid-cols-2 gap-3">
+                   <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.bracketPhase')} — {t('scheduler.bestOf')}</label>
+                     <select
+                       value={bestOf}
+                       onChange={(e) => setBestOf(Number(e.target.value))}
+                       className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                     >
+                       <option value={1}>{t('scheduler.bestOf1')}</option>
+                       <option value={3}>{t('scheduler.bestOf3')}</option>
+                       <option value={5}>{t('scheduler.bestOf5')}</option>
+                       <option value={7}>{t('scheduler.bestOf7')}</option>
+                     </select>
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.roundGapDays')}</label>
+                     <input
+                       type="number"
+                       min={1}
+                       max={7}
+                       value={roundGapDays}
+                       onChange={(e) => setRoundGapDays(Math.max(1, Math.min(7, Number(e.target.value))))}
+                       className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                     />
+                   </div>
+                 </div>
+               </div>
+             )}
           </div>
 
           <div>
@@ -600,6 +893,86 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
           </button>
         </div>
       </div>
+
+      {/* Saved Templates section */}
+      {selectedLeagueId && (
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+          <button
+            onClick={() => setTemplatesExpanded(v => !v)}
+            className="w-full flex items-center justify-between text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              {t('scheduler.savedTemplates')}
+              {leagueTemplates.length > 0 && (
+                <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-1.5 py-0.5 rounded-full">
+                  {leagueTemplates.length}
+                </span>
+              )}
+            </span>
+            {templatesExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+
+          {templatesExpanded && (
+            <div className="mt-4 space-y-3">
+              {/* Saved template list */}
+              {leagueTemplates.length === 0 ? (
+                <p className="text-sm text-slate-500">{t('scheduler.noTemplates')}</p>
+              ) : (
+                <div className="space-y-2">
+                  {leagueTemplates.map(tpl => (
+                    <div key={tpl.id} className="flex items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-md px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-800 truncate">{tpl.name}</p>
+                        <p className="text-xs text-slate-400">{new Date(tpl.savedAt).toLocaleDateString()}</p>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => handleLoadTemplate(tpl)}
+                          className="text-xs font-medium px-2.5 py-1 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors"
+                        >
+                          {t('scheduler.loadTemplate')}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTemplate(tpl.id)}
+                          className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                          title="Delete template"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Save current config as template */}
+              <div className="border-t border-slate-100 pt-3">
+                <p className="text-xs font-semibold text-slate-600 mb-2">{t('scheduler.saveTemplate')}</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder={t('scheduler.templateName')}
+                    className="flex-1 border border-slate-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTemplate(); }}
+                  />
+                  <button
+                    onClick={handleSaveTemplate}
+                    disabled={!templateName.trim()}
+                    className="px-3 py-2 text-sm font-medium bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {t('common.save')}
+                  </button>
+                </div>
+                {templateSavedMsg && (
+                  <p className="text-xs text-emerald-600 mt-1">{t('scheduler.templateSaved')}</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

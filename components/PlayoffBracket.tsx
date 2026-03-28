@@ -9,7 +9,19 @@ interface PlayoffBracketProps {
 
 const PlayoffBracket: React.FC<PlayoffBracketProps> = ({ games, teams }) => {
   const { t } = useTranslation();
-  const getTeam = (id: string) => teams.find(team => team.id === id);
+  const getTeam = (id: string): Team | undefined => {
+    if (id.startsWith('__tbd_')) {
+      return {
+        id,
+        name: 'TBD',
+        city: '',
+        abbreviation: 'TBD',
+        primaryColor: '#94a3b8',
+        secondaryColor: undefined,
+      } as Team;
+    }
+    return teams.find(team => team.id === id);
+  };
 
   const bracketGames = useMemo(() => games.filter(g => g.seriesName), [games]);
 
