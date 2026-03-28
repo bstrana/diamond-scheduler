@@ -154,7 +154,7 @@ const ScoreEditApp: React.FC = () => {
         scores: {
           home:    homeTotal,
           away:    awayTotal,
-          innings: innings.map(i => ({ home: i.home ?? 0, away: i.away ?? 0 })),
+          innings: innings.map(i => ({ home: i.home, away: i.away })),
           ...(status === 'live' && { outs, balls, strikes, baseRunners }),
         },
         recap: recap || undefined,
