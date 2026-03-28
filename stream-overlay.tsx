@@ -40,12 +40,12 @@ const deriveInning = (game: Game): { inning: string; half: 'top' | 'bottom' | nu
 
 // Two dots only — 3rd out resets the count so it never needs to display
 const OutsDots: React.FC<{ outs: number }> = ({ outs }) => (
-  <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+  <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
     {[0, 1].map(i => (
       <div key={i} style={{
-        width: 8, height: 8, borderRadius: '50%',
+        width: 13, height: 13, borderRadius: '50%',
         backgroundColor: i < outs ? '#fbbf24' : 'rgba(255,255,255,0.2)',
-        border: '1px solid rgba(255,255,255,0.35)',
+        border: '1.5px solid rgba(255,255,255,0.35)',
       }} />
     ))}
   </div>
@@ -90,6 +90,7 @@ const TeamRow: React.FC<{
   return (
     <div style={{
       display: 'flex',
+      flex: 1,
       alignItems: 'center',
       gap: 9,
       padding: '9px 14px',
@@ -270,7 +271,7 @@ const StreamOverlayApp: React.FC = () => {
       <div style={{ display: 'flex' }}>
 
         {/* Col 1: away (top) + home (bottom) */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <TeamRow
             team={awayTeam}
             score={hasScore || isFinal ? (game.scores?.away ?? 0) : null}
@@ -289,16 +290,16 @@ const StreamOverlayApp: React.FC = () => {
         {/* Col 2: status, inning, outs + count */}
         <div style={{
           display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          gap: 5, padding: '8px 12px',
+          alignItems: 'center', justifyContent: 'space-evenly',
+          padding: '8px 12px',
           borderLeft: `1px solid ${dividerColor}`,
-          flexShrink: 0, minWidth: 54,
+          flexShrink: 0, minWidth: 60,
           background: isLight ? 'rgba(248,250,252,0.8)' : 'rgba(15,23,42,0.5)',
         }}>
           {statusBadge}
 
           {isLive && innInfo && (
-            <span style={{ fontSize: 13, fontWeight: 800, color: '#4ade80', lineHeight: 1, whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#4ade80', lineHeight: 1, whiteSpace: 'nowrap' }}>
               {innInfo.inning !== '—'
                 ? `${innInfo.inning}${innInfo.half === 'top' ? ' ▲' : innInfo.half === 'bottom' ? ' ▼' : ''}`
                 : '—'}
@@ -310,10 +311,10 @@ const StreamOverlayApp: React.FC = () => {
           )}
 
           {isLive && (game.scores?.balls != null || game.scores?.strikes != null) && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontVariantNumeric: 'tabular-nums' }}>
-              <span style={{ fontSize: 16, fontWeight: 800, color: '#4ade80', lineHeight: 1 }}>{game.scores?.balls ?? 0}</span>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', lineHeight: 1 }}>·</span>
-              <span style={{ fontSize: 16, fontWeight: 800, color: '#f87171', lineHeight: 1 }}>{game.scores?.strikes ?? 0}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ fontSize: 22, fontWeight: 800, color: '#4ade80', lineHeight: 1 }}>{game.scores?.balls ?? 0}</span>
+              <span style={{ fontSize: 16, color: 'rgba(255,255,255,0.3)', lineHeight: 1 }}>·</span>
+              <span style={{ fontSize: 22, fontWeight: 800, color: '#f87171', lineHeight: 1 }}>{game.scores?.strikes ?? 0}</span>
             </div>
           )}
         </div>
