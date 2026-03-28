@@ -53,9 +53,9 @@ const OutsDots: React.FC<{ outs: number }> = ({ outs }) => (
 
 const BaseDiamond: React.FC<{ runners?: { first?: boolean; second?: boolean; third?: boolean } }> = ({ runners }) => {
   const bases = [
-    { key: 'second' as const, cx: 30, cy: 6  },
-    { key: 'third'  as const, cx: 5,  cy: 50 },
-    { key: 'first'  as const, cx: 55, cy: 50 },
+    { key: 'second' as const, cx: 30, cy: 10 },
+    { key: 'third'  as const, cx: 9,  cy: 46 },
+    { key: 'first'  as const, cx: 51, cy: 46 },
   ];
   return (
     <svg width={110} height={100} viewBox="-15 -15 90 90" style={{ display: 'block' }}>
@@ -167,7 +167,7 @@ const StreamOverlayApp: React.FC = () => {
 
       const edit = editMap.get(g.id);
       const finalGame = edit
-        ? { ...g, status: edit.status, scores: edit.scores ?? g.scores, ...(edit.recap != null && { recap: edit.recap || undefined }) }
+        ? { ...g, status: edit.status, scores: edit.scores ?? g.scores, recap: edit.recap?.trim() || undefined }
         : g;
 
       const allTeams: Team[] = [];
@@ -197,7 +197,7 @@ const StreamOverlayApp: React.FC = () => {
 
     const unsub = subscribeScoreEdits(link.scheduleKey, (edit) => {
       if (edit.gameId !== link.gameId) return;
-      setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, ...(edit.recap != null && { recap: edit.recap || undefined }) } : prev);
+      setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, recap: edit.recap?.trim() || undefined } : prev);
     });
 
     // 15 s fallback poll
@@ -205,7 +205,7 @@ const StreamOverlayApp: React.FC = () => {
       const edits = await listScoreEditsByScheduleKey(link.scheduleKey);
       const edit = edits.find(e => e.gameId === link.gameId);
       if (edit) {
-        setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, ...(edit.recap != null && { recap: edit.recap || undefined }) } : prev);
+        setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, recap: edit.recap?.trim() || undefined } : prev);
       }
     }, 15_000);
 
@@ -335,7 +335,7 @@ const StreamOverlayApp: React.FC = () => {
       </div>
 
       {/* Recap ticker — inside shell so border-radius clips it */}
-      {game.recap && (
+      {game.recap?.trim() && (
         <div style={{
           borderTop: `1px solid ${dividerColor}`,
           overflow: 'hidden',
