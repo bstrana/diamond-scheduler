@@ -291,7 +291,7 @@ const ScoreEditApp: React.FC = () => {
                     {(['away', 'home'] as const).map(side => (
                       <tr key={side}>
                         <td className="py-1 pr-2 text-xs font-medium text-slate-600 truncate max-w-[6rem]">
-                          {side === 'away' ? awayName : homeName}
+                          {side === 'away' ? awayAbbr : homeAbbr}
                         </td>
                         {innings.map((inn, i) => (
                           <td key={i} className="py-1 px-1">

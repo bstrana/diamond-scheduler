@@ -33,7 +33,7 @@ const deriveInning = (game: Game): { inning: string; half: 'top' | 'bottom' | nu
   );
   if (filled === 0) return { inning: '—', half: null };
   const isOdd = filled % 2 !== 0;
-  return { inning: String(Math.ceil(filled / 2)), half: isOdd ? 'top' : 'bottom' };
+  return { inning: String(Math.floor(filled / 2) + 1), half: isOdd ? 'bottom' : 'top' };
 };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -53,15 +53,15 @@ const OutsDots: React.FC<{ outs: number }> = ({ outs }) => (
 
 const BaseDiamond: React.FC<{ runners?: { first?: boolean; second?: boolean; third?: boolean } }> = ({ runners }) => {
   const bases = [
-    { key: 'second' as const, cx: 30, cy: 10 },
-    { key: 'third'  as const, cx: 9,  cy: 46 },
-    { key: 'first'  as const, cx: 51, cy: 46 },
+    { key: 'second' as const, cx: 30, cy: 12 },
+    { key: 'third'  as const, cx: 12, cy: 44 },
+    { key: 'first'  as const, cx: 48, cy: 44 },
   ];
   return (
-    <svg width={110} height={100} viewBox="-15 -15 90 90" style={{ display: 'block' }}>
+    <svg width={96} height={88} viewBox="-15 -15 90 90" style={{ display: 'block' }}>
       {bases.map(({ key, cx, cy }) => (
         <rect key={key}
-          x={cx - 12.5} y={cy - 12.5} width={25} height={25}
+          x={cx - 11} y={cy - 11} width={22} height={22}
           transform={`rotate(45 ${cx} ${cy})`}
           fill={runners?.[key] ? '#fbbf24' : 'rgba(255,255,255,0.18)'}
           stroke="rgba(255,255,255,0.4)" strokeWidth={0.9}
@@ -100,28 +100,28 @@ const TeamRow: React.FC<{
         <img
           src={team.logoUrl}
           alt={abbr}
-          style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.55))' }}
+          style={{ width: 42, height: 42, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.55))' }}
         />
       ) : (
         <div style={{
-          width: 32, height: 32, borderRadius: '50%',
+          width: 42, height: 42, borderRadius: '50%',
           background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
           flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 15, border: '2px solid rgba(255,255,255,0.25)',
+          fontSize: 18, border: '2px solid rgba(255,255,255,0.25)',
           boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
         }}>⚾</div>
       )}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <span style={{
-          fontSize: 14, fontWeight: 800, color: '#fff',
+          fontSize: 17, fontWeight: 800, color: '#fff',
           textTransform: 'uppercase', letterSpacing: '0.07em', lineHeight: 1,
           textShadow: '0 1px 4px rgba(0,0,0,0.7)',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>{abbr}</span>
         {city && (
           <span style={{
-            fontSize: 10, color: 'rgba(255,255,255,0.6)', lineHeight: 1,
+            fontSize: 11, color: 'rgba(255,255,255,0.6)', lineHeight: 1,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>{city}</span>
         )}
@@ -352,8 +352,10 @@ const StreamOverlayApp: React.FC = () => {
             display: 'inline-block',
             whiteSpace: 'nowrap',
             animation: 'ticker 20s linear infinite',
-            fontSize: 12,
-            fontWeight: 500,
+            fontSize: 14,
+            fontWeight: 700,
+            textTransform: 'uppercase' as const,
+            letterSpacing: '0.06em',
             color: isLight ? '#475569' : 'rgba(226,232,240,0.85)',
             paddingLeft: '100%',
           }}>
