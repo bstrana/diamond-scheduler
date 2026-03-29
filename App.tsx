@@ -985,6 +985,7 @@ const App: React.FC = () => {
     return (
       <SuperAdminDashboard
         onSignOut={() => keycloak.logout({ redirectUri: window.location.origin + '/logged-out.html' })}
+        keycloakToken={keycloak.token}
       />
     );
   }

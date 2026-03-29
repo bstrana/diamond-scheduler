@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.48",
+  "version": "1.0.49",
   "manifestVersion": 2,
 
   "image": {
@@ -101,6 +101,7 @@
     "1.0.45": "Feat: H (hits) and E (errors) columns in score-edit inning table and linescore overlay panel; PocketBase migration adds hits_away/home and errors_away/home number fields.",
     "1.0.46": "Fix: linescore overlay panel width now scales with inning count — no longer clips at 8 innings.",
     "1.0.47": "Feat: single/double elimination bracket generator, pool stage + bracket format, exhibition/forfeit game statuses, schedule templates (save/load per league), TBD placeholder slots in playoff bracket view.",
-    "1.0.48": "Fix: published schedule games no longer overwritten by auto-save; Feat: superadmin dashboard — system_admin role sees tenant management UI instead of the app, with plan/limits/active editing."
+    "1.0.48": "Fix: published schedule games no longer overwritten by auto-save; Feat: superadmin dashboard — system_admin role sees tenant management UI instead of the app, with plan/limits/active editing.",
+    "1.0.49": "Fix: superadmin dashboard now authenticates PocketBase before loading tenant list — resolves ClientResponseError 400 on dashboard open."
   }
 }

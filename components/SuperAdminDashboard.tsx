@@ -11,6 +11,7 @@ import * as storageApi from '../services/storage';
 
 interface SuperAdminDashboardProps {
   onSignOut: () => void;
+  keycloakToken?: string;
 }
 
 const PLAN_ORDER: TenantPlan[] = ['free', 'starter', 'pro', 'enterprise'];
@@ -297,7 +298,7 @@ const TenantCard: React.FC<TenantCardProps> = ({ tenant, onEdit }) => {
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
-const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onSignOut }) => {
+const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onSignOut, keycloakToken }) => {
   const [tenants, setTenants]     = useState<Tenant[]>([]);
   const [loading, setLoading]     = useState(true);
   const [search, setSearch]       = useState('');
@@ -308,10 +309,11 @@ const SuperAdminDashboard: React.FC<SuperAdminDashboardProps> = ({ onSignOut }) 
 
   const load = useCallback(async () => {
     setLoading(true);
+    if (keycloakToken) storageApi.authenticatePocketBase(keycloakToken);
     const all = await storageApi.listAllTenants();
     setTenants(all);
     setLoading(false);
-  }, []);
+  }, [keycloakToken]);
 
   useEffect(() => { load(); }, [load]);
 
