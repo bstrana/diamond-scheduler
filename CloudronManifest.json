@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.51",
+  "version": "1.0.52",
   "manifestVersion": 2,
 
   "image": {
@@ -104,6 +104,7 @@
     "1.0.48": "Fix: published schedule games no longer overwritten by auto-save; Feat: superadmin dashboard — system_admin role sees tenant management UI instead of the app, with plan/limits/active editing.",
     "1.0.49": "Fix: superadmin dashboard now authenticates PocketBase before loading tenant list — resolves ClientResponseError 400 on dashboard open.",
     "1.0.50": "Fix: remove sort parameter from listAllTenants API call — caused 404 on PocketBase; fix stable field back to boolean true in CloudronVersions.json.",
-    "1.0.51": "Feat: Resolve Pool Bracket — after pool play completes, seed bracket games from pool standings with interleaved seeding so pool winners meet in the final."
+    "1.0.51": "Feat: Resolve Pool Bracket — after pool play completes, seed bracket games from pool standings with interleaved seeding so pool winners meet in the final.",
+    "1.0.52": "Feat: Pool+Bracket — games per day setting for pool stage; bracket format toggle (Final Only vs Full Bracket); pool leader is home team in Final Only mode."
   }
 }

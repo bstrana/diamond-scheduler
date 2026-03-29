@@ -674,7 +674,9 @@ export const generatePoolKnockout = (
   allowedDays: string[],
   dayTimes: Record<string, string>,
   bestOf: number = 1,
-  roundGapDays: number = 3
+  roundGapDays: number = 3,
+  gamesPerDay: number = 1,
+  bracketFormat: 'full' | 'final_only' = 'full'
 ): Game[] => {
   if (teams.length < 2) return [];
 
@@ -689,11 +691,11 @@ export const generatePoolKnockout = (
 
   let currentDate = nextAllowedDate(startDate, allowedDays);
   let poolPhaseLastDate = currentDate;
+  let gamesOnCurrentDay = 0;
 
-  // Pool round-robin games
+  // Pool round-robin games — up to gamesPerDay games share the same date
   pools.forEach((poolTeams, poolIdx) => {
     const poolLabel = `Pool ${poolNames[poolIdx] ?? poolIdx + 1}`;
-    // All pairs play once
     for (let i = 0; i < poolTeams.length; i++) {
       for (let j = i + 1; j < poolTeams.length; j++) {
         const homeTeam = poolTeams[i];
@@ -717,7 +719,12 @@ export const generatePoolKnockout = (
         });
 
         if (currentDate > poolPhaseLastDate) poolPhaseLastDate = currentDate;
-        currentDate = nextAllowedDate(addDays(currentDate, 1), allowedDays);
+
+        gamesOnCurrentDay++;
+        if (gamesOnCurrentDay >= gamesPerDay) {
+          currentDate = nextAllowedDate(addDays(currentDate, 1), allowedDays);
+          gamesOnCurrentDay = 0;
+        }
       }
     }
   });
@@ -727,6 +734,26 @@ export const generatePoolKnockout = (
   if (numAdvancing < 2) return allGames;
 
   const bracketStartDate = nextAllowedDate(addDays(poolPhaseLastDate, roundGapDays), allowedDays);
+
+  if (bracketFormat === 'final_only') {
+    // Single championship game: seed1 (pool leader) is home, seed2 is away
+    const dayName = getDayNameFromStr(bracketStartDate);
+    const time = dayTimes[dayName] || '15:00';
+    allGames.push({
+      id: generateUUID(),
+      homeTeamId: '__tbd_pool_seed1__',
+      awayTeamId: '__tbd_pool_seed2__',
+      date: bracketStartDate,
+      time,
+      location: 'TBD Field',
+      status: 'scheduled',
+      gameNumber: String(allGames.length + 1),
+      seriesName: 'Final',
+      bracketRound: 1,
+      bracketPosition: 1,
+    });
+    return allGames;
+  }
 
   const bracketSize = nextPowerOf2(numAdvancing);
   const totalBracketRounds = Math.log2(bracketSize);

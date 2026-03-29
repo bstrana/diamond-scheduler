@@ -21,6 +21,8 @@ interface SchedulerTemplate {
     roundGapDays: number;
     poolSize: number;
     advancingPerPool: number;
+    poolGamesPerDay: number;
+    poolBracketFormat: 'full' | 'final_only';
   };
   savedAt: string;
 }
@@ -62,6 +64,8 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
   const [roundGapDays, setRoundGapDays] = useState<number>(3);
   const [poolSize, setPoolSize] = useState<number>(4);
   const [advancingPerPool, setAdvancingPerPool] = useState<number>(2);
+  const [poolGamesPerDay, setPoolGamesPerDay] = useState<number>(2);
+  const [poolBracketFormat, setPoolBracketFormat] = useState<'full' | 'final_only'>('final_only');
 
   // Templates state
   const [templatesExpanded, setTemplatesExpanded] = useState(false);
@@ -161,7 +165,7 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
                 );
             } else if (doubleHeaderMode === 'pool_bracket') {
                 newGames = generatePoolKnockout(
-                    selectedLeague.teams, poolSize, advancingPerPool, startDate, selectedDays, dayTimes, bestOf, roundGapDays
+                    selectedLeague.teams, poolSize, advancingPerPool, startDate, selectedDays, dayTimes, bestOf, roundGapDays, poolGamesPerDay, poolBracketFormat
                 );
             } else {
                 newGames = generateRoundRobinSchedule(
@@ -297,6 +301,8 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
         roundGapDays,
         poolSize,
         advancingPerPool,
+        poolGamesPerDay,
+        poolBracketFormat,
       },
       savedAt: new Date().toISOString(),
     };
@@ -305,7 +311,7 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
     setTemplateSavedMsg(true);
     setTemplatesTick(v => v + 1);
     setTimeout(() => setTemplateSavedMsg(false), 2500);
-  }, [templateName, selectedLeagueId, startDate, gamesPerTeam, selectedDays, dayTimes, doubleHeaderMode, bestOf, seriesGameMode, roundGapDays, poolSize, advancingPerPool]);
+  }, [templateName, selectedLeagueId, startDate, gamesPerTeam, selectedDays, dayTimes, doubleHeaderMode, bestOf, seriesGameMode, roundGapDays, poolSize, advancingPerPool, poolGamesPerDay, poolBracketFormat]);
 
   const handleDeleteTemplate = useCallback((id: string) => {
     const all = (() => {
@@ -326,6 +332,8 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
     setRoundGapDays(tpl.config.roundGapDays);
     setPoolSize(tpl.config.poolSize);
     setAdvancingPerPool(tpl.config.advancingPerPool);
+    if (tpl.config.poolGamesPerDay) setPoolGamesPerDay(tpl.config.poolGamesPerDay);
+    if (tpl.config.poolBracketFormat) setPoolBracketFormat(tpl.config.poolBracketFormat);
   }, []);
 
   // Manual seed order helpers
@@ -789,17 +797,15 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
                  </div>
                  <div className="grid grid-cols-2 gap-3">
                    <div>
-                     <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.bracketPhase')} — {t('scheduler.bestOf')}</label>
-                     <select
-                       value={bestOf}
-                       onChange={(e) => setBestOf(Number(e.target.value))}
+                     <label className="block text-sm font-medium text-slate-700 mb-1">Games per Day</label>
+                     <input
+                       type="number"
+                       min={1}
+                       max={10}
+                       value={poolGamesPerDay}
+                       onChange={(e) => setPoolGamesPerDay(Math.max(1, Math.min(10, Number(e.target.value))))}
                        className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                     >
-                       <option value={1}>{t('scheduler.bestOf1')}</option>
-                       <option value={3}>{t('scheduler.bestOf3')}</option>
-                       <option value={5}>{t('scheduler.bestOf5')}</option>
-                       <option value={7}>{t('scheduler.bestOf7')}</option>
-                     </select>
+                     />
                    </div>
                    <div>
                      <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduler.roundGapDays')}</label>
@@ -812,6 +818,43 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
                        className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                      />
                    </div>
+                 </div>
+
+                 {/* Bracket format */}
+                 <div>
+                   <label className="block text-sm font-medium text-slate-700 mb-1">Bracket Format</label>
+                   <div className="flex rounded-lg border border-slate-200 overflow-hidden text-sm font-medium">
+                     <button
+                       onClick={() => setPoolBracketFormat('final_only')}
+                       className={`flex-1 py-2 transition-colors ${poolBracketFormat === 'final_only' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                     >
+                       Final Only
+                     </button>
+                     <button
+                       onClick={() => setPoolBracketFormat('full')}
+                       className={`flex-1 py-2 transition-colors ${poolBracketFormat === 'full' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
+                     >
+                       Full Bracket
+                     </button>
+                   </div>
+                   {poolBracketFormat === 'final_only' && (
+                     <p className="text-xs text-slate-500 mt-1">Top team from each pool advances. #1 overall is home team.</p>
+                   )}
+                 </div>
+
+                 {/* Best-of only relevant for full bracket or final_only */}
+                 <div>
+                   <label className="block text-sm font-medium text-slate-700 mb-1">{poolBracketFormat === 'final_only' ? 'Final' : t('scheduler.bracketPhase')} — {t('scheduler.bestOf')}</label>
+                   <select
+                     value={bestOf}
+                     onChange={(e) => setBestOf(Number(e.target.value))}
+                     className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                   >
+                     <option value={1}>{t('scheduler.bestOf1')}</option>
+                     <option value={3}>{t('scheduler.bestOf3')}</option>
+                     <option value={5}>{t('scheduler.bestOf5')}</option>
+                     <option value={7}>{t('scheduler.bestOf7')}</option>
+                   </select>
                  </div>
                </div>
              )}
