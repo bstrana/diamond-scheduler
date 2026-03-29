@@ -819,7 +819,7 @@ export const listAllTenants = async (): Promise<Tenant[]> => {
     try {
       const result = await pocketbaseClient!
         .collection(tenantsCollection)
-        .getList(1, 500, { sort: '-created' });
+        .getList(1, 500, {});
       return (result.items || []).map(tenantFromRecord);
     } catch (error) {
       console.warn('listAllTenants failed', error);
