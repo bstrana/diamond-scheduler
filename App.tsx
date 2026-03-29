@@ -38,6 +38,7 @@ import PlayoffBracket from './components/PlayoffBracket';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import ScoreLinksManager from './components/ScoreLinksManager';
 import TenantLimitsTable from './components/TenantLimitsTable';
+import SuperAdminDashboard from './components/SuperAdminDashboard';
 
 const App: React.FC = () => {
   const { t } = useTranslation();
@@ -348,6 +349,7 @@ const App: React.FC = () => {
         data = { leagues: [defaultLeague], teams: [teamA, teamB], games: [], gamesInHoldingArea: [] };
         localStorage.setItem('dsa_seeded', '1');
         await storageApi.persistStorageData(data, { userId, orgId });
+
       }
 
       setLeagues(data.leagues);
@@ -428,15 +430,8 @@ const App: React.FC = () => {
     if (!isHydrated || !initialized || !keycloak.authenticated) return;
     const timeoutId = window.setTimeout(() => {
       storageApi.persistStorageData(
-        {
-          leagues,
-          teams,
-          games,
-          gamesInHoldingArea
-        },
-        { userId, orgId },
-        scheduleKey || undefined,
-        scheduleName || undefined
+        { leagues, teams, games, gamesInHoldingArea },
+        { userId, orgId }
       );
     }, 300);
     return () => window.clearTimeout(timeoutId);
@@ -982,6 +977,15 @@ const App: React.FC = () => {
           </button>
         </div>
       </div>
+    );
+  }
+
+  // ── SuperAdmin gate — system_admin sees only the management dashboard ────────
+  if (isSystemAdmin) {
+    return (
+      <SuperAdminDashboard
+        onSignOut={() => keycloak.logout({ redirectUri: window.location.origin + '/logged-out.html' })}
+      />
     );
   }
 

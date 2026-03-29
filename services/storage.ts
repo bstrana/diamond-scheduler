@@ -319,19 +319,17 @@ const saveScheduleToPocketBase = async (
 export const persistStorageData = async (
   data: StorageData,
   context?: StorageContext,
-  scheduleKey?: string,
-  scheduleName?: string
 ): Promise<boolean> => {
   localStorage.setItem(STORAGE_KEYS.leagues, JSON.stringify(data.leagues));
   localStorage.setItem(STORAGE_KEYS.teams, JSON.stringify(data.teams));
   localStorage.setItem(STORAGE_KEYS.games, JSON.stringify(data.games));
   localStorage.setItem(STORAGE_KEYS.gamesInHoldingArea, JSON.stringify(data.gamesInHoldingArea));
 
-  const [, result] = await Promise.all([
-    saveToPocketBase(data, context),
-    saveScheduleToPocketBase(data, context, scheduleKey, scheduleName)
-  ]);
-  return result.ok;
+  // Only persist the working copy (app_state). The published schedule is only
+  // updated when the user explicitly clicks Publish — not on every auto-save.
+  // Auto-syncing overwrote published games whenever the local state was empty.
+  await saveToPocketBase(data, context);
+  return true;
 };
 
 export const publishScheduleNow = async (
@@ -809,6 +807,25 @@ export const updateTenant = async (
     console.warn('updateTenant failed', error);
     return null;
   }
+};
+
+/**
+ * List ALL tenants — for system admins only.
+ * No org/user scoping applied.
+ */
+export const listAllTenants = async (): Promise<Tenant[]> => {
+  if (!pocketbaseClient) return [];
+  return withFreshToken(async () => {
+    try {
+      const result = await pocketbaseClient!
+        .collection(tenantsCollection)
+        .getList(1, 500, { sort: '-created' });
+      return (result.items || []).map(tenantFromRecord);
+    } catch (error) {
+      console.warn('listAllTenants failed', error);
+      return [];
+    }
+  });
 };
 
 // ─── Real-time subscriptions ──────────────────────────────────────────────────
