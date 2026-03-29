@@ -1,5 +1,5 @@
 {
-  "stable": "1.0.48",
+  "stable": true,
   "versions": {
     "1.0.0": {
       "manifest": {
