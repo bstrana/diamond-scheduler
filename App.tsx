@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useKeycloak } from '@react-keycloak/web';
 import { useTranslation } from 'react-i18next';
 import { Team, Game, ViewMode, League, Tenant, PLAN_LIMITS } from './types';
-import { getMonthDays, formatDate, generateUUID } from './utils';
+import { getMonthDays, formatDate, generateUUID, resolvePoolBracket } from './utils';
 import * as storageApi from './services/storage';
 import Calendar from './components/Calendar';
 import GameHoldingArea from './components/GameHoldingArea';
@@ -436,6 +436,34 @@ const App: React.FC = () => {
     }, 300);
     return () => window.clearTimeout(timeoutId);
   }, [isHydrated, initialized, keycloak.authenticated, leagues, teams, games, gamesInHoldingArea]);
+
+  // Auto-resolve pool bracket: when all pool games (bracketRound === 0) for a set
+  // of TBD bracket games are final/forfeit, replace TBD slots with real team IDs.
+  useEffect(() => {
+    const hasTbd = games.some(
+      g => g.homeTeamId?.startsWith('__tbd_pool_') || g.awayTeamId?.startsWith('__tbd_pool_')
+    );
+    if (!hasTbd) return;
+
+    const poolGames = games.filter(g => g.bracketRound === 0);
+    if (poolGames.length === 0) return;
+
+    const allPoolDone = poolGames.every(
+      g => g.status === 'final' || g.status === 'forfeit'
+    );
+    if (!allPoolDone) return;
+
+    // All pool games complete — auto-resolve
+    const { resolved } = resolvePoolBracket(games);
+    // Only update if something actually changed
+    const changed = resolved.some((g, i) => {
+      const orig = games[i];
+      return g.homeTeamId !== orig.homeTeamId || g.awayTeamId !== orig.awayTeamId;
+    });
+    if (changed) {
+      setGames(resolved);
+    }
+  }, [games]);
 
   // Helper to get league IDs from a game (handles both old and new format)
   const getGameLeagueIds = (game: Game): string[] => {
