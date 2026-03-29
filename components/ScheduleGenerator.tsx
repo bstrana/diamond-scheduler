@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { generateRoundRobinSchedule, generateSingleEliminationBracket, generateDoubleEliminationBracket, generatePoolKnockout, calculateStandings } from '../utils';
+import { generateRoundRobinSchedule, generateSingleEliminationBracket, generateDoubleEliminationBracket, generatePoolKnockout, calculateStandings, resolvePoolBracket } from '../utils';
 import { Team, Game, League } from '../types';
-import { Wand2, Loader2, Calendar as CalIcon, Clock, Layers, Info, Plus, X, Trophy, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from 'lucide-react';
+import { Wand2, Loader2, Calendar as CalIcon, Clock, Layers, Info, Plus, X, Trophy, ChevronDown, ChevronUp, ArrowUp, ArrowDown, CheckCircle2, AlertCircle } from 'lucide-react';
 import { formatDate } from '../utils';
 import { WEEKDAYS } from '../constants';
 import { useTranslation } from 'react-i18next';
@@ -973,6 +973,89 @@ const ScheduleGenerator: React.FC<ScheduleGeneratorProps> = ({ leagues, games, o
           )}
         </div>
       )}
+      {/* ── Resolve Pool Bracket ───────────────────────────────────────── */}
+      {(() => {
+        if (!selectedLeagueId) return null;
+        const league = leagues.find(l => l.id === selectedLeagueId);
+        if (!league) return null;
+
+        // Check if there are unresolved pool bracket TBD slots for this league
+        const leagueGames = games.filter(g =>
+          g.homeTeamId && (
+            league.teams.some(t => t.id === g.homeTeamId || t.id === g.awayTeamId) ||
+            g.homeTeamId.startsWith('__tbd_pool_') || g.awayTeamId.startsWith('__tbd_pool_')
+          )
+        );
+        const hasUnresolved = leagueGames.some(
+          g => g.homeTeamId.startsWith('__tbd_pool_') || g.awayTeamId.startsWith('__tbd_pool_')
+        );
+        if (!hasUnresolved) return null;
+
+        const poolGames = leagueGames.filter(g => g.bracketRound === 0);
+        const completedPool = poolGames.filter(g => g.status === 'final' || g.status === 'forfeit').length;
+        const allPoolDone = poolGames.length > 0 && completedPool === poolGames.length;
+
+        // Build per-pool standings preview
+        const { poolStandings } = resolvePoolBracket(leagueGames);
+        const teamById = new Map(league.teams.map(t => [t.id, t]));
+
+        return (
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-amber-200">
+            <div className="flex items-center gap-2 mb-3">
+              <Trophy size={16} className="text-amber-500" />
+              <span className="text-sm font-semibold text-slate-700">Resolve Pool Bracket</span>
+              {allPoolDone
+                ? <span className="ml-auto text-xs text-emerald-600 font-medium flex items-center gap-1"><CheckCircle2 size={13} />All pool games done</span>
+                : <span className="ml-auto text-xs text-amber-600 font-medium flex items-center gap-1"><AlertCircle size={13} />{completedPool}/{poolGames.length} pool games done</span>
+              }
+            </div>
+
+            {/* Pool standings preview */}
+            {Object.keys(poolStandings).length > 0 && (
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                {Object.entries(poolStandings).sort().map(([poolName, teamIds]) => (
+                  <div key={poolName} className="bg-slate-50 rounded-lg p-2 text-xs">
+                    <div className="font-semibold text-slate-600 mb-1">{poolName}</div>
+                    {teamIds.map((id, i) => {
+                      const team = teamById.get(id);
+                      return (
+                        <div key={id} className={`flex items-center gap-1 py-0.5 ${i === 0 ? 'text-emerald-700 font-medium' : 'text-slate-600'}`}>
+                          <span className="w-4 text-right text-slate-400">{i + 1}.</span>
+                          <span>{team?.name ?? id}</span>
+                          {i < 2 && <span className="ml-auto text-emerald-500">→</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="text-xs text-slate-500 mb-3">
+              Seeds bracket games with pool standings. Top teams advance — interleaved so pool winners meet in the final.
+            </p>
+
+            <button
+              disabled={!allPoolDone}
+              onClick={() => {
+                const { resolved } = resolvePoolBracket(leagueGames);
+                // Merge resolved league games back into full games list
+                const resolvedIds = new Set(resolved.map(g => g.id));
+                const otherGames = games.filter(g => !resolvedIds.has(g.id));
+                onScheduleGenerated([...otherGames, ...resolved], 'replace');
+              }}
+              className={`w-full py-2 px-4 rounded-lg text-sm font-medium text-white transition-all flex items-center justify-center gap-2
+                ${allPoolDone
+                  ? 'bg-amber-500 hover:bg-amber-600 shadow'
+                  : 'bg-slate-300 cursor-not-allowed'
+                }`}
+            >
+              <Trophy size={15} />
+              {allPoolDone ? 'Seed Bracket from Pool Standings' : `Waiting for ${poolGames.length - completedPool} pool games…`}
+            </button>
+          </div>
+        );
+      })()}
     </div>
   );
 };

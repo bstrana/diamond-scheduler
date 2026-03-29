@@ -779,7 +779,92 @@ export const generatePoolKnockout = (
   return allGames;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Resolves TBD pool bracket slots (`__tbd_pool_seed{n}__`) to real team IDs
+ * based on pool standings calculated from completed pool games.
+ *
+ * Seeding is interleaved across pools so pool winners don't meet until the final:
+ *   seed1 = Pool A #1, seed2 = Pool B #1, seed3 = Pool A #2, seed4 = Pool B #2 …
+ *
+ * Returns the updated games array and a map of seed → teamId for display.
+ */
+export function resolvePoolBracket(
+  games: Game[],
+): { resolved: Game[]; seedMap: Record<string, string>; poolStandings: Record<string, string[]> } {
+  // Pool games have bracketRound === 0
+  const poolGames = games.filter(g => g.bracketRound === 0);
+
+  // Group by seriesName (Pool A, Pool B, …)
+  const poolMap = new Map<string, Game[]>();
+  poolGames.forEach(g => {
+    const key = g.seriesName || 'Pool A';
+    if (!poolMap.has(key)) poolMap.set(key, []);
+    poolMap.get(key)!.push(g);
+  });
+
+  // Calculate standings per pool
+  const poolStandingMap = new Map<string, string[]>();
+  poolMap.forEach((pgames, poolName) => {
+    const wins   = new Map<string, number>();
+    const losses = new Map<string, number>();
+    const rdiff  = new Map<string, number>();
+
+    pgames.forEach(g => {
+      [g.homeTeamId, g.awayTeamId].forEach(id => {
+        if (!wins.has(id)) { wins.set(id, 0); losses.set(id, 0); rdiff.set(id, 0); }
+      });
+      const done = g.status === 'final' || g.status === 'forfeit';
+      if (!done || !g.scores) return;
+      const hr = g.scores.home;
+      const ar = g.scores.away;
+      rdiff.set(g.homeTeamId, (rdiff.get(g.homeTeamId) || 0) + (hr - ar));
+      rdiff.set(g.awayTeamId, (rdiff.get(g.awayTeamId) || 0) + (ar - hr));
+      if (hr > ar) {
+        wins.set(g.homeTeamId, (wins.get(g.homeTeamId) || 0) + 1);
+        losses.set(g.awayTeamId, (losses.get(g.awayTeamId) || 0) + 1);
+      } else if (ar > hr) {
+        wins.set(g.awayTeamId, (wins.get(g.awayTeamId) || 0) + 1);
+        losses.set(g.homeTeamId, (losses.get(g.homeTeamId) || 0) + 1);
+      }
+    });
+
+    const teamIds = Array.from(wins.keys()).sort((a, b) => {
+      const wDiff = (wins.get(b) || 0) - (wins.get(a) || 0);
+      return wDiff !== 0 ? wDiff : (rdiff.get(b) || 0) - (rdiff.get(a) || 0);
+    });
+    poolStandingMap.set(poolName, teamIds);
+  });
+
+  // Sort pools alphabetically
+  const sortedPools = Array.from(poolStandingMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+  // Build interleaved seed map: rank 0 across all pools, then rank 1, …
+  const maxRank = Math.max(...sortedPools.map(([, ids]) => ids.length));
+  const seedMap: Record<string, string> = {};
+  let seedIdx = 1;
+  for (let rank = 0; rank < maxRank; rank++) {
+    for (const [, teamIds] of sortedPools) {
+      if (rank < teamIds.length) {
+        seedMap[`__tbd_pool_seed${seedIdx}__`] = teamIds[rank];
+        seedIdx++;
+      }
+    }
+  }
+
+  // Apply replacements
+  const resolved = games.map(g => {
+    const homeTeamId = seedMap[g.homeTeamId] ?? g.homeTeamId;
+    const awayTeamId = seedMap[g.awayTeamId] ?? g.awayTeamId;
+    if (homeTeamId === g.homeTeamId && awayTeamId === g.awayTeamId) return g;
+    return { ...g, homeTeamId, awayTeamId };
+  });
+
+  const poolStandings: Record<string, string[]> = {};
+  poolStandingMap.forEach((ids, name) => { poolStandings[name] = ids; });
+
+  return { resolved, seedMap, poolStandings };
+}
+
 
 export const generateRoundRobinSchedule = (
   teams: Team[],
