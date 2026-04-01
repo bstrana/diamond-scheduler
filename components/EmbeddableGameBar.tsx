@@ -46,7 +46,8 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
 
   // Apply initial filters from URL params
   useEffect(() => {
-    if (initialLeagueId) setSelectedLeagueId(initialLeagueId);
+    const ids = (initialLeagueId || '').split(',').filter(Boolean);
+    setSelectedLeagueId(ids.length === 1 ? ids[0] : 'all');
     if (initialCategory) setSelectedCategory(initialCategory);
     if (initialTeamId) setSelectedTeamId(initialTeamId);
   }, [initialLeagueId, initialCategory, initialTeamId]);
@@ -86,16 +87,33 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
     };
   }, [dataOverride]);
 
+  // When multiple leagues are specified (comma-separated), restrict visible data to those leagues
+  const allowedLeagueIds = useMemo(() => (initialLeagueId || '').split(',').filter(Boolean), [initialLeagueId]);
+
+  const visibleLeagues = useMemo(() => {
+    if (allowedLeagueIds.length <= 1) return leagues;
+    return leagues.filter(l => allowedLeagueIds.includes(l.id));
+  }, [leagues, allowedLeagueIds]);
+
+  const visibleGames = useMemo(() => {
+    if (allowedLeagueIds.length <= 1) return games;
+    const allowed = new Set(allowedLeagueIds);
+    return games.filter(g => {
+      const ids = g.leagueIds?.length ? g.leagueIds : g.leagueId ? [g.leagueId] : [];
+      return ids.some(id => allowed.has(id));
+    });
+  }, [games, allowedLeagueIds]);
+
   // Hide filters if a single team is selected (for single team website embeds)
   const hideFilters = !!initialTeamId;
 
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
   const announcement = useMemo(() => {
     const league = selectedLeagueId !== 'all'
-      ? leagues.find(l => l.id === selectedLeagueId)
-      : leagues[0];
+      ? visibleLeagues.find(l => l.id === selectedLeagueId)
+      : visibleLeagues[0];
     return league?.announcement || null;
-  }, [leagues, selectedLeagueId]);
+  }, [visibleLeagues, selectedLeagueId]);
 
   return (
     <div
@@ -130,9 +148,9 @@ const EmbeddableGameBar: React.FC<EmbeddableGameBarProps> = ({
       )}
       <div style={{ flex: 1, minHeight: 0 }}>
       <GameBar
-        games={games}
+        games={visibleGames}
         teams={teams}
-        leagues={leagues}
+        leagues={visibleLeagues}
         selectedTeamId={selectedTeamId}
         selectedLeagueId={selectedLeagueId}
         selectedCategory={selectedCategory}

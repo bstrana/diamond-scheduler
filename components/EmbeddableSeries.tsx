@@ -19,7 +19,8 @@ const EmbeddableSeries: React.FC<EmbeddableSeriesProps> = ({
     dataOverride || null
   );
   const [isLoading, setIsLoading] = useState(!dataOverride && !!scheduleKey);
-  const [selectedLeagueId, setSelectedLeagueId] = useState<string>(leagueId || '');
+  const allowedLeagueIds = useMemo(() => (leagueId || '').split(',').filter(Boolean), [leagueId]);
+  const [selectedLeagueId, setSelectedLeagueId] = useState<string>(allowedLeagueIds.length === 1 ? allowedLeagueIds[0] : '');
 
   useEffect(() => {
     if (dataOverride) { setData(dataOverride); return; }
@@ -35,11 +36,18 @@ const EmbeddableSeries: React.FC<EmbeddableSeriesProps> = ({
 
   useEffect(() => {
     if (!selectedLeagueId && data?.leagues?.length) {
-      setSelectedLeagueId(leagueId || data.leagues[0]?.id || '');
+      const first = allowedLeagueIds.length > 0
+        ? data.leagues.find(l => allowedLeagueIds.includes(l.id))?.id
+        : data.leagues[0]?.id;
+      setSelectedLeagueId(first || '');
     }
-  }, [data, leagueId, selectedLeagueId]);
+  }, [data, allowedLeagueIds, selectedLeagueId]);
 
-  const visibleLeagues = useMemo(() => data?.leagues ?? [], [data]);
+  const visibleLeagues = useMemo(() => {
+    const all = data?.leagues ?? [];
+    if (allowedLeagueIds.length > 1) return all.filter(l => allowedLeagueIds.includes(l.id));
+    return all;
+  }, [data, allowedLeagueIds]);
 
   const league = useMemo(
     () => visibleLeagues.find(l => l.id === selectedLeagueId) ?? visibleLeagues[0] ?? null,
@@ -124,7 +132,7 @@ const EmbeddableSeries: React.FC<EmbeddableSeriesProps> = ({
   return (
     <div style={root}>
       {/* League selector */}
-      {visibleLeagues.length > 1 && !leagueId && (
+      {visibleLeagues.length > 1 && allowedLeagueIds.length !== 1 && (
         <div style={{ marginBottom: '12px' }}>
           <select
             value={selectedLeagueId}

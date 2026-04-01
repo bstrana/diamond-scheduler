@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { League, Team, Game } from '../types';
-import { Copy, Check, Code, ExternalLink } from 'lucide-react';
+import { Copy, Check, Code, ExternalLink, ChevronDown } from 'lucide-react';
 import EmbedStyler, { EmbedStyles } from './EmbedStyler';
 import EmbeddableCalendar from './EmbeddableCalendar';
 import EmbeddableGameBar from './EmbeddableGameBar';
@@ -33,7 +33,9 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   orgName,
 }) => {
   const { t } = useTranslation();
-  const [selectedLeagueId, setSelectedLeagueId] = useState<string>('all');
+  const [selectedLeagueIds, setSelectedLeagueIds] = useState<string[]>([]);
+  const [leagueDropdownOpen, setLeagueDropdownOpen] = useState(false);
+  const leagueDropdownRef = useRef<HTMLDivElement>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTeamId, setSelectedTeamId] = useState<string>('all');
   const [embedView, setEmbedView] = useState<'calendar' | 'gamebar' | 'standings' | 'series' | 'teamgames'>('calendar');
@@ -71,6 +73,18 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     }
   }, [loadedScheduleKey]);
 
+  // Close league dropdown on outside click
+  useEffect(() => {
+    if (!leagueDropdownOpen) return;
+    const handle = (e: MouseEvent) => {
+      if (leagueDropdownRef.current && !leagueDropdownRef.current.contains(e.target as Node)) {
+        setLeagueDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [leagueDropdownOpen]);
+
   useEffect(() => {
     let isActive = true;
     const loadSchedules = async () => {
@@ -102,7 +116,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     if (!scheduleKey) return '';
     const params = new URLSearchParams();
     params.set('type', embedView);
-    if (selectedLeagueId !== 'all') params.set('league', selectedLeagueId);
+    if (selectedLeagueIds.length > 0) params.set('league', selectedLeagueIds.join(','));
     params.set('schedule_key', scheduleKey);
     if (embedView === 'standings' && standingsInfoText.trim()) {
       params.set('info_text', standingsInfoText.trim());
@@ -139,7 +153,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   }, [
     baseUrl,
     embedView,
-    selectedLeagueId,
+    selectedLeagueIds,
     selectedCategory,
     selectedTeamId,
     viewType,
@@ -316,19 +330,52 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
             </div>
           )}
 
-          {/* League Filter */}
-          <div>
+          {/* League Filter – multi-select checkbox dropdown */}
+          <div ref={leagueDropdownRef} className="relative">
             <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.filterByLeague')}</label>
-            <select
-              value={selectedLeagueId}
-              onChange={(e) => setSelectedLeagueId(e.target.value)}
-              className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            <button
+              type="button"
+              onClick={() => setLeagueDropdownOpen(o => !o)}
+              className="w-full flex items-center justify-between border border-slate-300 rounded-md px-3 py-2 bg-white text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none text-left"
             >
-              <option value="all">{t('embed.allLeagues')}</option>
-              {leagues.map(l => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
+              <span className="truncate text-slate-700">
+                {selectedLeagueIds.length === 0
+                  ? t('embed.allLeagues')
+                  : selectedLeagueIds.length === 1
+                    ? (leagues.find(l => l.id === selectedLeagueIds[0])?.name ?? t('embed.allLeagues'))
+                    : `${selectedLeagueIds.length} leagues`}
+              </span>
+              <ChevronDown size={14} className={`ml-2 flex-shrink-0 text-slate-400 transition-transform ${leagueDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {leagueDropdownOpen && leagues.length > 0 && (
+              <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg max-h-52 overflow-y-auto">
+                {/* All Leagues option */}
+                <label className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-slate-50 border-b border-slate-100 text-sm font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={selectedLeagueIds.length === 0}
+                    onChange={() => setSelectedLeagueIds([])}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  {t('embed.allLeagues')}
+                </label>
+                {leagues.map(l => (
+                  <label key={l.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-slate-50 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={selectedLeagueIds.includes(l.id)}
+                      onChange={(e) => {
+                        setSelectedLeagueIds(prev =>
+                          e.target.checked ? [...prev, l.id] : prev.filter(id => id !== l.id)
+                        );
+                      }}
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    {l.name}
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Category Filter */}
@@ -586,7 +633,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
           >
             {embedView === 'gamebar' ? (
               <EmbeddableGameBar
-                initialLeagueId={selectedLeagueId !== 'all' ? selectedLeagueId : undefined}
+                initialLeagueId={selectedLeagueIds.length > 0 ? selectedLeagueIds.join(',') : undefined}
                 initialCategory={selectedCategory !== 'all' ? selectedCategory : undefined}
                 initialTeamId={selectedTeamId !== 'all' ? selectedTeamId : undefined}
                 height={`${Math.min(parseInt(height) || 260, 600)}px`}
@@ -600,18 +647,18 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
               />
             ) : embedView === 'standings' ? (
               <EmbeddableStandings
-                leagueId={selectedLeagueId !== 'all' ? selectedLeagueId : undefined}
+                leagueId={selectedLeagueIds.length > 0 ? selectedLeagueIds.join(',') : undefined}
                 dataOverride={{ leagues, teams, games }}
                 infoText={standingsInfoText.trim() || undefined}
               />
             ) : embedView === 'series' ? (
               <EmbeddableSeries
-                leagueId={selectedLeagueId !== 'all' ? selectedLeagueId : undefined}
+                leagueId={selectedLeagueIds.length > 0 ? selectedLeagueIds.join(',') : undefined}
                 dataOverride={{ leagues, teams, games }}
               />
             ) : (
               <EmbeddableCalendar
-                initialLeagueId={selectedLeagueId !== 'all' ? selectedLeagueId : undefined}
+                initialLeagueId={selectedLeagueIds.length > 0 ? selectedLeagueIds.join(',') : undefined}
                 initialCategory={selectedCategory !== 'all' ? selectedCategory : undefined}
                 initialTeamId={selectedTeamId !== 'all' ? selectedTeamId : undefined}
                 initialView={viewType}
