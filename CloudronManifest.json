@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.58",
+  "version": "1.0.59",
   "manifestVersion": 2,
 
   "image": {
@@ -111,6 +111,7 @@
     "1.0.55": "Fix: embed schedule widget (GameBar and others) now loads correctly in cross-origin iframes — CSP frame-ancestors and X-Frame-Options no longer block /embed.html on third-party sites.",
     "1.0.56": "Feat: multi-select league filter in embed code generator — pick any combination of leagues (or all) instead of only one; embed URL uses comma-separated league IDs; all embed types respect the selection.",
     "1.0.57": "Feat: standings sort selector — choose sort priority (W, GB, RS, RA, RD) or enable custom drag-and-drop row ordering; default sort can be pre-configured in embed code generator.",
-    "1.0.58": "Feat: embed style templates — save named style presets in the browser and reload them via a dropdown; stored in localStorage, no backend required."
+    "1.0.58": "Feat: embed style templates — save named style presets in the browser and reload them via a dropdown; stored in localStorage, no backend required.",
+    "1.0.59": "Feat: user menu lists all teams from the loaded schedule with color swatch, name and abbreviation; league builder now offers all schedule teams (not just global roster) when adding existing teams to a new league."
   }
 }

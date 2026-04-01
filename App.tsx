@@ -1200,17 +1200,38 @@ const App: React.FC = () => {
                         )}
                       </div>
                       <div className="py-2">
-                        <button
-                          onClick={() => {
-                            setShowUserMenu(false);
-                            setViewMode('teams');
-                          }}
-                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                        >
-                          <span>{t('nav.teams')}</span>
-                          <Users size={16} />
-                        </button>
-                        <div className="px-3 pb-2 space-y-2">
+                        {/* Teams section */}
+                        <div className="px-3 pb-2 border-b border-slate-100">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                              {t('nav.teams')} ({allTeams.length})
+                            </span>
+                            <button
+                              onClick={() => { setShowUserMenu(false); setViewMode('teams'); }}
+                              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                            >
+                              {t('common.manage', 'Manage')} →
+                            </button>
+                          </div>
+                          {allTeams.length === 0 ? (
+                            <p className="text-xs text-slate-400 italic py-1">{t('teams.noTeams', 'No teams yet')}</p>
+                          ) : (
+                            <div className="space-y-0.5 max-h-44 overflow-y-auto pr-1">
+                              {allTeams.map(team => (
+                                <div key={team.id} className="flex items-center gap-2 py-0.5">
+                                  {team.logoUrl ? (
+                                    <img src={team.logoUrl} alt={team.name} className="w-5 h-5 rounded-full object-contain flex-shrink-0" />
+                                  ) : (
+                                    <span className="w-5 h-5 rounded-full flex-shrink-0 inline-block" style={{ background: team.primaryColor || '#94a3b8' }} />
+                                  )}
+                                  <span className="text-xs text-slate-700 truncate">{team.city} {team.name}</span>
+                                  <span className="text-[10px] text-slate-400 ml-auto flex-shrink-0">{team.abbreviation}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="px-3 pb-2 space-y-2 pt-2">
                           <div className="text-xs font-semibold text-slate-500 uppercase">{t('app.schedule')}</div>
                           <button
                             onClick={async () => {
@@ -1349,7 +1370,7 @@ const App: React.FC = () => {
                 onLeagueCreated={handleLeagueCreated}
                 onLeagueUpdated={handleLeagueUpdated}
                 onLeagueDeleted={handleLeagueDeleted}
-                existingTeams={teams}
+                existingTeams={allTeams}
                 maxLeagues={leagueLimit}
                 maxTeams={teamLimit}
             />
