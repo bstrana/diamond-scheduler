@@ -629,7 +629,28 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
           </div>
           <div
             className="rounded-lg overflow-hidden border border-slate-200"
-            style={{ height: `${Math.min(parseInt(height) || 800, 600)}px` }}
+            style={{
+              height: `${Math.min(parseInt(height) || 800, 600)}px`,
+              ...(embedStyles ? {
+                '--embed-primary': embedStyles.primaryColor,
+                '--embed-secondary': embedStyles.secondaryColor,
+                '--embed-bg': embedStyles.backgroundColor,
+                '--embed-text': embedStyles.textColor,
+                '--embed-border': embedStyles.borderColor,
+                '--embed-font': embedStyles.fontFamily,
+                '--embed-font-size': embedStyles.fontSize,
+                '--embed-radius': embedStyles.borderRadius,
+                '--embed-border-width': embedStyles.borderWidth,
+                '--embed-padding': embedStyles.padding,
+                '--embed-card-bg': embedStyles.cardBackgroundColor,
+                '--embed-card-border': embedStyles.cardBorderColor,
+                '--embed-card-radius': embedStyles.cardBorderRadius,
+                '--embed-card-shadow': embedStyles.cardShadow,
+                '--embed-announcement-bg': embedStyles.announcementBackgroundColor,
+                '--embed-announcement-text': embedStyles.announcementTextColor,
+                '--embed-announcement-border': embedStyles.announcementBorderColor,
+              } as React.CSSProperties : {}),
+            }}
           >
             {embedView === 'gamebar' ? (
               <EmbeddableGameBar
