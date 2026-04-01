@@ -23,8 +23,36 @@ const scheduleCollection = process.env.PB_SCHEDULE_COLLECTION || process.env.VIT
 const defaultDurationMinutes = Number.parseInt(process.env.SCHEDULE_EVENT_DURATION_MINUTES || '120', 10);
 
 const pad = (value) => String(value).padStart(2, '0');
-const formatLocalIcsDate = (date) =>
-  `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}00`;
+
+/**
+ * Build an ICS floating-time timestamp (YYYYMMDDTHHMMSS, no Z / no TZID)
+ * directly from stored date (YYYY-MM-DD) and time (HH:MM) strings.
+ * Works independently of server timezone.
+ */
+const icsDateTime = (dateStr, timeStr) => {
+  const [h, m] = (timeStr || '15:00').split(':').map(Number);
+  return `${dateStr.replace(/-/g, '')}T${pad(h)}${pad(m)}00`;
+};
+
+/**
+ * Add minutes to a date+time pair, returning a new { dateStr, timeStr }.
+ * Handles overflow past midnight using only UTC arithmetic on the date part.
+ */
+const addMinutesToDateTime = (dateStr, timeStr, minutes) => {
+  const [h, m] = (timeStr || '15:00').split(':').map(Number);
+  const totalMins = h * 60 + m + minutes;
+  const endH = Math.floor(totalMins / 60) % 24;
+  const endM = totalMins % 60;
+  let endDate = dateStr;
+  if (totalMins >= 24 * 60) {
+    // Advance the date by the number of full days overflowed
+    const overflowDays = Math.floor(totalMins / (24 * 60));
+    const d = new Date(dateStr + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + overflowDays);
+    endDate = d.toISOString().slice(0, 10);
+  }
+  return `${endDate.replace(/-/g, '')}T${pad(endH)}${pad(endM)}00`;
+};
 
 const escapeIcs = (value = '') =>
   value.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
@@ -43,15 +71,16 @@ const buildIcs = (data) => {
   const events = games.map((game) => {
     const home = teamsById.get(game.homeTeamId);
     const away = teamsById.get(game.awayTeamId);
-    const start = new Date(`${game.date}T${game.time || '15:00'}:00`);
-    const end = new Date(start.getTime() + defaultDurationMinutes * 60000);
+    const gameTime = game.time || '15:00';
+    const dtStart = icsDateTime(game.date, gameTime);
+    const dtEnd = addMinutesToDateTime(game.date, gameTime, defaultDurationMinutes);
     const summary = `${away?.name || 'Away'} @ ${home?.name || 'Home'}`;
     return [
       'BEGIN:VEVENT',
       `UID:${game.id}@diamond-scheduler`,
       `DTSTAMP:${dtstamp}`,
-      `DTSTART:${formatLocalIcsDate(start)}`,
-      `DTEND:${formatLocalIcsDate(end)}`,
+      `DTSTART:${dtStart}`,
+      `DTEND:${dtEnd}`,
       `SUMMARY:${escapeIcs(summary)}`,
       `LOCATION:${escapeIcs(game.location || '')}`,
       'END:VEVENT'
