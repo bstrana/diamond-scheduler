@@ -50,7 +50,9 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   const [hideStatusFilter, setHideStatusFilter] = useState(false);
   const [hideLeagueName, setHideLeagueName] = useState(false);
   const [hideGameNumber, setHideGameNumber] = useState(false);
+  const [showCountry, setShowCountry] = useState(false);
   const [standingsInfoText, setStandingsInfoText] = useState<string>('');
+  const [standingsSort, setStandingsSort] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
   const [showStyler, setShowStyler] = useState(false);
   const [embedStyles, setEmbedStyles] = useState<EmbedStyles | null>(null);
@@ -121,6 +123,9 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     if (embedView === 'standings' && standingsInfoText.trim()) {
       params.set('info_text', standingsInfoText.trim());
     }
+    if (embedView === 'standings' && standingsSort.length > 0) {
+      params.set('sort', standingsSort.join(','));
+    }
     if (embedView === 'teamgames') {
       if (selectedTeamId !== 'all') params.set('team', selectedTeamId);
       if (orgName) params.set('org_name', orgName);
@@ -136,6 +141,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
       if (embedView === 'gamebar' && orgName) params.set('org_name', orgName);
       if (embedView === 'calendar' && viewType !== 'grid') params.set('view', viewType);
     }
+    if (showCountry) params.set('show_country', '1');
     params.set('height', `${height}px`);
 
     if (embedStyles) {
@@ -166,7 +172,9 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     hideStatusFilter,
     hideLeagueName,
     hideGameNumber,
+    showCountry,
     standingsInfoText,
+    standingsSort,
   ]);
 
   // Generate embed code
@@ -330,6 +338,24 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
             </div>
           )}
 
+          {/* Show country code – available for all embed types */}
+          {embedView !== 'teamgames' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Team display</label>
+              <div className="space-y-2 rounded-md border border-slate-200 p-3 text-sm">
+                <label className="flex items-center space-x-2 text-slate-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showCountry}
+                    onChange={(e) => setShowCountry(e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>Show country code <span className="text-slate-400">(e.g. USA, CAN, CZE)</span></span>
+                </label>
+              </div>
+            </div>
+          )}
+
           {/* League Filter – multi-select checkbox dropdown */}
           <div ref={leagueDropdownRef} className="relative">
             <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.filterByLeague')}</label>
@@ -481,6 +507,29 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                 />
                 <p className="text-xs text-slate-500 mt-1">{t('embed.standingsInfoTextHelp', 'Shown at the bottom left of the standings table.')}</p>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.standingsSortOrder', 'Default sort order')}</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {standingsSort.map((key, i) => (
+                    <span key={key} className="inline-flex items-center gap-1 bg-indigo-600 text-white text-xs font-semibold rounded px-2 py-0.5">
+                      <span className="opacity-60">{i + 1}.</span> {key}
+                      <button onClick={() => setStandingsSort(prev => prev.filter(k => k !== key))} className="ml-0.5 text-white opacity-70 hover:opacity-100" type="button">×</button>
+                    </span>
+                  ))}
+                  {(['W', 'GB', 'RS', 'RA', 'RD'] as const).filter(k => !standingsSort.includes(k)).map(key => (
+                    <button
+                      key={key}
+                      onClick={() => setStandingsSort(prev => [...prev, key])}
+                      type="button"
+                      className="text-xs font-semibold border border-slate-300 rounded px-2 py-0.5 bg-white hover:bg-slate-50 text-slate-700"
+                    >{key}</button>
+                  ))}
+                </div>
+                {standingsSort.length > 0 && (
+                  <button onClick={() => setStandingsSort([])} type="button" className="text-xs text-slate-400 hover:text-slate-600">Reset</button>
+                )}
+                <p className="text-xs text-slate-500 mt-1">{t('embed.standingsSortHelp', 'Click keys to add in priority order. Viewers can also change the sort interactively.')}</p>
+              </div>
               <div className="bg-indigo-50 border border-indigo-200 rounded-md p-3 text-sm text-indigo-800">
                 {t('embed.standingsNote')}
               </div>
@@ -629,10 +678,32 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
           </div>
           <div
             className="rounded-lg overflow-hidden border border-slate-200"
-            style={{ height: `${Math.min(parseInt(height) || 800, 600)}px` }}
+            style={{
+              height: `${Math.min(parseInt(height) || 800, 600)}px`,
+              ...(embedStyles ? {
+                '--embed-primary': embedStyles.primaryColor,
+                '--embed-secondary': embedStyles.secondaryColor,
+                '--embed-bg': embedStyles.backgroundColor,
+                '--embed-text': embedStyles.textColor,
+                '--embed-border': embedStyles.borderColor,
+                '--embed-font': embedStyles.fontFamily,
+                '--embed-font-size': embedStyles.fontSize,
+                '--embed-radius': embedStyles.borderRadius,
+                '--embed-border-width': embedStyles.borderWidth,
+                '--embed-padding': embedStyles.padding,
+                '--embed-card-bg': embedStyles.cardBackgroundColor,
+                '--embed-card-border': embedStyles.cardBorderColor,
+                '--embed-card-radius': embedStyles.cardBorderRadius,
+                '--embed-card-shadow': embedStyles.cardShadow,
+                '--embed-announcement-bg': embedStyles.announcementBackgroundColor,
+                '--embed-announcement-text': embedStyles.announcementTextColor,
+                '--embed-announcement-border': embedStyles.announcementBorderColor,
+              } as React.CSSProperties : {}),
+            }}
           >
             {embedView === 'gamebar' ? (
               <EmbeddableGameBar
+                showCountry={showCountry}
                 initialLeagueId={selectedLeagueIds.length > 0 ? selectedLeagueIds.join(',') : undefined}
                 initialCategory={selectedCategory !== 'all' ? selectedCategory : undefined}
                 initialTeamId={selectedTeamId !== 'all' ? selectedTeamId : undefined}
@@ -647,12 +718,15 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
               />
             ) : embedView === 'standings' ? (
               <EmbeddableStandings
+                showCountry={showCountry}
                 leagueId={selectedLeagueIds.length > 0 ? selectedLeagueIds.join(',') : undefined}
                 dataOverride={{ leagues, teams, games }}
                 infoText={standingsInfoText.trim() || undefined}
+                defaultSort={standingsSort.length > 0 ? standingsSort.join(',') : undefined}
               />
             ) : embedView === 'series' ? (
               <EmbeddableSeries
+                showCountry={showCountry}
                 leagueId={selectedLeagueIds.length > 0 ? selectedLeagueIds.join(',') : undefined}
                 dataOverride={{ leagues, teams, games }}
               />

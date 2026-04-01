@@ -2,17 +2,20 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Game, League, Team } from '../types';
 import * as storageApi from '../services/storage';
 import { useTranslation } from 'react-i18next';
+import { getCountryCode } from '../utils';
 
 interface EmbeddableSeriesProps {
   leagueId?: string;
   dataOverride?: { leagues: League[]; teams: Team[]; games: Game[] } | null;
   scheduleKey?: string;
+  showCountry?: boolean;
 }
 
 const EmbeddableSeries: React.FC<EmbeddableSeriesProps> = ({
   leagueId,
   dataOverride,
   scheduleKey,
+  showCountry = false,
 }) => {
   const { t } = useTranslation();
   const [data, setData] = useState<{ leagues: League[]; teams: Team[]; games: Game[] } | null>(
@@ -267,7 +270,16 @@ const EmbeddableSeries: React.FC<EmbeddableSeriesProps> = ({
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                           }}>
-                            {team ? `${team.city} ${team.name}` : 'TBD'}
+                            {team ? (
+                            <>
+                              {team.city} {team.name}
+                              {showCountry && getCountryCode(team.country) && (
+                                <span style={{ opacity: 0.55, fontSize: '0.82em', marginLeft: '3px', letterSpacing: '0.05em' }}>
+                                  ({getCountryCode(team.country)})
+                                </span>
+                              )}
+                            </>
+                          ) : 'TBD'}
                           </span>
                           {hasResults && (
                             <span style={{

@@ -1,9 +1,23 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { League, Team, Game } from '../types';
-import { buildStandingsShareText, copyToClipboard, calculateStandings, StandingsRow } from '../utils';
-import { Share2, Copy, Check, ImageDown } from 'lucide-react';
+import { buildStandingsShareText, copyToClipboard, calculateStandings, StandingsRow, getCountryCode } from '../utils';
+import { Share2, Copy, Check, ImageDown, GripVertical, ChevronDown, X } from 'lucide-react';
 import * as storageApi from '../services/storage';
 import { useTranslation } from 'react-i18next';
+
+type SortKey = 'W' | 'GB' | 'RS' | 'RA' | 'RD';
+const ALL_SORT_KEYS: SortKey[] = ['W', 'GB', 'RS', 'RA', 'RD'];
+
+const compareByKey = (a: StandingsRow, b: StandingsRow, key: SortKey): number => {
+  switch (key) {
+    case 'W':  return b.w - a.w;
+    case 'GB': return (a.gb ?? 0) - (b.gb ?? 0);
+    case 'RS': return b.rs - a.rs;
+    case 'RA': return a.ra - b.ra;
+    case 'RD': return b.diff - a.diff;
+    default:   return 0;
+  }
+};
 
 function getGameLeagueIds(game: Game): string[] {
   if (game.leagueIds && game.leagueIds.length > 0) return game.leagueIds;
@@ -27,6 +41,8 @@ interface EmbeddableStandingsProps {
   dataOverride?: { leagues: League[]; teams: Team[]; games: Game[] } | null;
   scheduleKey?: string;
   infoText?: string;
+  showCountry?: boolean;
+  defaultSort?: string;
 }
 
 const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
@@ -34,6 +50,8 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
   dataOverride,
   scheduleKey,
   infoText,
+  showCountry = false,
+  defaultSort,
 }) => {
   const { t } = useTranslation();
   const [data, setData] = useState<{ leagues: League[]; teams: Team[]; games: Game[] } | null>(
@@ -42,13 +60,18 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
   const [isLoading, setIsLoading] = useState(!dataOverride && !!scheduleKey);
   const allowedLeagueIds = useMemo(() => (leagueId || '').split(',').filter(Boolean), [leagueId]);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>(allowedLeagueIds.length === 1 ? allowedLeagueIds[0] : '');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const shareMenuRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const sortPanelRef = useRef<HTMLDivElement>(null);
+  const [activeSortKeys, setActiveSortKeys] = useState<SortKey[]>([]);
+  const [sortPanelOpen, setSortPanelOpen] = useState(false);
+  const [useCustomSort, setUseCustomSort] = useState(false);
+  const [customOrder, setCustomOrder] = useState<string[]>([]);
+  const [dragSrcId, setDragSrcId] = useState<string | null>(null);
 
   useEffect(() => {
     if (dataOverride) { setData(dataOverride); return; }
@@ -82,16 +105,33 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showShareMenu]);
 
-  const categories = useMemo(
-    () => Array.from(new Set((data?.leagues ?? []).map(l => l.category).filter(Boolean))),
-    [data]
-  );
+  useEffect(() => {
+    if (!sortPanelOpen) return;
+    const handle = (e: MouseEvent) => {
+      if (sortPanelRef.current && !sortPanelRef.current.contains(e.target as Node)) {
+        setSortPanelOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [sortPanelOpen]);
+
+  useEffect(() => {
+    if (!defaultSort) return;
+    const keys = defaultSort.split(',').filter((k): k is SortKey => ALL_SORT_KEYS.includes(k as SortKey));
+    if (keys.length > 0) setActiveSortKeys(keys);
+  }, [defaultSort]);
+
+  // Reset custom order when active league changes
+  useEffect(() => {
+    setCustomOrder([]);
+  }, [selectedLeagueId]);
 
   const visibleLeagues = useMemo(() => {
-    const all = (data?.leagues ?? []).filter(l => selectedCategory === 'all' || l.category === selectedCategory);
+    const all = data?.leagues ?? [];
     if (allowedLeagueIds.length > 1) return all.filter(l => allowedLeagueIds.includes(l.id));
     return all;
-  }, [data, selectedCategory, allowedLeagueIds]);
+  }, [data, allowedLeagueIds]);
 
   const league = useMemo(
     () => visibleLeagues.find(l => l.id === selectedLeagueId) ?? visibleLeagues[0] ?? null,
@@ -102,6 +142,26 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
     () => (league && data ? calculateStandings(league, data.games) : []),
     [league, data]
   );
+
+  const sortedStandings = useMemo(() => {
+    if (useCustomSort) {
+      if (customOrder.length === 0) return standings;
+      const orderMap = new Map<string, number>(customOrder.map((id, i) => [id, i]));
+      return [...standings].sort((a, b) => {
+        const ai: number = orderMap.get(a.team.id) ?? Infinity;
+        const bi: number = orderMap.get(b.team.id) ?? Infinity;
+        return ai - bi;
+      });
+    }
+    if (activeSortKeys.length === 0) return standings;
+    return [...standings].sort((a, b) => {
+      for (const key of activeSortKeys) {
+        const c = compareByKey(a, b, key);
+        if (c !== 0) return c;
+      }
+      return 0;
+    });
+  }, [standings, activeSortKeys, useCustomSort, customOrder]);
 
   const totalGames = standings.reduce((s, r) => s + r.w + r.l, 0) / 2;
 
@@ -168,48 +228,25 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
 
   return (
     <div style={root}>
-      {/* Category + League selectors */}
-      {(categories.length > 1 || (visibleLeagues.length > 1 && allowedLeagueIds.length !== 1)) && (
-        <div style={{ marginBottom: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {categories.length > 1 && (
-            <select
-              value={selectedCategory}
-              onChange={e => setSelectedCategory(e.target.value)}
-              style={{
-                border: '1px solid var(--embed-border, #e2e8f0)',
-                borderRadius: 'var(--embed-radius, 6px)',
-                padding: '6px 10px',
-                background: 'var(--embed-card-bg, #fff)',
-                fontSize: 'inherit',
-                color: 'inherit',
-              }}
-            >
-              <option value="all">{t('standings.allCategories')}</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          )}
-          {visibleLeagues.length > 1 && allowedLeagueIds.length !== 1 && (
-            <select
-              value={selectedLeagueId}
-              onChange={e => setSelectedLeagueId(e.target.value)}
-              style={{
-                border: '1px solid var(--embed-border, #e2e8f0)',
-                borderRadius: 'var(--embed-radius, 6px)',
-                padding: '6px 10px',
-                background: 'var(--embed-card-bg, #fff)',
-                fontSize: 'inherit',
-                color: 'inherit',
-              }}
-            >
-              {visibleLeagues.map(l => (
-                <option key={l.id} value={l.id}>
-                  {l.shortName || l.name}{l.category && categories.length <= 1 ? ` – ${l.category}` : ''}
-                </option>
-              ))}
-            </select>
-          )}
+      {/* League selector */}
+      {visibleLeagues.length > 1 && allowedLeagueIds.length !== 1 && (
+        <div style={{ marginBottom: '12px' }}>
+          <select
+            value={selectedLeagueId}
+            onChange={e => setSelectedLeagueId(e.target.value)}
+            style={{
+              border: '1px solid var(--embed-border, #e2e8f0)',
+              borderRadius: 'var(--embed-radius, 6px)',
+              padding: '6px 10px',
+              background: 'var(--embed-card-bg, #fff)',
+              fontSize: 'inherit',
+              color: 'inherit',
+            }}
+          >
+            {visibleLeagues.map(l => (
+              <option key={l.id} value={l.id}>{l.shortName || l.name}</option>
+            ))}
+          </select>
         </div>
       )}
 
@@ -296,11 +333,105 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
               style={{ width: '28px', height: '28px', objectFit: 'contain', flexShrink: 0 }}
             />
           )}
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: '0.95em', lineHeight: 1.2 }}>
               {league.name}{league.category ? ` – ${league.category}` : ''}
             </div>
             <div style={{ fontSize: '0.72em', opacity: 0.75 }}>{t('standings.title')}</div>
+          </div>
+          {/* Sort selector */}
+          <div ref={sortPanelRef} style={{ position: 'relative', flexShrink: 0 }}>
+            <button
+              onClick={() => setSortPanelOpen(p => !p)}
+              title="Sort order"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '4px',
+                padding: '4px 8px', borderRadius: '6px',
+                border: '1px solid var(--embed-border, #e2e8f0)',
+                background: (activeSortKeys.length > 0 || useCustomSort) ? 'var(--embed-primary, #4f46e5)' : 'var(--embed-card-bg, #fff)',
+                color: (activeSortKeys.length > 0 || useCustomSort) ? '#fff' : 'var(--embed-text, #64748b)',
+                cursor: 'pointer', fontSize: '0.72em', fontWeight: 600, lineHeight: 1,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {useCustomSort ? 'Custom' : activeSortKeys.length > 0 ? activeSortKeys.join(' › ') : 'Sort'}
+              <ChevronDown size={11} />
+            </button>
+            {sortPanelOpen && (
+              <div style={{
+                position: 'absolute', top: '100%', right: 0, marginTop: '4px', zIndex: 40,
+                background: 'var(--embed-card-bg, #fff)',
+                border: '1px solid var(--embed-border, #e2e8f0)',
+                borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                padding: '10px', width: '210px',
+              }}>
+                <div style={{ fontSize: '0.72em', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  Sort Priority
+                </div>
+                {/* Active sort keys */}
+                {activeSortKeys.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
+                    {activeSortKeys.map((key, i) => (
+                      <span key={key} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '3px',
+                        background: 'var(--embed-primary, #4f46e5)', color: '#fff',
+                        borderRadius: '4px', padding: '2px 6px', fontSize: '0.8em', fontWeight: 700,
+                      }}>
+                        <span style={{ opacity: 0.7, fontSize: '0.85em' }}>{i + 1}.</span> {key}
+                        <button
+                          onClick={() => setActiveSortKeys(prev => prev.filter(k => k !== key))}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center', opacity: 0.8 }}
+                        ><X size={10} /></button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* Available keys to add */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '10px' }}>
+                  {ALL_SORT_KEYS.filter(k => !activeSortKeys.includes(k)).map(key => (
+                    <button
+                      key={key}
+                      onClick={() => { setUseCustomSort(false); setActiveSortKeys(prev => [...prev, key]); }}
+                      style={{
+                        background: 'var(--embed-bg, #f8fafc)',
+                        border: '1px solid var(--embed-border, #e2e8f0)',
+                        borderRadius: '4px', padding: '2px 8px', fontSize: '0.8em', fontWeight: 600,
+                        cursor: 'pointer', color: 'var(--embed-text, #334155)',
+                      }}
+                    >{key}</button>
+                  ))}
+                </div>
+                {/* Divider */}
+                <div style={{ borderTop: '1px solid var(--embed-border, #e2e8f0)', marginBottom: '8px' }} />
+                {/* Custom sort toggle */}
+                <button
+                  onClick={() => { setUseCustomSort(p => !p); if (!useCustomSort) setActiveSortKeys([]); if (customOrder.length === 0) setCustomOrder(sortedStandings.map(r => r.team.id)); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px', width: '100%',
+                    background: useCustomSort ? 'var(--embed-primary, #4f46e5)' : 'var(--embed-bg, #f8fafc)',
+                    color: useCustomSort ? '#fff' : 'var(--embed-text, #334155)',
+                    border: '1px solid var(--embed-border, #e2e8f0)',
+                    borderRadius: '6px', padding: '5px 8px', cursor: 'pointer',
+                    fontSize: '0.8em', fontWeight: 600, textAlign: 'left',
+                  }}
+                >
+                  <GripVertical size={12} />
+                  Custom order (drag rows)
+                </button>
+                {(activeSortKeys.length > 0 || useCustomSort) && (
+                  <button
+                    onClick={() => { setActiveSortKeys([]); setUseCustomSort(false); setCustomOrder([]); }}
+                    style={{
+                      marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px', width: '100%',
+                      background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75em',
+                      color: '#94a3b8', padding: '2px 4px', textAlign: 'left',
+                    }}
+                  >
+                    <X size={10} /> Reset to default
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
@@ -320,7 +451,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
             </tr>
           </thead>
           <tbody>
-            {standings.length === 0 ? (
+            {sortedStandings.length === 0 ? (
               <tr>
                 <td
                   colSpan={10}
@@ -330,17 +461,41 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
                 </td>
               </tr>
             ) : (
-              standings.map((row, idx) => (
+              sortedStandings.map((row, idx) => (
                 <tr
                   key={row.team.id}
+                  draggable={useCustomSort}
+                  onDragStart={useCustomSort ? () => setDragSrcId(row.team.id) : undefined}
+                  onDragOver={useCustomSort ? (e) => e.preventDefault() : undefined}
+                  onDrop={useCustomSort ? (e) => {
+                    e.preventDefault();
+                    if (!dragSrcId || dragSrcId === row.team.id) return;
+                    setCustomOrder(prev => {
+                      const base = prev.length > 0 ? [...prev] : sortedStandings.map(r => r.team.id);
+                      const srcIdx = base.indexOf(dragSrcId);
+                      const tgtIdx = base.indexOf(row.team.id);
+                      if (srcIdx === -1 || tgtIdx === -1) return prev;
+                      const next = [...base];
+                      next.splice(srcIdx, 1);
+                      next.splice(tgtIdx, 0, dragSrcId);
+                      return next;
+                    });
+                    setDragSrcId(null);
+                  } : undefined}
+                  onDragEnd={useCustomSort ? () => setDragSrcId(null) : undefined}
                   style={{
                     borderTop: '1px solid var(--embed-border, #e2e8f0)',
-                    background: idx % 2 === 0
-                      ? 'var(--embed-card-bg, #fff)'
-                      : 'var(--embed-bg, #f8fafc)',
+                    background: dragSrcId === row.team.id
+                      ? 'var(--embed-primary-light, rgba(79,70,229,0.07))'
+                      : idx % 2 === 0
+                        ? 'var(--embed-card-bg, #fff)'
+                        : 'var(--embed-bg, #f8fafc)',
+                    cursor: useCustomSort ? 'grab' : 'default',
                   }}
                 >
-                  <td style={{ ...tdStyle, paddingLeft: '14px', color: '#94a3b8', fontWeight: 500 }}>{idx + 1}</td>
+                  <td style={{ ...tdStyle, paddingLeft: '14px', color: '#94a3b8', fontWeight: 500 }}>
+                    {useCustomSort ? <GripVertical size={12} style={{ opacity: 0.4 }} /> : idx + 1}
+                  </td>
                   <td style={{ ...tdStyle, textAlign: 'left' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {row.team.logoUrl ? (
@@ -361,6 +516,11 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
                         <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: '4px', fontSize: '0.85em' }}>
                           {row.team.abbreviation}
                         </span>
+                        {showCountry && getCountryCode(row.team.country) && (
+                          <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: '4px', fontSize: '0.82em', letterSpacing: '0.05em' }}>
+                            ({getCountryCode(row.team.country)})
+                          </span>
+                        )}
                       </span>
                     </div>
                   </td>

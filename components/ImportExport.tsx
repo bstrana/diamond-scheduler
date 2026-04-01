@@ -100,12 +100,12 @@ const ImportExport: React.FC<ImportExportProps> = ({
     onAfterAction?.();
   };
 
-  const formatICSDate = (date: string, time: string) => {
-    const [year, month, day] = date.split('-').map(Number);
-    const [hour, minute] = (time || '15:00').split(':').map(Number);
-    const dt = new Date(year, (month || 1) - 1, day || 1, hour || 0, minute || 0, 0);
-    const pad = (value: number) => String(value).padStart(2, '0');
-    return `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}T${pad(dt.getHours())}${pad(dt.getMinutes())}00`;
+  // Build ICS floating-time stamp directly from stored strings — no Date
+  // object, no timezone conversion risk regardless of browser/OS locale.
+  const formatICSDate = (date: string, time: string): string => {
+    const pad = (v: number) => String(v).padStart(2, '0');
+    const [h, m] = (time || '15:00').split(':').map(Number);
+    return `${date.replace(/-/g, '')}T${pad(h || 0)}${pad(m || 0)}00`;
   };
 
   const escapeICSText = (value: string) =>
@@ -116,11 +116,20 @@ const ImportExport: React.FC<ImportExportProps> = ({
     const events = allGames.map((g) => {
       const home = teams.find(t => t.id === g.homeTeamId)?.name || 'Unknown';
       const away = teams.find(t => t.id === g.awayTeamId)?.name || 'Unknown';
-      const start = formatICSDate(g.date, g.time || '15:00');
-      const endDate = new Date(`${g.date}T${g.time || '15:00'}:00`);
-      endDate.setHours(endDate.getHours() + 2);
-      const pad = (value: number) => String(value).padStart(2, '0');
-      const end = `${endDate.getFullYear()}${pad(endDate.getMonth() + 1)}${pad(endDate.getDate())}T${pad(endDate.getHours())}${pad(endDate.getMinutes())}00`;
+      const gameTime = g.time || '15:00';
+      const start = formatICSDate(g.date, gameTime);
+      const pad = (v: number) => String(v).padStart(2, '0');
+      const [sh, sm] = gameTime.split(':').map(Number);
+      const totalEndMins = (sh || 0) * 60 + (sm || 0) + 120; // 2-hour default
+      const endH = Math.floor(totalEndMins / 60) % 24;
+      const endM = totalEndMins % 60;
+      let endDateStr = g.date;
+      if (totalEndMins >= 24 * 60) {
+        const d = new Date(g.date + 'T00:00:00Z');
+        d.setUTCDate(d.getUTCDate() + Math.floor(totalEndMins / (24 * 60)));
+        endDateStr = d.toISOString().slice(0, 10);
+      }
+      const end = `${endDateStr.replace(/-/g, '')}T${pad(endH)}${pad(endM)}00`;
       const summary = `${away} @ ${home}`;
       return [
         'BEGIN:VEVENT',
