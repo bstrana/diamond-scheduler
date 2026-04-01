@@ -758,7 +758,7 @@ const GameBar: React.FC<GameBarProps> = ({
                 const leagueColor = gameLeagues[0]?.color;
                 const cardBorderColor = isLive
                   ? '#22c55e'
-                  : leagueColor || 'var(--embed-card-border, #e2e8f0)';
+                  : `var(--embed-card-border, ${leagueColor || '#e2e8f0'})`;
                 const cardHoverBorderColor = isLive
                   ? '#16a34a'
                   : leagueColor || 'var(--embed-primary, #6366f1)';
@@ -777,7 +777,7 @@ const GameBar: React.FC<GameBarProps> = ({
                       backgroundColor: 'var(--embed-card-bg, #ffffff)',
                       border: isLive
                         ? '1.5px solid #22c55e'
-                        : `var(--embed-border-width, 1px) solid ${leagueColor || 'var(--embed-card-border, #e2e8f0)'}`,
+                        : `var(--embed-border-width, 1px) solid var(--embed-card-border, ${leagueColor || '#e2e8f0'})`,
                       borderRadius: 'var(--embed-card-radius, 0.5rem)',
                       boxShadow: isLive
                         ? '0 0 0 2px rgba(34,197,94,0.15)'
