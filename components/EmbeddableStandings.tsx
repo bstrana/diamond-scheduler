@@ -42,7 +42,6 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
   const [isLoading, setIsLoading] = useState(!dataOverride && !!scheduleKey);
   const allowedLeagueIds = useMemo(() => (leagueId || '').split(',').filter(Boolean), [leagueId]);
   const [selectedLeagueId, setSelectedLeagueId] = useState<string>(allowedLeagueIds.length === 1 ? allowedLeagueIds[0] : '');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -82,16 +81,11 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showShareMenu]);
 
-  const categories = useMemo(
-    () => Array.from(new Set((data?.leagues ?? []).map(l => l.category).filter(Boolean))),
-    [data]
-  );
-
   const visibleLeagues = useMemo(() => {
-    const all = (data?.leagues ?? []).filter(l => selectedCategory === 'all' || l.category === selectedCategory);
+    const all = data?.leagues ?? [];
     if (allowedLeagueIds.length > 1) return all.filter(l => allowedLeagueIds.includes(l.id));
     return all;
-  }, [data, selectedCategory, allowedLeagueIds]);
+  }, [data, allowedLeagueIds]);
 
   const league = useMemo(
     () => visibleLeagues.find(l => l.id === selectedLeagueId) ?? visibleLeagues[0] ?? null,
@@ -168,48 +162,25 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
 
   return (
     <div style={root}>
-      {/* Category + League selectors */}
-      {(categories.length > 1 || (visibleLeagues.length > 1 && allowedLeagueIds.length !== 1)) && (
-        <div style={{ marginBottom: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {categories.length > 1 && (
-            <select
-              value={selectedCategory}
-              onChange={e => setSelectedCategory(e.target.value)}
-              style={{
-                border: '1px solid var(--embed-border, #e2e8f0)',
-                borderRadius: 'var(--embed-radius, 6px)',
-                padding: '6px 10px',
-                background: 'var(--embed-card-bg, #fff)',
-                fontSize: 'inherit',
-                color: 'inherit',
-              }}
-            >
-              <option value="all">{t('standings.allCategories')}</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          )}
-          {visibleLeagues.length > 1 && allowedLeagueIds.length !== 1 && (
-            <select
-              value={selectedLeagueId}
-              onChange={e => setSelectedLeagueId(e.target.value)}
-              style={{
-                border: '1px solid var(--embed-border, #e2e8f0)',
-                borderRadius: 'var(--embed-radius, 6px)',
-                padding: '6px 10px',
-                background: 'var(--embed-card-bg, #fff)',
-                fontSize: 'inherit',
-                color: 'inherit',
-              }}
-            >
-              {visibleLeagues.map(l => (
-                <option key={l.id} value={l.id}>
-                  {l.shortName || l.name}{l.category && categories.length <= 1 ? ` – ${l.category}` : ''}
-                </option>
-              ))}
-            </select>
-          )}
+      {/* League selector */}
+      {visibleLeagues.length > 1 && allowedLeagueIds.length !== 1 && (
+        <div style={{ marginBottom: '12px' }}>
+          <select
+            value={selectedLeagueId}
+            onChange={e => setSelectedLeagueId(e.target.value)}
+            style={{
+              border: '1px solid var(--embed-border, #e2e8f0)',
+              borderRadius: 'var(--embed-radius, 6px)',
+              padding: '6px 10px',
+              background: 'var(--embed-card-bg, #fff)',
+              fontSize: 'inherit',
+              color: 'inherit',
+            }}
+          >
+            {visibleLeagues.map(l => (
+              <option key={l.id} value={l.id}>{l.shortName || l.name}</option>
+            ))}
+          </select>
         </div>
       )}
 
