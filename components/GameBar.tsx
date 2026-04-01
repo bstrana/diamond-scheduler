@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { Game, Team, League } from '../types';
-import { formatDate, buildGameShareText, copyToClipboard } from '../utils';
+import { formatDate, buildGameShareText, copyToClipboard, getCountryCode } from '../utils';
 import { ChevronLeft, ChevronRight, MapPin, Calendar as CalIcon, Clock, ChevronDown, SlidersHorizontal, Radio, Share2, Copy, Check, Maximize2, ImageDown, Link } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -29,6 +29,8 @@ interface GameBarProps {
   includePastDays?: number;
   /** Organisation name shown in the full-screen game card branding footer */
   orgName?: string;
+  /** Show ISO 3166-1 alpha-3 country code next to team names */
+  showCountry?: boolean;
 }
 
 const GameBar: React.FC<GameBarProps> = ({
@@ -53,6 +55,7 @@ const GameBar: React.FC<GameBarProps> = ({
   hideGameNumber = false,
   includePastDays = 0,
   orgName,
+  showCountry = false,
 }) => {
   const { t, i18n } = useTranslation();
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -337,6 +340,9 @@ const GameBar: React.FC<GameBarProps> = ({
         )}
         <span style={{ color: '#fff', fontWeight: 800, fontSize: '1.1rem', textShadow: '0 2px 6px rgba(0,0,0,0.7)', textAlign: 'center', letterSpacing: '0.04em' }}>{team.abbreviation}</span>
         <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.78rem', textAlign: 'center' }}>{team.city}</span>
+        {showCountry && getCountryCode(team.country) && (
+          <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.72rem', letterSpacing: '0.08em', textAlign: 'center' }}>({getCountryCode(team.country)})</span>
+        )}
         {hasScore && score !== null && (
           <span style={{ color: won ? '#4ade80' : '#fff', fontSize: '3rem', fontWeight: 900, lineHeight: 1, textShadow: won ? '0 0 24px rgba(74,222,128,0.6)' : '0 2px 10px rgba(0,0,0,0.5)', fontVariantNumeric: 'tabular-nums' }}>{score}</span>
         )}
@@ -1107,6 +1113,11 @@ const GameBar: React.FC<GameBarProps> = ({
                               <span className="text-xs" style={{ color: 'var(--embed-text, #64748b)' }}>
                                 {team?.city ?? ''}
                               </span>
+                              {showCountry && team && getCountryCode(team.country) && (
+                                <span className="text-xs" style={{ color: 'var(--embed-text, #94a3b8)', letterSpacing: '0.05em' }}>
+                                  ({getCountryCode(team.country)})
+                                </span>
+                              )}
                               {team && teamRecords[team.id] && (
                                 <span className="text-xs font-medium" style={{ color: 'var(--embed-text, #94a3b8)' }}>
                                   {teamRecords[team.id].w}-{teamRecords[team.id].l}

@@ -50,6 +50,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   const [hideStatusFilter, setHideStatusFilter] = useState(false);
   const [hideLeagueName, setHideLeagueName] = useState(false);
   const [hideGameNumber, setHideGameNumber] = useState(false);
+  const [showCountry, setShowCountry] = useState(false);
   const [standingsInfoText, setStandingsInfoText] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [showStyler, setShowStyler] = useState(false);
@@ -136,6 +137,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
       if (embedView === 'gamebar' && orgName) params.set('org_name', orgName);
       if (embedView === 'calendar' && viewType !== 'grid') params.set('view', viewType);
     }
+    if (showCountry) params.set('show_country', '1');
     params.set('height', `${height}px`);
 
     if (embedStyles) {
@@ -166,6 +168,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     hideStatusFilter,
     hideLeagueName,
     hideGameNumber,
+    showCountry,
     standingsInfoText,
   ]);
 
@@ -326,6 +329,24 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                     </label>
                   </>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Show country code – available for all embed types */}
+          {embedView !== 'teamgames' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Team display</label>
+              <div className="space-y-2 rounded-md border border-slate-200 p-3 text-sm">
+                <label className="flex items-center space-x-2 text-slate-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showCountry}
+                    onChange={(e) => setShowCountry(e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>Show country code <span className="text-slate-400">(e.g. USA, CAN, CZE)</span></span>
+                </label>
               </div>
             </div>
           )}
@@ -654,6 +675,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
           >
             {embedView === 'gamebar' ? (
               <EmbeddableGameBar
+                showCountry={showCountry}
                 initialLeagueId={selectedLeagueIds.length > 0 ? selectedLeagueIds.join(',') : undefined}
                 initialCategory={selectedCategory !== 'all' ? selectedCategory : undefined}
                 initialTeamId={selectedTeamId !== 'all' ? selectedTeamId : undefined}
@@ -668,12 +690,14 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
               />
             ) : embedView === 'standings' ? (
               <EmbeddableStandings
+                showCountry={showCountry}
                 leagueId={selectedLeagueIds.length > 0 ? selectedLeagueIds.join(',') : undefined}
                 dataOverride={{ leagues, teams, games }}
                 infoText={standingsInfoText.trim() || undefined}
               />
             ) : embedView === 'series' ? (
               <EmbeddableSeries
+                showCountry={showCountry}
                 leagueId={selectedLeagueIds.length > 0 ? selectedLeagueIds.join(',') : undefined}
                 dataOverride={{ leagues, teams, games }}
               />

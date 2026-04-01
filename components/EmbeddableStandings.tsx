@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { League, Team, Game } from '../types';
-import { buildStandingsShareText, copyToClipboard, calculateStandings, StandingsRow } from '../utils';
+import { buildStandingsShareText, copyToClipboard, calculateStandings, StandingsRow, getCountryCode } from '../utils';
 import { Share2, Copy, Check, ImageDown } from 'lucide-react';
 import * as storageApi from '../services/storage';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +27,7 @@ interface EmbeddableStandingsProps {
   dataOverride?: { leagues: League[]; teams: Team[]; games: Game[] } | null;
   scheduleKey?: string;
   infoText?: string;
+  showCountry?: boolean;
 }
 
 const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
@@ -34,6 +35,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
   dataOverride,
   scheduleKey,
   infoText,
+  showCountry = false,
 }) => {
   const { t } = useTranslation();
   const [data, setData] = useState<{ leagues: League[]; teams: Team[]; games: Game[] } | null>(
@@ -332,6 +334,11 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
                         <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: '4px', fontSize: '0.85em' }}>
                           {row.team.abbreviation}
                         </span>
+                        {showCountry && getCountryCode(row.team.country) && (
+                          <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: '4px', fontSize: '0.82em', letterSpacing: '0.05em' }}>
+                            ({getCountryCode(row.team.country)})
+                          </span>
+                        )}
                       </span>
                     </div>
                   </td>

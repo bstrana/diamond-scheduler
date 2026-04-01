@@ -1194,3 +1194,44 @@ export const generateRoundRobinSchedule = (
 
   return games;
 };
+
+// ── Country code lookup ───────────────────────────────────────────────────────
+// Maps the country names stored in Team.country to ISO 3166-1 alpha-3 codes.
+export const COUNTRY_CODES: Record<string, string> = {
+  // North America
+  'USA': 'USA', 'Canada': 'CAN', 'Mexico': 'MEX',
+  // Europe
+  'Albania': 'ALB', 'Andorra': 'AND', 'Armenia': 'ARM', 'Austria': 'AUT',
+  'Azerbaijan': 'AZE', 'Belarus': 'BLR', 'Belgium': 'BEL',
+  'Bosnia and Herzegovina': 'BIH', 'Bulgaria': 'BGR', 'Croatia': 'HRV',
+  'Cyprus': 'CYP', 'Czechia': 'CZE', 'Denmark': 'DNK', 'Estonia': 'EST',
+  'Finland': 'FIN', 'France': 'FRA', 'Georgia': 'GEO', 'Germany': 'DEU',
+  'Greece': 'GRC', 'Hungary': 'HUN', 'Iceland': 'ISL', 'Ireland': 'IRL',
+  'Italy': 'ITA', 'Kosovo': 'XKX', 'Latvia': 'LVA', 'Liechtenstein': 'LIE',
+  'Lithuania': 'LTU', 'Luxembourg': 'LUX', 'Malta': 'MLT', 'Moldova': 'MDA',
+  'Monaco': 'MCO', 'Montenegro': 'MNE', 'Netherlands': 'NLD',
+  'North Macedonia': 'MKD', 'Norway': 'NOR', 'Poland': 'POL',
+  'Portugal': 'PRT', 'Romania': 'ROU', 'Russia': 'RUS', 'San Marino': 'SMR',
+  'Serbia': 'SRB', 'Slovakia': 'SVK', 'Slovenia': 'SVN', 'Spain': 'ESP',
+  'Sweden': 'SWE', 'Switzerland': 'CHE', 'Turkey': 'TUR', 'Ukraine': 'UKR',
+  'United Kingdom': 'GBR', 'Vatican City': 'VAT',
+  // Asia-Pacific
+  'Australia': 'AUS', 'New Zealand': 'NZL', 'China': 'CHN', 'India': 'IND',
+  'Japan': 'JPN', 'Philippines': 'PHL', 'South Korea': 'KOR', 'Taiwan': 'TWN',
+  // Africa & Americas
+  'South Africa': 'ZAF', 'Argentina': 'ARG', 'Brazil': 'BRA', 'Chile': 'CHL',
+  'Colombia': 'COL', 'Cuba': 'CUB', 'Dominican Republic': 'DOM',
+  'Venezuela': 'VEN',
+};
+
+/**
+ * Return the ISO 3166-1 alpha-3 code for a stored country name.
+ * Falls back to the value itself if it already looks like a short code (≤4 chars).
+ */
+export const getCountryCode = (country?: string): string | null => {
+  if (!country) return null;
+  if (COUNTRY_CODES[country]) return COUNTRY_CODES[country];
+  // Accept values that are already short codes (legacy data, custom entries)
+  if (country.length >= 2 && country.length <= 4) return country.toUpperCase();
+  return null;
+};

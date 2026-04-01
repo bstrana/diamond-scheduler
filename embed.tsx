@@ -31,6 +31,7 @@ const hideLeagueName = urlParams.get('hide_league_name') === '1';
 const hideGameNumber = urlParams.get('hide_game_number') === '1';
 const standingsInfoText = urlParams.get('info_text') || undefined;
 const orgName = urlParams.get('org_name') || undefined;
+const showCountry = urlParams.get('show_country') === '1';
 
 // Sanitize CSS property values to prevent CSS injection
 const sanitizeCssColor = (value: unknown, fallback: string): string => {
@@ -223,6 +224,7 @@ if (!rootElement) {
           hideLeagueName={hideLeagueName}
           hideGameNumber={hideGameNumber}
           orgName={orgName}
+          showCountry={showCountry}
         />
       );
     }
@@ -238,6 +240,7 @@ if (!rootElement) {
             games: scheduleData.games
           } : null}
           infoText={standingsInfoText}
+          showCountry={showCountry}
         />
       );
     }
@@ -252,6 +255,7 @@ if (!rootElement) {
             teams: scheduleData.teams,
             games: scheduleData.games
           } : null}
+          showCountry={showCountry}
         />
       );
     }
