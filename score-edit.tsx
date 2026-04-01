@@ -85,7 +85,7 @@ const ScoreEditApp: React.FC = () => {
   const [awayTeam, setAwayTeam] = useState<Team | null>(null);
 
   // form state
-  const [status, setStatus] = useState<Game['status']>('final');
+  const [status, setStatus] = useState<Game['status']>('scheduled');
   const [innings, setInnings] = useState<Array<{ home: number | null; away: number | null }>>([
     { home: null, away: null },
   ]);
@@ -118,7 +118,7 @@ const ScoreEditApp: React.FC = () => {
       setGame(g);
 
       // pre-fill current values if already scored
-      if (g.status !== 'scheduled') setStatus(g.status);
+      setStatus(g.status);
       if (g.recap) setRecap(g.recap);
       if (g.scores?.innings?.length) {
         setInnings(g.scores.innings.map(i => ({ home: i.home, away: i.away })));

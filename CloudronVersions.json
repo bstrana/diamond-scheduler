@@ -2196,7 +2196,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "",
+        "changelog": "Feat: standings sort selector — choose sort priority (W, GB, RS, RA, RD) or enable custom drag-and-drop row ordering; default sort can be pre-configured in embed code generator.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2205,19 +2205,19 @@
       "ts": "Wed, 01 Apr 2026 00:00:00 GMT",
       "publishState": "published"
     },
-    "1.0.57": {
+    "1.0.58": {
       "manifest": {
         "id": "io.github.bstrana.diamond-scheduler",
         "title": "Diamond Scheduler",
         "author": "bstrana",
         "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
         "tagline": "Baseball & multi-sport league scheduling",
-        "version": "1.0.57",
+        "version": "1.0.58",
         "website": "https://github.com/bstrana/diamond-scheduler",
         "contactEmail": "support@example.com",
         "healthCheckPath": "/health",
         "httpPort": 8000,
-        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.57",
+        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.58",
         "addons": {
           "localstorage": {}
         },
@@ -2234,7 +2234,45 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: standings sort selector — choose sort priority (W, GB, RS, RA, RD) or enable custom drag-and-drop row ordering; default sort can be pre-configured in embed code generator.",
+        "changelog": "Feat: standings sort selector — choose sort priority (W, GB, RS, RA, RD, PCT) or use default; default sort pre-configured in embed code generator.",
+        "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
+        "packagerName": "bstrana",
+        "packagerUrl": "https://github.com/bstrana"
+      },
+      "creationDate": "Wed, 01 Apr 2026 00:00:00 GMT",
+      "ts": "Wed, 01 Apr 2026 00:00:00 GMT",
+      "publishState": "published"
+    },
+    "1.0.58": {
+      "manifest": {
+        "id": "io.github.bstrana.diamond-scheduler",
+        "title": "Diamond Scheduler",
+        "author": "bstrana",
+        "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
+        "tagline": "Baseball & multi-sport league scheduling",
+        "version": "1.0.58",
+        "website": "https://github.com/bstrana/diamond-scheduler",
+        "contactEmail": "support@example.com",
+        "healthCheckPath": "/health",
+        "httpPort": 8000,
+        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.58",
+        "addons": {
+          "localstorage": {}
+        },
+        "manifestVersion": 2,
+        "minBoxVersion": "9.1.0",
+        "icon": "file://appicon.png",
+        "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
+        "mediaLinks": [
+          "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
+        ],
+        "changelog": "Feat: embed style templates — save named style presets in the browser and reload them via a dropdown; stored in localStorage, no backend required.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
