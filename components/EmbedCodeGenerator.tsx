@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { League, Team, Game } from '../types';
-import { Copy, Check, Code, ExternalLink, ChevronDown } from 'lucide-react';
+import { Copy, Check, Code, ExternalLink, ChevronDown, BookmarkPlus, Trash2 } from 'lucide-react';
 import EmbedStyler, { EmbedStyles } from './EmbedStyler';
 import EmbeddableCalendar from './EmbeddableCalendar';
 import EmbeddableGameBar from './EmbeddableGameBar';
@@ -8,6 +8,13 @@ import EmbeddableStandings from './EmbeddableStandings';
 import EmbeddableSeries from './EmbeddableSeries';
 import * as storageApi from '../services/storage';
 import { useTranslation } from 'react-i18next';
+
+const STYLE_TEMPLATES_KEY = 'dsa_embed_style_templates';
+
+interface StyleTemplate {
+  name: string;
+  styles: EmbedStyles;
+}
 
 interface EmbedCodeGeneratorProps {
   leagues: League[];
@@ -56,6 +63,10 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   const [copied, setCopied] = useState(false);
   const [showStyler, setShowStyler] = useState(false);
   const [embedStyles, setEmbedStyles] = useState<EmbedStyles | null>(null);
+  const [styleTemplates, setStyleTemplates] = useState<StyleTemplate[]>(() => {
+    try { return JSON.parse(localStorage.getItem(STYLE_TEMPLATES_KEY) || '[]'); } catch { return []; }
+  });
+  const [templateName, setTemplateName] = useState('');
 
   // Update height when embed view changes
   useEffect(() => {
@@ -563,19 +574,81 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
 
         {/* Style Customization */}
         <div className="pt-4 border-t border-slate-200">
-          <button
-            onClick={() => setShowStyler(!showStyler)}
-            className="flex items-center space-x-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-md hover:bg-slate-200 transition-colors text-sm font-medium"
-          >
-            <Code size={16} />
-            <span>{showStyler ? t('embed.hideStyleCustomization') : t('embed.showStyleCustomization')}</span>
-          </button>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <button
+              onClick={() => setShowStyler(!showStyler)}
+              className="flex items-center space-x-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-md hover:bg-slate-200 transition-colors text-sm font-medium"
+            >
+              <Code size={16} />
+              <span>{showStyler ? t('embed.hideStyleCustomization') : t('embed.showStyleCustomization')}</span>
+            </button>
+            {/* Template picker */}
+            {styleTemplates.length > 0 && (
+              <select
+                value=""
+                onChange={(e) => {
+                  const tpl = styleTemplates[parseInt(e.target.value)];
+                  if (tpl) { setEmbedStyles(tpl.styles); setShowStyler(true); }
+                }}
+                className="border border-slate-300 rounded-md px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white"
+              >
+                <option value="">Load template…</option>
+                {styleTemplates.map((tpl, i) => (
+                  <option key={i} value={i}>{tpl.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
           {showStyler && (
             <div className="mt-4">
               <EmbedStyler
                 onStyleChange={setEmbedStyles}
                 initialStyles={embedStyles || undefined}
               />
+              {/* Save / manage templates */}
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  placeholder="Template name…"
+                  className="border border-slate-300 rounded-md px-2 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none flex-1 min-w-[140px]"
+                />
+                <button
+                  disabled={!templateName.trim() || !embedStyles}
+                  onClick={() => {
+                    if (!templateName.trim() || !embedStyles) return;
+                    const updated = [
+                      ...styleTemplates.filter(t => t.name !== templateName.trim()),
+                      { name: templateName.trim(), styles: embedStyles },
+                    ];
+                    setStyleTemplates(updated);
+                    localStorage.setItem(STYLE_TEMPLATES_KEY, JSON.stringify(updated));
+                    setTemplateName('');
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  <BookmarkPlus size={14} /> Save
+                </button>
+                {styleTemplates.length > 0 && (
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      const idx = parseInt(e.target.value);
+                      if (isNaN(idx)) return;
+                      const updated = styleTemplates.filter((_, i) => i !== idx);
+                      setStyleTemplates(updated);
+                      localStorage.setItem(STYLE_TEMPLATES_KEY, JSON.stringify(updated));
+                    }}
+                    className="border border-red-200 text-red-600 rounded-md px-2 py-1.5 text-sm focus:ring-2 focus:ring-red-300 focus:outline-none bg-white"
+                  >
+                    <option value="">Delete template…</option>
+                    {styleTemplates.map((tpl, i) => (
+                      <option key={i} value={i}>{tpl.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
             </div>
           )}
         </div>
