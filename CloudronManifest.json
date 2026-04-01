@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.54",
+  "version": "1.0.55",
   "manifestVersion": 2,
 
   "image": {
@@ -107,6 +107,7 @@
     "1.0.51": "Feat: Resolve Pool Bracket — after pool play completes, seed bracket games from pool standings with interleaved seeding so pool winners meet in the final.",
     "1.0.52": "Feat: Pool+Bracket — games per day setting for pool stage; bracket format toggle (Final Only vs Full Bracket); pool leader is home team in Final Only mode.",
     "1.0.53": "Feat: Pool bracket auto-resolves when all pool games are final — TBD slots replaced automatically; manual Seed button still available as override.",
-    "1.0.54": "Feat: Playoff bracket view redesign — pool stage/bracket sections, live win counts, winner highlight with trophy, loser fade, forfeit support, short date format, status badges."
+    "1.0.54": "Feat: Playoff bracket view redesign — pool stage/bracket sections, live win counts, winner highlight with trophy, loser fade, forfeit support, short date format, status badges.",
+    "1.0.55": "Fix: embed schedule widget (GameBar and others) now loads correctly in cross-origin iframes — CSP frame-ancestors and X-Frame-Options no longer block /embed.html on third-party sites."
   }
 }
