@@ -151,6 +151,19 @@ app.get('/subscribe.ics', icsRateLimiter, async (req, res) => {
 
 app.get('/health', (_req, res) => res.sendStatus(200));
 
+// embed.html must be embeddable in cross-origin iframes – override the default
+// frame-ancestors 'self' restriction set by the security headers middleware above.
+app.use((req, res, next) => {
+  if (req.path === '/embed.html') {
+    res.removeHeader('X-Frame-Options');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https:; frame-ancestors *;"
+    );
+  }
+  next();
+});
+
 app.use(express.static(distDir));
 app.get('*', (_req, res) => {
   res.sendFile(path.join(distDir, 'index.html'));
