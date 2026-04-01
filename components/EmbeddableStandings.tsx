@@ -40,7 +40,8 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
     dataOverride || null
   );
   const [isLoading, setIsLoading] = useState(!dataOverride && !!scheduleKey);
-  const [selectedLeagueId, setSelectedLeagueId] = useState<string>(leagueId || '');
+  const allowedLeagueIds = useMemo(() => (leagueId || '').split(',').filter(Boolean), [leagueId]);
+  const [selectedLeagueId, setSelectedLeagueId] = useState<string>(allowedLeagueIds.length === 1 ? allowedLeagueIds[0] : '');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -63,9 +64,12 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
 
   useEffect(() => {
     if (!selectedLeagueId && data?.leagues?.length) {
-      setSelectedLeagueId(leagueId || data.leagues[0]?.id || '');
+      const first = allowedLeagueIds.length > 0
+        ? data.leagues.find(l => allowedLeagueIds.includes(l.id))?.id
+        : data.leagues[0]?.id;
+      setSelectedLeagueId(first || '');
     }
-  }, [data, leagueId, selectedLeagueId]);
+  }, [data, allowedLeagueIds, selectedLeagueId]);
 
   useEffect(() => {
     if (!showShareMenu) return;
@@ -83,10 +87,11 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
     [data]
   );
 
-  const visibleLeagues = useMemo(
-    () => (data?.leagues ?? []).filter(l => selectedCategory === 'all' || l.category === selectedCategory),
-    [data, selectedCategory]
-  );
+  const visibleLeagues = useMemo(() => {
+    const all = (data?.leagues ?? []).filter(l => selectedCategory === 'all' || l.category === selectedCategory);
+    if (allowedLeagueIds.length > 1) return all.filter(l => allowedLeagueIds.includes(l.id));
+    return all;
+  }, [data, selectedCategory, allowedLeagueIds]);
 
   const league = useMemo(
     () => visibleLeagues.find(l => l.id === selectedLeagueId) ?? visibleLeagues[0] ?? null,
@@ -164,7 +169,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
   return (
     <div style={root}>
       {/* Category + League selectors */}
-      {(categories.length > 1 || (data.leagues.length > 1 && !leagueId)) && (
+      {(categories.length > 1 || (visibleLeagues.length > 1 && allowedLeagueIds.length !== 1)) && (
         <div style={{ marginBottom: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {categories.length > 1 && (
             <select
@@ -185,7 +190,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
               ))}
             </select>
           )}
-          {visibleLeagues.length > 1 && !leagueId && (
+          {visibleLeagues.length > 1 && allowedLeagueIds.length !== 1 && (
             <select
               value={selectedLeagueId}
               onChange={e => setSelectedLeagueId(e.target.value)}

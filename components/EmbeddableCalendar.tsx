@@ -40,7 +40,8 @@ const EmbeddableCalendar: React.FC<EmbeddableCalendarProps> = ({
 
   // Apply initial filters from URL params
   useEffect(() => {
-    if (initialLeagueId) setSelectedLeagueId(initialLeagueId);
+    const ids = (initialLeagueId || '').split(',').filter(Boolean);
+    setSelectedLeagueId(ids.length === 1 ? ids[0] : 'all');
     if (initialCategory) setSelectedCategory(initialCategory);
     if (initialTeamId) setSelectedTeamId(initialTeamId);
   }, [initialLeagueId, initialCategory, initialTeamId]);
@@ -78,6 +79,23 @@ const EmbeddableCalendar: React.FC<EmbeddableCalendarProps> = ({
     };
   }, [dataOverride]);
 
+  // When multiple leagues are specified (comma-separated), restrict visible data to those leagues
+  const allowedLeagueIds = useMemo(() => (initialLeagueId || '').split(',').filter(Boolean), [initialLeagueId]);
+
+  const visibleLeagues = useMemo(() => {
+    if (allowedLeagueIds.length <= 1) return leagues;
+    return leagues.filter(l => allowedLeagueIds.includes(l.id));
+  }, [leagues, allowedLeagueIds]);
+
+  const visibleGames = useMemo(() => {
+    if (allowedLeagueIds.length <= 1) return games;
+    const allowed = new Set(allowedLeagueIds);
+    return games.filter(g => {
+      const ids = g.leagueIds?.length ? g.leagueIds : g.leagueId ? [g.leagueId] : [];
+      return ids.some(id => allowed.has(id));
+    });
+  }, [games, allowedLeagueIds]);
+
   // Helper to get league IDs from a game (handles both old and new format)
   const getGameLeagueIds = (game: Game): string[] => {
     if (game.leagueIds && game.leagueIds.length > 0) {
@@ -91,19 +109,19 @@ const EmbeddableCalendar: React.FC<EmbeddableCalendarProps> = ({
 
   // Filter games - only show scheduled games
   const filteredGames = useMemo(() => {
-    return games.filter(g => {
+    return visibleGames.filter(g => {
       // Only scheduled games
       if (g.status !== 'scheduled') {
         return false;
       }
-      
+
       // Team filter
       if (selectedTeamId !== 'all') {
         if (g.homeTeamId !== selectedTeamId && g.awayTeamId !== selectedTeamId) {
           return false;
         }
       }
-      
+
       // League filter
       if (selectedLeagueId !== 'all') {
         const gameLeagueIds = getGameLeagueIds(g);
@@ -111,20 +129,20 @@ const EmbeddableCalendar: React.FC<EmbeddableCalendarProps> = ({
           return false;
         }
       }
-      
+
       // Category filter
       if (selectedCategory !== 'all') {
         const gameLeagueIds = getGameLeagueIds(g);
-        const gameLeagues = gameLeagueIds.map(id => leagues.find(l => l.id === id)).filter(Boolean);
+        const gameLeagues = gameLeagueIds.map(id => visibleLeagues.find(l => l.id === id)).filter(Boolean);
         const hasMatchingCategory = gameLeagues.some(l => l && l.category === selectedCategory);
         if (!hasMatchingCategory) {
           return false;
         }
       }
-      
+
       return true;
     });
-  }, [games, selectedTeamId, selectedLeagueId, selectedCategory, leagues]);
+  }, [visibleGames, selectedTeamId, selectedLeagueId, selectedCategory, visibleLeagues]);
 
   // Calendar days
   const days = useMemo(() => {
@@ -165,10 +183,10 @@ const EmbeddableCalendar: React.FC<EmbeddableCalendarProps> = ({
   const [announcementDismissed, setAnnouncementDismissed] = useState(false);
   const announcement = useMemo(() => {
     const league = selectedLeagueId !== 'all'
-      ? leagues.find(l => l.id === selectedLeagueId)
-      : leagues[0];
+      ? visibleLeagues.find(l => l.id === selectedLeagueId)
+      : visibleLeagues[0];
     return league?.announcement || null;
-  }, [leagues, selectedLeagueId]);
+  }, [visibleLeagues, selectedLeagueId]);
 
   return (
     <div style={{ height, width: '100%', display: 'flex', flexDirection: 'column' }} className="bg-slate-50">
@@ -199,7 +217,7 @@ const EmbeddableCalendar: React.FC<EmbeddableCalendarProps> = ({
           days={days}
           filteredGames={filteredGames}
           teams={teams}
-          leagues={leagues}
+          leagues={visibleLeagues}
           onPrevMonth={handlePrevMonth}
           onNextMonth={handleNextMonth}
           onGameClick={handleGameClick}
