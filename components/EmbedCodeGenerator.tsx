@@ -52,6 +52,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   const [hideGameNumber, setHideGameNumber] = useState(false);
   const [showCountry, setShowCountry] = useState(false);
   const [standingsInfoText, setStandingsInfoText] = useState<string>('');
+  const [standingsSort, setStandingsSort] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
   const [showStyler, setShowStyler] = useState(false);
   const [embedStyles, setEmbedStyles] = useState<EmbedStyles | null>(null);
@@ -122,6 +123,9 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     if (embedView === 'standings' && standingsInfoText.trim()) {
       params.set('info_text', standingsInfoText.trim());
     }
+    if (embedView === 'standings' && standingsSort.length > 0) {
+      params.set('sort', standingsSort.join(','));
+    }
     if (embedView === 'teamgames') {
       if (selectedTeamId !== 'all') params.set('team', selectedTeamId);
       if (orgName) params.set('org_name', orgName);
@@ -170,6 +174,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     hideGameNumber,
     showCountry,
     standingsInfoText,
+    standingsSort,
   ]);
 
   // Generate embed code
@@ -502,6 +507,29 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                 />
                 <p className="text-xs text-slate-500 mt-1">{t('embed.standingsInfoTextHelp', 'Shown at the bottom left of the standings table.')}</p>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.standingsSortOrder', 'Default sort order')}</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {standingsSort.map((key, i) => (
+                    <span key={key} className="inline-flex items-center gap-1 bg-indigo-600 text-white text-xs font-semibold rounded px-2 py-0.5">
+                      <span className="opacity-60">{i + 1}.</span> {key}
+                      <button onClick={() => setStandingsSort(prev => prev.filter(k => k !== key))} className="ml-0.5 text-white opacity-70 hover:opacity-100" type="button">×</button>
+                    </span>
+                  ))}
+                  {(['W', 'GB', 'RS', 'RA', 'RD'] as const).filter(k => !standingsSort.includes(k)).map(key => (
+                    <button
+                      key={key}
+                      onClick={() => setStandingsSort(prev => [...prev, key])}
+                      type="button"
+                      className="text-xs font-semibold border border-slate-300 rounded px-2 py-0.5 bg-white hover:bg-slate-50 text-slate-700"
+                    >{key}</button>
+                  ))}
+                </div>
+                {standingsSort.length > 0 && (
+                  <button onClick={() => setStandingsSort([])} type="button" className="text-xs text-slate-400 hover:text-slate-600">Reset</button>
+                )}
+                <p className="text-xs text-slate-500 mt-1">{t('embed.standingsSortHelp', 'Click keys to add in priority order. Viewers can also change the sort interactively.')}</p>
+              </div>
               <div className="bg-indigo-50 border border-indigo-200 rounded-md p-3 text-sm text-indigo-800">
                 {t('embed.standingsNote')}
               </div>
@@ -694,6 +722,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                 leagueId={selectedLeagueIds.length > 0 ? selectedLeagueIds.join(',') : undefined}
                 dataOverride={{ leagues, teams, games }}
                 infoText={standingsInfoText.trim() || undefined}
+                defaultSort={standingsSort.length > 0 ? standingsSort.join(',') : undefined}
               />
             ) : embedView === 'series' ? (
               <EmbeddableSeries

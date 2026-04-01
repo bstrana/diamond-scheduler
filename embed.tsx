@@ -32,6 +32,7 @@ const hideGameNumber = urlParams.get('hide_game_number') === '1';
 const standingsInfoText = urlParams.get('info_text') || undefined;
 const orgName = urlParams.get('org_name') || undefined;
 const showCountry = urlParams.get('show_country') === '1';
+const defaultSort = urlParams.get('sort') || undefined;
 
 // Sanitize CSS property values to prevent CSS injection
 const sanitizeCssColor = (value: unknown, fallback: string): string => {
@@ -241,6 +242,7 @@ if (!rootElement) {
           } : null}
           infoText={standingsInfoText}
           showCountry={showCountry}
+          defaultSort={defaultSort}
         />
       );
     }
