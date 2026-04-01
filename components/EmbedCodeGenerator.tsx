@@ -516,7 +516,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                       <button onClick={() => setStandingsSort(prev => prev.filter(k => k !== key))} className="ml-0.5 text-white opacity-70 hover:opacity-100" type="button">×</button>
                     </span>
                   ))}
-                  {(['W', 'GB', 'RS', 'RA', 'RD'] as const).filter(k => !standingsSort.includes(k)).map(key => (
+                  {(['W', 'GB', 'RS', 'RA', 'RD', 'PCT'] as const).filter(k => !standingsSort.includes(k)).map(key => (
                     <button
                       key={key}
                       onClick={() => setStandingsSort(prev => [...prev, key])}
@@ -528,7 +528,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                 {standingsSort.length > 0 && (
                   <button onClick={() => setStandingsSort([])} type="button" className="text-xs text-slate-400 hover:text-slate-600">Reset</button>
                 )}
-                <p className="text-xs text-slate-500 mt-1">{t('embed.standingsSortHelp', 'Click keys to add in priority order. Viewers can also change the sort interactively.')}</p>
+                <p className="text-xs text-slate-500 mt-1">{t('embed.standingsSortHelp', 'Click keys to add in priority order. The table will be sorted in the embedded view.')}</p>
               </div>
               <div className="bg-indigo-50 border border-indigo-200 rounded-md p-3 text-sm text-indigo-800">
                 {t('embed.standingsNote')}
