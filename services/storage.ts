@@ -6,6 +6,7 @@ export type StorageData = {
   teams: Team[];
   games: Game[];
   gamesInHoldingArea: Game[];
+  interleagueDays?: string[];
 };
 
 export type StorageContext = {

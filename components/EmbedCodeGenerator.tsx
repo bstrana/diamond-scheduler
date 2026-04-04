@@ -45,7 +45,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   const leagueDropdownRef = useRef<HTMLDivElement>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTeamId, setSelectedTeamId] = useState<string>('all');
-  const [embedView, setEmbedView] = useState<'calendar' | 'gamebar' | 'standings' | 'series' | 'teamgames'>('calendar');
+  const [embedView, setEmbedView] = useState<'calendar' | 'gamebar' | 'standings' | 'combined' | 'series' | 'teamgames'>('calendar');
   const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
   const [height, setHeight] = useState<string>('800');
   const [scheduleKey, setScheduleKey] = useState<string>(loadedScheduleKey || '');
@@ -72,7 +72,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   useEffect(() => {
     if (embedView === 'gamebar') {
       setHeight('260');
-    } else if (embedView === 'standings' || embedView === 'series' || embedView === 'teamgames') {
+    } else if (embedView === 'standings' || embedView === 'combined' || embedView === 'series' || embedView === 'teamgames') {
       setHeight('500');
     } else {
       setHeight('800');
@@ -131,16 +131,16 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     params.set('type', embedView);
     if (selectedLeagueIds.length > 0) params.set('league', selectedLeagueIds.join(','));
     params.set('schedule_key', scheduleKey);
-    if (embedView === 'standings' && standingsInfoText.trim()) {
+    if ((embedView === 'standings' || embedView === 'combined') && standingsInfoText.trim()) {
       params.set('info_text', standingsInfoText.trim());
     }
-    if (embedView === 'standings' && standingsSort.length > 0) {
+    if ((embedView === 'standings' || embedView === 'combined') && standingsSort.length > 0) {
       params.set('sort', standingsSort.join(','));
     }
     if (embedView === 'teamgames') {
       if (selectedTeamId !== 'all') params.set('team', selectedTeamId);
       if (orgName) params.set('org_name', orgName);
-    } else if (embedView !== 'standings' && embedView !== 'series') {
+    } else if (embedView !== 'standings' && embedView !== 'combined' && embedView !== 'series') {
       if (selectedCategory !== 'all') params.set('category', selectedCategory);
       if (selectedTeamId !== 'all') params.set('team', selectedTeamId);
       if (hideLeagueFilter) params.set('hide_league_filter', '1');
@@ -190,7 +190,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
 
   // Generate embed code
   const embedCode = useMemo(() => {
-    const defaultHeight = embedView === 'gamebar' ? '260' : (embedView === 'standings' || embedView === 'series' || embedView === 'teamgames') ? '500' : '800';
+    const defaultHeight = embedView === 'gamebar' ? '260' : (embedView === 'standings' || embedView === 'combined' || embedView === 'series' || embedView === 'teamgames') ? '500' : '800';
     const finalHeight = height || defaultHeight;
     const borderColor = embedStyles?.borderColor || '#e2e8f0';
     const borderRadius = embedStyles?.borderRadius || '8px';
@@ -281,7 +281,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
           </div>
 
           {/* Filter Visibility (not applicable for standings/series/teamgames) */}
-          {embedView !== 'standings' && embedView !== 'series' && embedView !== 'teamgames' && (
+          {embedView !== 'standings' && embedView !== 'combined' && embedView !== 'series' && embedView !== 'teamgames' && (
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.showFilters')}</label>
               <div className="space-y-2 rounded-md border border-slate-200 p-3 text-sm">
@@ -453,13 +453,14 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
             <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.embedType')}</label>
             <select
               value={embedView}
-              onChange={(e) => setEmbedView(e.target.value as 'calendar' | 'gamebar' | 'standings' | 'series' | 'teamgames')}
+              onChange={(e) => setEmbedView(e.target.value as 'calendar' | 'gamebar' | 'standings' | 'combined' | 'series' | 'teamgames')}
               className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             >
               <option value="calendar">{t('embed.calendarView')}</option>
               <option value="gamebar">{t('embed.gameBar')}</option>
               <option value="teamgames">Team Games</option>
               <option value="standings">{t('embed.leagueStandings')}</option>
+              <option value="combined">Combined Standings</option>
               <option value="series">{t('embed.seriesBracket')}</option>
             </select>
           </div>
@@ -505,7 +506,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
           )}
 
           {/* Standings options */}
-          {embedView === 'standings' && (
+          {(embedView === 'standings' || embedView === 'combined') && (
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.standingsInfoText', 'Info text')}</label>
@@ -559,15 +560,15 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
             <label className="block text-sm font-medium text-slate-700 mb-1">{t('embed.heightPx')}</label>
             <input
               type="number"
-              min={embedView === 'gamebar' ? '260' : (embedView === 'standings' || embedView === 'series') ? '300' : '400'}
+              min={embedView === 'gamebar' ? '260' : (embedView === 'standings' || embedView === 'combined' || embedView === 'series') ? '300' : '400'}
               max="2000"
               value={height}
               onChange={(e) => setHeight(e.target.value)}
               className="w-full border border-slate-300 rounded-md p-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              placeholder={embedView === 'gamebar' ? '260' : (embedView === 'standings' || embedView === 'series') ? '500' : '800'}
+              placeholder={embedView === 'gamebar' ? '260' : (embedView === 'standings' || embedView === 'combined' || embedView === 'series') ? '500' : '800'}
             />
             <p className="text-xs text-slate-500 mt-1">
-              {t('embed.recommended')} {embedView === 'gamebar' ? '260–400px' : (embedView === 'standings' || embedView === 'series') ? '400–700px' : '600–1000px'}
+              {t('embed.recommended')} {embedView === 'gamebar' ? '260–400px' : (embedView === 'standings' || embedView === 'combined' || embedView === 'series') ? '400–700px' : '600–1000px'}
             </p>
           </div>
         </div>
@@ -794,6 +795,15 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                 showCountry={showCountry}
                 leagueId={selectedLeagueIds.length > 0 ? selectedLeagueIds.join(',') : undefined}
                 dataOverride={{ leagues, teams, games }}
+                infoText={standingsInfoText.trim() || undefined}
+                defaultSort={standingsSort.length > 0 ? standingsSort.join(',') : undefined}
+              />
+            ) : embedView === 'combined' ? (
+              <EmbeddableStandings
+                combinedMode
+                showCountry={showCountry}
+                dataOverride={{ leagues, teams, games }}
+                sourceTeams={Array.from(new Map([...teams, ...leagues.flatMap(l => l.teams)].map(t => [t.id, t])).values())}
                 infoText={standingsInfoText.trim() || undefined}
                 defaultSort={standingsSort.length > 0 ? standingsSort.join(',') : undefined}
               />

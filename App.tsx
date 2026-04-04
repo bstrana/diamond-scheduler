@@ -178,6 +178,7 @@ const App: React.FC = () => {
     setLeagues(data.leagues);
     setTeams(data.teams);
     setGames(data.games);
+    setInterleagueDays(data.interleagueDays || []);
     setGamesInHoldingArea([]);
     setSelectedLeagueId('all');
     setSelectedCategory('all');
@@ -207,6 +208,7 @@ const App: React.FC = () => {
 
   const [games, setGames] = useState<Game[]>([]);
   useEffect(() => { gamesRef.current = games; }, [games]);
+  const [interleagueDays, setInterleagueDays] = useState<string[]>([]);
 
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -431,7 +433,7 @@ const App: React.FC = () => {
     if (!isHydrated || !initialized || !keycloak.authenticated) return;
     const timeoutId = window.setTimeout(() => {
       storageApi.persistStorageData(
-        { leagues, teams, games, gamesInHoldingArea },
+        { leagues, teams, games, gamesInHoldingArea, interleagueDays },
         { userId, orgId }
       );
     }, 300);
@@ -607,6 +609,12 @@ const App: React.FC = () => {
     }
   };
 
+  const toggleInterleagueDay = (dateStr: string) => {
+    const isNowInterleague = !interleagueDays.includes(dateStr);
+    setInterleagueDays(prev => isNowInterleague ? [...prev, dateStr] : prev.filter(d => d !== dateStr));
+    setGames(prev => prev.map(g => g.date === dateStr ? { ...g, interleague: isNowInterleague || undefined } : g));
+  };
+
   const handleGameClick = (game: Game) => {
     setEditingGame(game);
     // Initialize form with all game's current values so nothing is lost on save
@@ -626,6 +634,7 @@ const App: React.FC = () => {
       streamUrl: game.streamUrl,
       currentInning: game.currentInning,
       inningHalf: game.inningHalf,
+      interleague: game.interleague,
     });
     setShowEditModal(true);
   };
@@ -655,6 +664,7 @@ const App: React.FC = () => {
       streamUrl: newGameForm.streamUrl !== undefined ? newGameForm.streamUrl : editingGame.streamUrl,
       currentInning: newGameForm.currentInning !== undefined ? newGameForm.currentInning : editingGame.currentInning,
       inningHalf: newGameForm.inningHalf !== undefined ? newGameForm.inningHalf : editingGame.inningHalf,
+      interleague: newGameForm.interleague || undefined,
     };
 
     if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
@@ -699,6 +709,7 @@ const App: React.FC = () => {
       streamUrl: newGameForm.streamUrl !== undefined ? newGameForm.streamUrl : editingGame.streamUrl,
       currentInning: newGameForm.currentInning !== undefined ? newGameForm.currentInning : editingGame.currentInning,
       inningHalf: newGameForm.inningHalf !== undefined ? newGameForm.inningHalf : editingGame.inningHalf,
+      interleague: newGameForm.interleague || undefined,
     };
 
     if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
@@ -719,7 +730,7 @@ const App: React.FC = () => {
 
     setIsPublishing(true);
     const result = await storageApi.publishScheduleNow(
-      { leagues, teams, games: updatedGames, gamesInHoldingArea },
+      { leagues, teams, games: updatedGames, gamesInHoldingArea, interleagueDays },
       { userId, orgId },
       scheduleKey,
       scheduleName
@@ -811,12 +822,14 @@ const App: React.FC = () => {
       return;
     }
     const defaultLeague = leagues.find(l => l.teams.some(t => t.id === teams[0]?.id)) || leagues[0];
+    const dateStr = formatDate(date);
     setNewGameForm({
-        date: formatDate(date),
+        date: dateStr,
         time: '15:00',
         location: 'Main Stadium',
         leagueIds: defaultLeague ? [defaultLeague.id] : [],
-        gameNumber: ''
+        gameNumber: '',
+        interleague: interleagueDays.includes(dateStr) || undefined,
     });
     setShowAddModal(true);
   };
@@ -864,7 +877,8 @@ const App: React.FC = () => {
         location: newGameForm.location || 'Stadium',
         status: 'scheduled',
         leagueIds: newGameForm.leagueIds,
-        gameNumber: newGameForm.gameNumber
+        gameNumber: newGameForm.gameNumber,
+        interleague: (newGameForm.interleague || interleagueDays.includes(newGameForm.date || '')) || undefined,
     };
     setGames([...games, game]);
     setShowAddModal(false);
@@ -1359,6 +1373,8 @@ const App: React.FC = () => {
                 selectedCategory={selectedCategory}
                 onCategoryFilterChange={setSelectedCategory}
                 onGenerateScoreLinks={scheduleKey ? handleGenerateScoreLinksForGames : undefined}
+                interleagueDays={interleagueDays}
+                onToggleInterleagueDay={toggleInterleagueDay}
               />
             </>
           )}
@@ -1621,6 +1637,16 @@ const App: React.FC = () => {
                                 )}
                             </div>
                         </div>
+
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={!!newGameForm.interleague}
+                            onChange={e => setNewGameForm({...newGameForm, interleague: e.target.checked || undefined})}
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span className="text-sm text-slate-700">Interleague game (counts toward combined standings)</span>
+                        </label>
 
                         <div className="grid grid-cols-2 gap-4">
                              <div>
@@ -1977,7 +2003,7 @@ const App: React.FC = () => {
                     localStorage.setItem('dsa_schedule_publish_key', trimmedKey);
                     localStorage.setItem('dsa_schedule_publish_name', finalName);
                     const result = await storageApi.publishScheduleNow(
-                      { leagues, teams, games, gamesInHoldingArea },
+                      { leagues, teams, games, gamesInHoldingArea, interleagueDays },
                       { userId, orgId },
                       trimmedKey,
                       finalName

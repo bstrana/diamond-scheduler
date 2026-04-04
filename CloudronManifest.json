@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.62",
+  "version": "1.0.63",
   "manifestVersion": 2,
 
   "image": {
@@ -115,6 +115,7 @@
     "1.0.59": "Feat: user menu lists all teams from the loaded schedule with color swatch, name and abbreviation; league builder now offers all schedule teams (not just global roster) when adding existing teams to a new league.",
     "1.0.60": "Fix: allow Google Fonts stylesheet and font files in CSP (style-src + font-src for fonts.googleapis.com and fonts.gstatic.com).",
     "1.0.61": "Feat: export loaded schedule as JSON from user menu; Fix: creating a new league no longer clears all games; sort games by date → time → game number in all views.",
-    "1.0.62": "Fix: stream overlay now shows team scores for live games at 0-0 — hasScore condition now includes isLive so scores are always visible when status is live."
+    "1.0.62": "Fix: stream overlay now shows team scores for live games at 0-0 — hasScore condition now includes isLive so scores are always visible when status is live.",
+    "1.0.63": "Feat: interleague games and combined standings — mark individual games or whole days as interleague; combined standings embed aggregates all interleague game results across leagues."
   }
 }

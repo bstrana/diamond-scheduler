@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { League, Team, Game } from '../types';
-import { buildStandingsShareText, copyToClipboard, calculateStandings, StandingsRow, getCountryCode } from '../utils';
+import { buildStandingsShareText, copyToClipboard, calculateStandings, calculateCombinedStandings, StandingsRow, getCountryCode } from '../utils';
 import { Share2, Copy, Check, ImageDown } from 'lucide-react';
 import * as storageApi from '../services/storage';
 import { useTranslation } from 'react-i18next';
@@ -44,6 +44,8 @@ interface EmbeddableStandingsProps {
   infoText?: string;
   showCountry?: boolean;
   defaultSort?: string;
+  combinedMode?: boolean;
+  sourceTeams?: Team[];
 }
 
 const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
@@ -53,6 +55,8 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
   infoText,
   showCountry = false,
   defaultSort,
+  combinedMode = false,
+  sourceTeams,
 }) => {
   const { t } = useTranslation();
   const [data, setData] = useState<{ leagues: League[]; teams: Team[]; games: Game[] } | null>(
@@ -123,16 +127,26 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
     [league, data]
   );
 
+  const combinedStandings = useMemo(() => {
+    if (!combinedMode || !data) return null;
+    const interleagueGames = data.games.filter(g => g.interleague);
+    const allTeams = sourceTeams && sourceTeams.length > 0
+      ? sourceTeams
+      : Array.from(new Map([...data.teams, ...data.leagues.flatMap(l => l.teams)].map(t => [t.id, t])).values());
+    return calculateCombinedStandings(allTeams, interleagueGames);
+  }, [combinedMode, data, sourceTeams]);
+
   const sortedStandings = useMemo(() => {
-    if (activeSortKeys.length === 0) return standings;
-    return [...standings].sort((a, b) => {
+    const base = combinedMode ? (combinedStandings ?? []) : standings;
+    if (activeSortKeys.length === 0) return base;
+    return [...base].sort((a, b) => {
       for (const key of activeSortKeys) {
         const c = compareByKey(a, b, key);
         if (c !== 0) return c;
       }
       return 0;
     });
-  }, [standings, activeSortKeys]);
+  }, [standings, combinedStandings, combinedMode, activeSortKeys]);
 
   const totalGames = standings.reduce((s, r) => s + r.w + r.l, 0) / 2;
 
@@ -189,7 +203,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
     );
   }
 
-  if (!data || !league) {
+  if (!data || (!league && !combinedMode)) {
     return (
       <div style={{ ...root, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
         {t('standings.noData')}
@@ -199,8 +213,15 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
 
   return (
     <div style={root}>
+      {/* Combined mode header */}
+      {combinedMode && (
+        <div style={{ marginBottom: '12px', fontWeight: 700, fontSize: '1.05em', color: 'var(--embed-text, #1e293b)' }}>
+          Combined Standings
+        </div>
+      )}
+
       {/* League selector */}
-      {visibleLeagues.length > 1 && allowedLeagueIds.length !== 1 && (
+      {!combinedMode && visibleLeagues.length > 1 && allowedLeagueIds.length !== 1 && (
         <div style={{ marginBottom: '12px' }}>
           <select
             value={selectedLeagueId}
@@ -297,7 +318,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
           padding: '10px 14px',
           borderBottom: '1px solid var(--embed-border, #e2e8f0)',
         }}>
-          {league.logoUrl && (
+          {!combinedMode && league?.logoUrl && (
             <img
               src={league.logoUrl}
               alt={league.name}
@@ -306,7 +327,7 @@ const EmbeddableStandings: React.FC<EmbeddableStandingsProps> = ({
           )}
           <div>
             <div style={{ fontWeight: 700, fontSize: '0.95em', lineHeight: 1.2 }}>
-              {league.name}{league.category ? ` – ${league.category}` : ''}
+              {combinedMode ? 'Combined Standings' : `${league!.name}${league!.category ? ` – ${league!.category}` : ''}`}
             </div>
             <div style={{ fontSize: '0.72em', opacity: 0.75 }}>{t('standings.title')}</div>
           </div>
