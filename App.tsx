@@ -881,9 +881,8 @@ const App: React.FC = () => {
         return;
       }
       setLeagues([...leagues, league]);
-      // Automatically switch to this league's teams
+      // Switch the active team roster to the new league's teams
       setTeams(league.teams);
-      setGames([]); // Clear games when switching to a fresh league context
       alert(t('league.leagueCreated', { name: league.name }));
       setViewMode('scheduler');
   };
