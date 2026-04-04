@@ -142,7 +142,8 @@ const GameBar: React.FC<GameBarProps> = ({
       // Sort finished games newest-first; everything else oldest-first
       const dir = selectedStatus === 'final' ? -1 : 1;
       if (a.date !== b.date) return dir * a.date.localeCompare(b.date);
-      return dir * a.time.localeCompare(b.time);
+      if (a.time !== b.time) return dir * a.time.localeCompare(b.time);
+      return dir * ((parseInt(a.gameNumber || '0') || 0) - (parseInt(b.gameNumber || '0') || 0));
     });
   }, [games, selectedTeamId, selectedLeagueId, selectedCategory, selectedStatus, leagues, todayStr]);
 
