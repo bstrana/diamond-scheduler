@@ -202,7 +202,8 @@ const Calendar: React.FC<CalendarProps> = ({
       .filter(g => g.date >= todayStr)
       .sort((a, b) => {
         if (a.date !== b.date) return a.date.localeCompare(b.date);
-        return a.time.localeCompare(b.time);
+        if (a.time !== b.time) return a.time.localeCompare(b.time);
+        return (parseInt(a.gameNumber || '0') || 0) - (parseInt(b.gameNumber || '0') || 0);
       });
   }, [filteredGames]);
 
@@ -548,7 +549,7 @@ const Calendar: React.FC<CalendarProps> = ({
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               {gamesByDate[dateStr]
-                                .sort((a, b) => a.time.localeCompare(b.time))
+                                .sort((a, b) => a.time !== b.time ? a.time.localeCompare(b.time) : (parseInt(a.gameNumber || '0') || 0) - (parseInt(b.gameNumber || '0') || 0))
                                 .map(game => {
                                   const home = getTeam(game.homeTeamId);
                                   const away = getTeam(game.awayTeamId);
@@ -988,7 +989,7 @@ const Calendar: React.FC<CalendarProps> = ({
             <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#4f46e5', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>
               {new Date(dateStr + 'T00:00:00').toLocaleDateString(i18n.language, { weekday: 'long', month: 'long', day: 'numeric' })}
             </div>
-            {selectedByDate[dateStr].sort((a, b) => a.time.localeCompare(b.time)).map(game => {
+            {selectedByDate[dateStr].sort((a, b) => a.time !== b.time ? a.time.localeCompare(b.time) : (parseInt(a.gameNumber || '0') || 0) - (parseInt(b.gameNumber || '0') || 0)).map(game => {
               const home = getTeam(game.homeTeamId);
               const away = getTeam(game.awayTeamId);
               return (
