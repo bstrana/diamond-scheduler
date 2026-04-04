@@ -256,7 +256,7 @@ const StreamOverlayApp: React.FC = () => {
   const isLive      = game.status === 'live';
   const isFinal     = game.status === 'final';
   const isPostponed = game.status === 'postponed';
-  const hasScore    = game.scores != null && (game.scores.home !== 0 || game.scores.away !== 0 || isFinal);
+  const hasScore    = isLive || isFinal || (game.scores != null && (game.scores.home !== 0 || game.scores.away !== 0));
 
   const innInfo = isLive ? deriveInning(game) : null;
 
@@ -283,15 +283,15 @@ const StreamOverlayApp: React.FC = () => {
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <TeamRow
             team={awayTeam}
-            score={hasScore || isFinal ? (game.scores?.away ?? 0) : null}
-            showScore={hasScore || isFinal}
+            score={hasScore ? (game.scores?.away ?? 0) : null}
+            showScore={hasScore}
             isLight={isLight}
           />
           <div style={{ height: 1, background: dividerColor }} />
           <TeamRow
             team={homeTeam}
-            score={hasScore || isFinal ? (game.scores?.home ?? 0) : null}
-            showScore={hasScore || isFinal}
+            score={hasScore ? (game.scores?.home ?? 0) : null}
+            showScore={hasScore}
             isLight={isLight}
           />
         </div>
