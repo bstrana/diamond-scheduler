@@ -29,6 +29,7 @@ import {
   Menu,
   Link2,
   Building2,
+  Download,
 } from 'lucide-react';
 import LeagueBuilder from './components/LeagueBuilder';
 import ScheduleGenerator from './components/ScheduleGenerator';
@@ -1242,6 +1243,24 @@ const App: React.FC = () => {
                           >
                             <span>{t('app.loadPublishedSchedule')}</span>
                             <Send size={16} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowUserMenu(false);
+                              const payload = { leagues, teams, games };
+                              const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              const label = (scheduleName || scheduleKey || 'schedule').replace(/[^a-z0-9]/gi, '-').toLowerCase();
+                              a.href = url;
+                              a.download = `${label}.json`;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            }}
+                            className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                          >
+                            <span>{t('app.exportSchedule', 'Export schedule')}</span>
+                            <Download size={16} />
                           </button>
                           <button
                             onClick={() => {
