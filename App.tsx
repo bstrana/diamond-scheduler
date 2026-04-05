@@ -210,6 +210,9 @@ const App: React.FC = () => {
   useEffect(() => { gamesRef.current = games; }, [games]);
   const [interleagueDays, setInterleagueDays] = useState<string[]>([]);
 
+  // Always-fresh ref for data needed by the score-edit auto-publish callback (populated via useEffect below)
+  const publishDataRef = useRef<{ leagues: League[]; teams: Team[]; games: Game[]; gamesInHoldingArea: Game[]; interleagueDays: string[]; scheduleKey: string; scheduleName: string; userId: string | undefined; orgId: string | undefined }>({ leagues: [], teams: [], games: [], gamesInHoldingArea: [], interleagueDays: [], scheduleKey: '', scheduleName: '', userId: undefined, orgId: undefined });
+
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -224,6 +227,10 @@ const App: React.FC = () => {
   
   // Game Holding Area State (for games in edit mode)
   const [gamesInHoldingArea, setGamesInHoldingArea] = useState<Game[]>([]);
+  // Keep publishDataRef always current so the score-edit subscription callback never has stale closures
+  useEffect(() => {
+    publishDataRef.current = { leagues, teams, games, gamesInHoldingArea, interleagueDays, scheduleKey, scheduleName, userId, orgId };
+  });
   const [generatingLinkFor, setGeneratingLinkFor] = useState<string | null>(null);
   const [generatedLinkUrl, setGeneratedLinkUrl] = useState<string | null>(null);
 
@@ -439,6 +446,35 @@ const App: React.FC = () => {
     }, 300);
     return () => window.clearTimeout(timeoutId);
   }, [isHydrated, initialized, keycloak.authenticated, leagues, teams, games, gamesInHoldingArea]);
+
+  // Auto-publish when a score-edit link marks a game as final
+  useEffect(() => {
+    if (!scheduleKey) return;
+    const unsub = storageApi.subscribeScoreEdits(scheduleKey, (edit) => {
+      if (edit.status !== 'final') return;
+      const { leagues: l, teams: t, gamesInHoldingArea: giha, interleagueDays: ild, scheduleKey: sk, scheduleName: sn, userId: uid, orgId: oid } = publishDataRef.current;
+      if (!sk) return;
+      const currentGames = gamesRef.current;
+      const updatedGames = currentGames.map(g => {
+        if (g.id !== edit.gameId) return g;
+        return {
+          ...g,
+          status: 'final' as const,
+          scores: edit.scores ?? g.scores,
+          recap: edit.recap ?? g.recap,
+        };
+      });
+      if (updatedGames === currentGames) return;
+      setGames(updatedGames);
+      storageApi.publishScheduleNow(
+        { leagues: l, teams: t, games: updatedGames, gamesInHoldingArea: giha, interleagueDays: ild },
+        { userId: uid, orgId: oid },
+        sk,
+        sn
+      ).catch(() => {});
+    });
+    return () => unsub();
+  }, [scheduleKey]);
 
   // Auto-resolve pool bracket: when all pool games (bracketRound === 0) for a set
   // of TBD bracket games are final/forfeit, replace TBD slots with real team IDs.

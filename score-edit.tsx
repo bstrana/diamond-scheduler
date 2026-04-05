@@ -86,6 +86,7 @@ const ScoreEditApp: React.FC = () => {
 
   // form state
   const [status, setStatus] = useState<Game['status']>('scheduled');
+  const [confirmingFinal, setConfirmingFinal] = useState(false);
   const [innings, setInnings] = useState<Array<{ home: number | null; away: number | null }>>([
     { home: null, away: null },
   ]);
@@ -262,11 +263,15 @@ const ScoreEditApp: React.FC = () => {
       <div className="bg-white rounded-b-xl shadow-sm border border-slate-200 border-t-0 w-full max-w-md mb-8">
         <div className="p-6 space-y-6">
           {/* Status */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Game Status</label>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-700">Game Status</label>
             <select
               value={status}
-              onChange={e => setStatus(e.target.value as Game['status'])}
+              onChange={e => {
+                const next = e.target.value as Game['status'];
+                if (next === 'final') { setConfirmingFinal(true); }
+                else { setConfirmingFinal(false); setStatus(next); }
+              }}
               className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             >
               <option value="scheduled">Scheduled</option>
@@ -274,6 +279,29 @@ const ScoreEditApp: React.FC = () => {
               <option value="final">Final</option>
               <option value="postponed">Postponed (PPD)</option>
             </select>
+
+            {confirmingFinal && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+                <p className="text-sm font-medium text-amber-800">Mark this game as Final?</p>
+                <p className="text-xs text-amber-700">The final score will be published to the schedule. The score entry link will remain active until it expires.</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setStatus('final'); setConfirmingFinal(false); }}
+                    className="flex-1 py-1.5 rounded-md bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 active:bg-amber-800"
+                  >
+                    Confirm Final
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingFinal(false)}
+                    className="flex-1 py-1.5 rounded-md bg-white border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Score by inning */}
