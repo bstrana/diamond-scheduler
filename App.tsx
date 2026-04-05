@@ -462,6 +462,8 @@ const App: React.FC = () => {
           status: 'final' as const,
           scores: edit.scores ?? g.scores,
           recap: edit.recap ?? g.recap,
+          hits: edit.hits ?? g.hits,
+          errors: edit.errors ?? g.errors,
         };
       });
       if (updatedGames === currentGames) return;
@@ -671,6 +673,8 @@ const App: React.FC = () => {
       currentInning: game.currentInning,
       inningHalf: game.inningHalf,
       interleague: game.interleague,
+      hits: game.hits,
+      errors: game.errors,
     });
     setShowEditModal(true);
   };
@@ -701,6 +705,8 @@ const App: React.FC = () => {
       currentInning: newGameForm.currentInning !== undefined ? newGameForm.currentInning : editingGame.currentInning,
       inningHalf: newGameForm.inningHalf !== undefined ? newGameForm.inningHalf : editingGame.inningHalf,
       interleague: newGameForm.interleague || undefined,
+      hits: newGameForm.hits !== undefined ? newGameForm.hits : editingGame.hits,
+      errors: newGameForm.errors !== undefined ? newGameForm.errors : editingGame.errors,
     };
 
     if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
@@ -1847,6 +1853,9 @@ const App: React.FC = () => {
                                 setNewGameForm({...newGameForm, scores: newInnings.length > 0 ? { home: totalHome, away: totalAway, innings: newInnings } : undefined});
                             };
 
+                            const currentHits   = newGameForm.hits   !== undefined ? newGameForm.hits   : editingGame.hits;
+                            const currentErrors = newGameForm.errors !== undefined ? newGameForm.errors : editingGame.errors;
+
                             return (
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
@@ -1865,7 +1874,9 @@ const App: React.FC = () => {
                                                     <tr className="bg-slate-100">
                                                         <th className="text-left px-2 py-1.5 font-semibold text-slate-600 w-16 border-r border-slate-200">Team</th>
                                                         {innings.map((_, i) => <th key={i} className="px-1 py-1.5 font-medium text-slate-500 w-9 border-r border-slate-200">{i + 1}</th>)}
-                                                        <th className="px-2 py-1.5 font-bold text-slate-800 w-9">R</th>
+                                                        <th className="px-2 py-1.5 font-bold text-slate-800 w-9 border-l border-slate-300">R</th>
+                                                        <th className="px-2 py-1.5 font-bold text-slate-800 w-9 border-l border-slate-200">H</th>
+                                                        <th className="px-2 py-1.5 font-bold text-slate-800 w-9 border-l border-slate-200">E</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -1883,8 +1894,32 @@ const App: React.FC = () => {
                                                                     />
                                                                 </td>
                                                             ))}
-                                                            <td className="px-2 py-1 font-bold text-center text-slate-800">
+                                                            <td className="px-2 py-1 font-bold text-center text-slate-800 border-l border-slate-300">
                                                                 {innings.reduce((s, i) => s + (i[side] ?? 0), 0)}
+                                                            </td>
+                                                            <td className="p-0.5 border-l border-slate-200">
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    className="w-8 text-center border border-slate-200 rounded p-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                                                    value={currentHits?.[side] ?? ''}
+                                                                    onChange={e => {
+                                                                        const val = e.target.value === '' ? null : parseInt(e.target.value);
+                                                                        setNewGameForm({...newGameForm, hits: { ...(currentHits ?? { away: null, home: null }), [side]: val }});
+                                                                    }}
+                                                                />
+                                                            </td>
+                                                            <td className="p-0.5 border-l border-slate-200">
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    className="w-8 text-center border border-slate-200 rounded p-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                                                    value={currentErrors?.[side] ?? ''}
+                                                                    onChange={e => {
+                                                                        const val = e.target.value === '' ? null : parseInt(e.target.value);
+                                                                        setNewGameForm({...newGameForm, errors: { ...(currentErrors ?? { away: null, home: null }), [side]: val }});
+                                                                    }}
+                                                                />
                                                             </td>
                                                         </tr>
                                                     ))}
