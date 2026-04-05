@@ -117,27 +117,32 @@ const ScoreEditApp: React.FC = () => {
       if (!g) { setPhase('invalid'); return; }
       setGame(g);
 
-      // pre-fill current values if already scored
-      setStatus(g.status);
-      if (g.recap) setRecap(g.recap);
-      if (g.scores?.innings?.length) {
-        setInnings(g.scores.innings.map(i => ({ home: i.home, away: i.away })));
-      }
-      if (g.scores?.outs     != null) setOuts(g.scores.outs);
-      if (g.scores?.balls    != null) setBalls(g.scores.balls);
-      if (g.scores?.strikes  != null) setStrikes(g.scores.strikes);
-      if (g.scores?.baseRunners) setBaseRunners({
-        first:  !!g.scores.baseRunners.first,
-        second: !!g.scores.baseRunners.second,
-        third:  !!g.scores.baseRunners.third,
-      });
-
-      // pre-fill linescore toggle from existing score edit
+      // fetch score edit first so we can prefer its values over the base game
       const existingEdits = await listScoreEditsByScheduleKey(validated.scheduleKey);
       const existingEdit = existingEdits.find(e => e.gameId === g.id);
+
+      // status: prefer score edit (keeps final/live set by the scorer), fall back to base game
+      setStatus(existingEdit ? existingEdit.status : g.status);
+
+      // scores: prefer score edit innings over base game
+      const sourceScores = existingEdit?.scores ?? g.scores;
+      if (sourceScores?.innings?.length) {
+        setInnings(sourceScores.innings.map(i => ({ home: i.home, away: i.away })));
+      }
+      if (sourceScores?.outs     != null) setOuts(sourceScores.outs);
+      if (sourceScores?.balls    != null) setBalls(sourceScores.balls);
+      if (sourceScores?.strikes  != null) setStrikes(sourceScores.strikes);
+      if (sourceScores?.baseRunners) setBaseRunners({
+        first:  !!sourceScores.baseRunners.first,
+        second: !!sourceScores.baseRunners.second,
+        third:  !!sourceScores.baseRunners.third,
+      });
+
+      const sourceRecap = existingEdit?.recap ?? g.recap;
+      if (sourceRecap) setRecap(sourceRecap);
       if (existingEdit?.linescore) setLinescore(true);
-      if (existingEdit?.hits)   setHits(existingEdit.hits);
-      if (existingEdit?.errors) setErrors(existingEdit.errors);
+      if (existingEdit?.hits)      setHits(existingEdit.hits);
+      if (existingEdit?.errors)    setErrors(existingEdit.errors);
 
       // look up team names from all teams across leagues
       const allTeams: Team[] = [];
