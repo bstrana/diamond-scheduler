@@ -834,18 +834,46 @@ const App: React.FC = () => {
     alert(`Generated ${created.length} score link(s). View and copy them from Score Links in the user menu.`);
   };
 
-  // Real-time score-edit subscriptions + fallback poll every 5 min
+  // Real-time score-edit subscriptions + fallback poll every 30 s
   useEffect(() => {
     if (!scheduleKey) return;
     const check = async () => {
       const edits = await storageApi.listScoreEditsByScheduleKey(scheduleKey);
       if (edits.length === 0) return;
       const editMap = new Map(edits.map(e => [e.gameId, e]));
-      setGames(prev => prev.map(g => {
+
+      // Apply edits on top of the current games ref (always-fresh value).
+      const currentGames = gamesRef.current;
+      let hasStatusChange = false;
+      const updatedGames = currentGames.map(g => {
         const edit = editMap.get(g.id);
         if (!edit) return g;
-        return { ...g, status: edit.status, scores: edit.scores ?? g.scores, ...(edit.recap != null && { recap: edit.recap || undefined }) };
-      }));
+        if (edit.status !== g.status) hasStatusChange = true;
+        return {
+          ...g,
+          status: edit.status as Game['status'],
+          scores: edit.scores ?? g.scores,
+          ...(edit.recap != null && { recap: edit.recap || undefined }),
+        };
+      });
+
+      if (!hasStatusChange) return; // nothing changed, skip update + publish
+      setGames(updatedGames);
+
+      // Re-publish so the public schedule reflects the latest score-edit statuses.
+      // This acts as a fallback for when the SSE auto-publish subscription missed an event.
+      const hasFinalEdits = edits.some(e => e.status === 'final');
+      if (hasFinalEdits) {
+        const { leagues: l, teams: t, gamesInHoldingArea: giha, interleagueDays: ild, scheduleKey: sk, scheduleName: sn, userId: uid, orgId: oid } = publishDataRef.current;
+        if (sk && keycloak.authenticated) {
+          storageApi.publishScheduleNow(
+            { leagues: l, teams: t, games: updatedGames, gamesInHoldingArea: giha, interleagueDays: ild },
+            { userId: uid, orgId: oid },
+            sk,
+            sn
+          ).catch(() => {});
+        }
+      }
     };
     // Initial fetch to pick up any edits that arrived before we subscribed
     check();
