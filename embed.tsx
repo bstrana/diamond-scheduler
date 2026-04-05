@@ -247,6 +247,23 @@ if (!rootElement) {
       );
     }
 
+    if (embedType === 'combined') {
+      return (
+        <EmbeddableStandings
+          combinedMode
+          scheduleKey={scheduleKey}
+          dataOverride={scheduleData ? {
+            leagues: scheduleData.leagues,
+            teams: scheduleData.teams,
+            games: scheduleData.games
+          } : null}
+          infoText={standingsInfoText}
+          showCountry={showCountry}
+          defaultSort={defaultSort}
+        />
+      );
+    }
+
     if (embedType === 'series') {
       return (
         <EmbeddableSeries

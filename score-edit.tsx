@@ -86,6 +86,7 @@ const ScoreEditApp: React.FC = () => {
 
   // form state
   const [status, setStatus] = useState<Game['status']>('scheduled');
+  const [confirmingFinal, setConfirmingFinal] = useState(false);
   const [innings, setInnings] = useState<Array<{ home: number | null; away: number | null }>>([
     { home: null, away: null },
   ]);
@@ -117,27 +118,32 @@ const ScoreEditApp: React.FC = () => {
       if (!g) { setPhase('invalid'); return; }
       setGame(g);
 
-      // pre-fill current values if already scored
-      setStatus(g.status);
-      if (g.recap) setRecap(g.recap);
-      if (g.scores?.innings?.length) {
-        setInnings(g.scores.innings.map(i => ({ home: i.home, away: i.away })));
-      }
-      if (g.scores?.outs     != null) setOuts(g.scores.outs);
-      if (g.scores?.balls    != null) setBalls(g.scores.balls);
-      if (g.scores?.strikes  != null) setStrikes(g.scores.strikes);
-      if (g.scores?.baseRunners) setBaseRunners({
-        first:  !!g.scores.baseRunners.first,
-        second: !!g.scores.baseRunners.second,
-        third:  !!g.scores.baseRunners.third,
-      });
-
-      // pre-fill linescore toggle from existing score edit
+      // fetch score edit first so we can prefer its values over the base game
       const existingEdits = await listScoreEditsByScheduleKey(validated.scheduleKey);
       const existingEdit = existingEdits.find(e => e.gameId === g.id);
+
+      // status: prefer score edit (keeps final/live set by the scorer), fall back to base game
+      setStatus(existingEdit ? existingEdit.status : g.status);
+
+      // scores: prefer score edit innings over base game
+      const sourceScores = existingEdit?.scores ?? g.scores;
+      if (sourceScores?.innings?.length) {
+        setInnings(sourceScores.innings.map(i => ({ home: i.home, away: i.away })));
+      }
+      if (sourceScores?.outs     != null) setOuts(sourceScores.outs);
+      if (sourceScores?.balls    != null) setBalls(sourceScores.balls);
+      if (sourceScores?.strikes  != null) setStrikes(sourceScores.strikes);
+      if (sourceScores?.baseRunners) setBaseRunners({
+        first:  !!sourceScores.baseRunners.first,
+        second: !!sourceScores.baseRunners.second,
+        third:  !!sourceScores.baseRunners.third,
+      });
+
+      const sourceRecap = existingEdit?.recap ?? g.recap;
+      if (sourceRecap) setRecap(sourceRecap);
       if (existingEdit?.linescore) setLinescore(true);
-      if (existingEdit?.hits)   setHits(existingEdit.hits);
-      if (existingEdit?.errors) setErrors(existingEdit.errors);
+      if (existingEdit?.hits)      setHits(existingEdit.hits);
+      if (existingEdit?.errors)    setErrors(existingEdit.errors);
 
       // look up team names from all teams across leagues
       const allTeams: Team[] = [];
@@ -257,11 +263,15 @@ const ScoreEditApp: React.FC = () => {
       <div className="bg-white rounded-b-xl shadow-sm border border-slate-200 border-t-0 w-full max-w-md mb-8">
         <div className="p-6 space-y-6">
           {/* Status */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Game Status</label>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-700">Game Status</label>
             <select
               value={status}
-              onChange={e => setStatus(e.target.value as Game['status'])}
+              onChange={e => {
+                const next = e.target.value as Game['status'];
+                if (next === 'final') { setConfirmingFinal(true); }
+                else { setConfirmingFinal(false); setStatus(next); }
+              }}
               className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             >
               <option value="scheduled">Scheduled</option>
@@ -269,6 +279,29 @@ const ScoreEditApp: React.FC = () => {
               <option value="final">Final</option>
               <option value="postponed">Postponed (PPD)</option>
             </select>
+
+            {confirmingFinal && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+                <p className="text-sm font-medium text-amber-800">Mark this game as Final?</p>
+                <p className="text-xs text-amber-700">The final score will be published to the schedule. The score entry link will remain active until it expires.</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setStatus('final'); setConfirmingFinal(false); }}
+                    className="flex-1 py-1.5 rounded-md bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 active:bg-amber-800"
+                  >
+                    Confirm Final
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingFinal(false)}
+                    className="flex-1 py-1.5 rounded-md bg-white border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Score by inning */}

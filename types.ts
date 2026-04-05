@@ -55,6 +55,9 @@ export interface Game {
   streamUrl?: string; // Optional live stream URL
   currentInning?: number; // Current inning for live games
   inningHalf?: 'top' | 'bottom'; // Top (▲) or bottom (▼) of the inning
+  interleague?: boolean; // Counts toward combined standings
+  hits?: { away: number | null; home: number | null };
+  errors?: { away: number | null; home: number | null };
 }
 
 export type ViewMode = 'calendar' | 'list' | 'teams' | 'leagues' | 'league_builder' | 'scheduler' | 'embed' | 'gamebar' | 'help' | 'bracket' | 'score_links' | 'tenant_settings';

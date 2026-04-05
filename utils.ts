@@ -348,6 +348,49 @@ export function calculateStandings(league: League, games: Game[]): StandingsRow[
   return rows;
 }
 
+export function calculateCombinedStandings(teams: Team[], games: Game[]): StandingsRow[] {
+  const completedGames = games.filter(game =>
+    (game.status === 'final' || game.status === 'forfeit') &&
+    game.scores != null
+  );
+
+  const involvedTeamIds = new Set<string>();
+  completedGames.forEach(g => { involvedTeamIds.add(g.homeTeamId); involvedTeamIds.add(g.awayTeamId); });
+  const involvedTeams = teams.filter(t => involvedTeamIds.has(t.id));
+
+  const stats = new Map<string, { w: number; l: number; rs: number; ra: number }>();
+  involvedTeams.forEach(team => stats.set(team.id, { w: 0, l: 0, rs: 0, ra: 0 }));
+
+  completedGames.forEach(game => {
+    const home = stats.get(game.homeTeamId);
+    const away = stats.get(game.awayTeamId);
+    if (!home || !away || !game.scores) return;
+    const hr = game.scores.home;
+    const ar = game.scores.away;
+    home.rs += hr; home.ra += ar;
+    away.rs += ar; away.ra += hr;
+    if (hr > ar) { home.w++; away.l++; }
+    else if (ar > hr) { away.w++; home.l++; }
+  });
+
+  const rows: StandingsRow[] = involvedTeams
+    .map(team => {
+      const s = stats.get(team.id)!;
+      const gp = s.w + s.l;
+      return { team, gp, w: s.w, l: s.l, pct: gp > 0 ? s.w / gp : 0, gb: 0, rs: s.rs, ra: s.ra, diff: s.rs - s.ra };
+    })
+    .sort((a, b) => b.w - a.w || a.l - b.l || b.diff - a.diff);
+
+  if (rows.length > 0) {
+    const leader = rows[0];
+    rows.forEach((row, idx) => {
+      row.gb = idx === 0 ? null : ((leader.w - row.w) + (row.l - leader.l)) / 2;
+    });
+  }
+
+  return rows;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── Bracket / Tournament helpers ────────────────────────────────────────────

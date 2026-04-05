@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Game, Team, CalendarDay, League } from '../types';
 import { WEEKDAYS } from '../constants';
-import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio, Printer, SlidersHorizontal, MoreVertical, X, CheckSquare2, Square, ImageDown, Link2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Grid, List, Filter, Copy, Maximize, Minimize, Hash, Trash2, Edit, PlusCircle, Radio, Printer, SlidersHorizontal, MoreVertical, X, CheckSquare2, Square, ImageDown, Link2, ArrowLeftRight } from 'lucide-react';
 import { formatDate } from '../utils';
 import { useTranslation } from 'react-i18next';
 import PrintSchedule from './PrintSchedule';
@@ -36,6 +36,8 @@ interface CalendarProps {
   hideTeamFilter?: boolean;
   hideViewToggle?: boolean;
   onGenerateScoreLinks?: (gameIds: string[]) => void;
+  interleagueDays?: string[];
+  onToggleInterleagueDay?: (date: string) => void;
 }
 
 const Calendar: React.FC<CalendarProps> = ({ 
@@ -67,6 +69,8 @@ const Calendar: React.FC<CalendarProps> = ({
   hideTeamFilter = false,
   hideViewToggle = false,
   onGenerateScoreLinks,
+  interleagueDays = [],
+  onToggleInterleagueDay,
 }) => {
   const { t, i18n } = useTranslation();
 
@@ -383,9 +387,24 @@ const Calendar: React.FC<CalendarProps> = ({
                     <span className={`text-sm font-medium h-7 w-7 flex items-center justify-center rounded-full ${day.isToday ? 'bg-blue-600 text-white' : ''}`}>
                         {day.date.getDate()}
                     </span>
-                    <button className="opacity-0 group-hover:opacity-100 text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-slate-600">
+                    <div className="flex items-center gap-1">
+                      {onToggleInterleagueDay && (() => {
+                        const dateStr = formatDate(day.date);
+                        const isIL = interleagueDays.includes(dateStr);
+                        return (
+                          <button
+                            title={isIL ? 'Remove interleague day' : 'Mark as interleague day'}
+                            onClick={(e) => { e.stopPropagation(); onToggleInterleagueDay(dateStr); }}
+                            className={`text-xs px-1.5 py-1 rounded transition-all ${isIL ? 'bg-purple-100 text-purple-700 opacity-100' : 'opacity-0 group-hover:opacity-100 bg-slate-100 hover:bg-slate-200 text-slate-500'}`}
+                          >
+                            <ArrowLeftRight size={11} />
+                          </button>
+                        );
+                      })()}
+                      <button className="opacity-0 group-hover:opacity-100 text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-slate-600">
                         {t('app.addGame')}
-                    </button>
+                      </button>
+                    </div>
                     </div>
 
                     <div className="space-y-1 overflow-y-auto max-h-[140px] custom-scrollbar">
@@ -454,9 +473,10 @@ const Calendar: React.FC<CalendarProps> = ({
                             </div>
 
                             {/* Series Name, League Info & Game Number */}
-                            {(game.seriesName || gameLeagues.length > 0 || game.gameNumber) && (
+                            {(game.seriesName || gameLeagues.length > 0 || game.gameNumber || game.interleague) && (
                                 <div className="flex justify-between items-center mb-1 pb-1 border-b border-slate-50 text-[9px] text-slate-400">
-                                    <span className="truncate max-w-[60px]">
+                                    <span className="truncate max-w-[60px] flex items-center gap-1">
+                                    {game.interleague && <span title="Interleague" className="inline-flex items-center text-purple-500"><ArrowLeftRight size={8} /></span>}
                                         {game.seriesName && (
                                             <span className="font-semibold text-indigo-600">{game.seriesName}</span>
                                         )}

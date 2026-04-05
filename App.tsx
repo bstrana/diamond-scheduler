@@ -178,6 +178,7 @@ const App: React.FC = () => {
     setLeagues(data.leagues);
     setTeams(data.teams);
     setGames(data.games);
+    setInterleagueDays(data.interleagueDays || []);
     setGamesInHoldingArea([]);
     setSelectedLeagueId('all');
     setSelectedCategory('all');
@@ -207,6 +208,10 @@ const App: React.FC = () => {
 
   const [games, setGames] = useState<Game[]>([]);
   useEffect(() => { gamesRef.current = games; }, [games]);
+  const [interleagueDays, setInterleagueDays] = useState<string[]>([]);
+
+  // Always-fresh ref for data needed by the score-edit auto-publish callback (populated via useEffect below)
+  const publishDataRef = useRef<{ leagues: League[]; teams: Team[]; games: Game[]; gamesInHoldingArea: Game[]; interleagueDays: string[]; scheduleKey: string; scheduleName: string; userId: string | undefined; orgId: string | undefined }>({ leagues: [], teams: [], games: [], gamesInHoldingArea: [], interleagueDays: [], scheduleKey: '', scheduleName: '', userId: undefined, orgId: undefined });
 
   const [viewMode, setViewMode] = useState<ViewMode>('calendar');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -222,6 +227,10 @@ const App: React.FC = () => {
   
   // Game Holding Area State (for games in edit mode)
   const [gamesInHoldingArea, setGamesInHoldingArea] = useState<Game[]>([]);
+  // Keep publishDataRef always current so the score-edit subscription callback never has stale closures
+  useEffect(() => {
+    publishDataRef.current = { leagues, teams, games, gamesInHoldingArea, interleagueDays, scheduleKey, scheduleName, userId, orgId };
+  });
   const [generatingLinkFor, setGeneratingLinkFor] = useState<string | null>(null);
   const [generatedLinkUrl, setGeneratedLinkUrl] = useState<string | null>(null);
 
@@ -431,12 +440,43 @@ const App: React.FC = () => {
     if (!isHydrated || !initialized || !keycloak.authenticated) return;
     const timeoutId = window.setTimeout(() => {
       storageApi.persistStorageData(
-        { leagues, teams, games, gamesInHoldingArea },
+        { leagues, teams, games, gamesInHoldingArea, interleagueDays },
         { userId, orgId }
       );
     }, 300);
     return () => window.clearTimeout(timeoutId);
   }, [isHydrated, initialized, keycloak.authenticated, leagues, teams, games, gamesInHoldingArea]);
+
+  // Auto-publish when a score-edit link marks a game as final
+  useEffect(() => {
+    if (!scheduleKey) return;
+    const unsub = storageApi.subscribeScoreEdits(scheduleKey, (edit) => {
+      if (edit.status !== 'final') return;
+      const { leagues: l, teams: t, gamesInHoldingArea: giha, interleagueDays: ild, scheduleKey: sk, scheduleName: sn, userId: uid, orgId: oid } = publishDataRef.current;
+      if (!sk) return;
+      const currentGames = gamesRef.current;
+      const updatedGames = currentGames.map(g => {
+        if (g.id !== edit.gameId) return g;
+        return {
+          ...g,
+          status: 'final' as const,
+          scores: edit.scores ?? g.scores,
+          recap: edit.recap ?? g.recap,
+          hits: edit.hits ?? g.hits,
+          errors: edit.errors ?? g.errors,
+        };
+      });
+      if (updatedGames === currentGames) return;
+      setGames(updatedGames);
+      storageApi.publishScheduleNow(
+        { leagues: l, teams: t, games: updatedGames, gamesInHoldingArea: giha, interleagueDays: ild },
+        { userId: uid, orgId: oid },
+        sk,
+        sn
+      ).catch(() => {});
+    });
+    return () => unsub();
+  }, [scheduleKey]);
 
   // Auto-resolve pool bracket: when all pool games (bracketRound === 0) for a set
   // of TBD bracket games are final/forfeit, replace TBD slots with real team IDs.
@@ -607,6 +647,12 @@ const App: React.FC = () => {
     }
   };
 
+  const toggleInterleagueDay = (dateStr: string) => {
+    const isNowInterleague = !interleagueDays.includes(dateStr);
+    setInterleagueDays(prev => isNowInterleague ? [...prev, dateStr] : prev.filter(d => d !== dateStr));
+    setGames(prev => prev.map(g => g.date === dateStr ? { ...g, interleague: isNowInterleague || undefined } : g));
+  };
+
   const handleGameClick = (game: Game) => {
     setEditingGame(game);
     // Initialize form with all game's current values so nothing is lost on save
@@ -626,6 +672,9 @@ const App: React.FC = () => {
       streamUrl: game.streamUrl,
       currentInning: game.currentInning,
       inningHalf: game.inningHalf,
+      interleague: game.interleague,
+      hits: game.hits,
+      errors: game.errors,
     });
     setShowEditModal(true);
   };
@@ -655,6 +704,9 @@ const App: React.FC = () => {
       streamUrl: newGameForm.streamUrl !== undefined ? newGameForm.streamUrl : editingGame.streamUrl,
       currentInning: newGameForm.currentInning !== undefined ? newGameForm.currentInning : editingGame.currentInning,
       inningHalf: newGameForm.inningHalf !== undefined ? newGameForm.inningHalf : editingGame.inningHalf,
+      interleague: newGameForm.interleague || undefined,
+      hits: newGameForm.hits !== undefined ? newGameForm.hits : editingGame.hits,
+      errors: newGameForm.errors !== undefined ? newGameForm.errors : editingGame.errors,
     };
 
     if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
@@ -699,6 +751,7 @@ const App: React.FC = () => {
       streamUrl: newGameForm.streamUrl !== undefined ? newGameForm.streamUrl : editingGame.streamUrl,
       currentInning: newGameForm.currentInning !== undefined ? newGameForm.currentInning : editingGame.currentInning,
       inningHalf: newGameForm.inningHalf !== undefined ? newGameForm.inningHalf : editingGame.inningHalf,
+      interleague: newGameForm.interleague || undefined,
     };
 
     if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
@@ -719,7 +772,7 @@ const App: React.FC = () => {
 
     setIsPublishing(true);
     const result = await storageApi.publishScheduleNow(
-      { leagues, teams, games: updatedGames, gamesInHoldingArea },
+      { leagues, teams, games: updatedGames, gamesInHoldingArea, interleagueDays },
       { userId, orgId },
       scheduleKey,
       scheduleName
@@ -811,12 +864,14 @@ const App: React.FC = () => {
       return;
     }
     const defaultLeague = leagues.find(l => l.teams.some(t => t.id === teams[0]?.id)) || leagues[0];
+    const dateStr = formatDate(date);
     setNewGameForm({
-        date: formatDate(date),
+        date: dateStr,
         time: '15:00',
         location: 'Main Stadium',
         leagueIds: defaultLeague ? [defaultLeague.id] : [],
-        gameNumber: ''
+        gameNumber: '',
+        interleague: interleagueDays.includes(dateStr) || undefined,
     });
     setShowAddModal(true);
   };
@@ -864,7 +919,8 @@ const App: React.FC = () => {
         location: newGameForm.location || 'Stadium',
         status: 'scheduled',
         leagueIds: newGameForm.leagueIds,
-        gameNumber: newGameForm.gameNumber
+        gameNumber: newGameForm.gameNumber,
+        interleague: (newGameForm.interleague || interleagueDays.includes(newGameForm.date || '')) || undefined,
     };
     setGames([...games, game]);
     setShowAddModal(false);
@@ -1359,6 +1415,8 @@ const App: React.FC = () => {
                 selectedCategory={selectedCategory}
                 onCategoryFilterChange={setSelectedCategory}
                 onGenerateScoreLinks={scheduleKey ? handleGenerateScoreLinksForGames : undefined}
+                interleagueDays={interleagueDays}
+                onToggleInterleagueDay={toggleInterleagueDay}
               />
             </>
           )}
@@ -1622,6 +1680,16 @@ const App: React.FC = () => {
                             </div>
                         </div>
 
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={!!newGameForm.interleague}
+                            onChange={e => setNewGameForm({...newGameForm, interleague: e.target.checked || undefined})}
+                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span className="text-sm text-slate-700">Interleague game (counts toward combined standings)</span>
+                        </label>
+
                         <div className="grid grid-cols-2 gap-4">
                              <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">{t('gameForm.date')}</label>
@@ -1785,6 +1853,9 @@ const App: React.FC = () => {
                                 setNewGameForm({...newGameForm, scores: newInnings.length > 0 ? { home: totalHome, away: totalAway, innings: newInnings } : undefined});
                             };
 
+                            const currentHits   = newGameForm.hits   !== undefined ? newGameForm.hits   : editingGame.hits;
+                            const currentErrors = newGameForm.errors !== undefined ? newGameForm.errors : editingGame.errors;
+
                             return (
                                 <div>
                                     <div className="flex items-center justify-between mb-2">
@@ -1803,7 +1874,9 @@ const App: React.FC = () => {
                                                     <tr className="bg-slate-100">
                                                         <th className="text-left px-2 py-1.5 font-semibold text-slate-600 w-16 border-r border-slate-200">Team</th>
                                                         {innings.map((_, i) => <th key={i} className="px-1 py-1.5 font-medium text-slate-500 w-9 border-r border-slate-200">{i + 1}</th>)}
-                                                        <th className="px-2 py-1.5 font-bold text-slate-800 w-9">R</th>
+                                                        <th className="px-2 py-1.5 font-bold text-slate-800 w-9 border-l border-slate-300">R</th>
+                                                        <th className="px-2 py-1.5 font-bold text-slate-800 w-9 border-l border-slate-200">H</th>
+                                                        <th className="px-2 py-1.5 font-bold text-slate-800 w-9 border-l border-slate-200">E</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -1821,8 +1894,32 @@ const App: React.FC = () => {
                                                                     />
                                                                 </td>
                                                             ))}
-                                                            <td className="px-2 py-1 font-bold text-center text-slate-800">
+                                                            <td className="px-2 py-1 font-bold text-center text-slate-800 border-l border-slate-300">
                                                                 {innings.reduce((s, i) => s + (i[side] ?? 0), 0)}
+                                                            </td>
+                                                            <td className="p-0.5 border-l border-slate-200">
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    className="w-8 text-center border border-slate-200 rounded p-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                                                    value={currentHits?.[side] ?? ''}
+                                                                    onChange={e => {
+                                                                        const val = e.target.value === '' ? null : parseInt(e.target.value);
+                                                                        setNewGameForm({...newGameForm, hits: { ...(currentHits ?? { away: null, home: null }), [side]: val }});
+                                                                    }}
+                                                                />
+                                                            </td>
+                                                            <td className="p-0.5 border-l border-slate-200">
+                                                                <input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    className="w-8 text-center border border-slate-200 rounded p-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                                                    value={currentErrors?.[side] ?? ''}
+                                                                    onChange={e => {
+                                                                        const val = e.target.value === '' ? null : parseInt(e.target.value);
+                                                                        setNewGameForm({...newGameForm, errors: { ...(currentErrors ?? { away: null, home: null }), [side]: val }});
+                                                                    }}
+                                                                />
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -1977,7 +2074,7 @@ const App: React.FC = () => {
                     localStorage.setItem('dsa_schedule_publish_key', trimmedKey);
                     localStorage.setItem('dsa_schedule_publish_name', finalName);
                     const result = await storageApi.publishScheduleNow(
-                      { leagues, teams, games, gamesInHoldingArea },
+                      { leagues, teams, games, gamesInHoldingArea, interleagueDays },
                       { userId, orgId },
                       trimmedKey,
                       finalName
