@@ -77,8 +77,9 @@ const ScoreEditApp: React.FC = () => {
   const [savedAt, setSavedAt]   = useState<Date | null>(null);
   const [saveError, setSaveError] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const formReadyRef = useRef(false);   // true after initial prefill — skip first effect run
-  const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const formReadyRef   = useRef(false);  // true after initial prefill
+  const skipInitSaveRef = useRef(false); // true for exactly one auto-save cycle after init — prevents saving the initial prefill back as if it were a user change
+  const debounceRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [link, setLink]   = useState<ScoreLink | null>(null);
   const [game, setGame]   = useState<Game | null>(null);
   const [homeTeam, setHomeTeam] = useState<Team | null>(null);
@@ -151,7 +152,8 @@ const ScoreEditApp: React.FC = () => {
       setHomeTeam(allTeams.find(t => t.id === g.homeTeamId) ?? null);
       setAwayTeam(allTeams.find(t => t.id === g.awayTeamId) ?? null);
 
-      formReadyRef.current = true;
+      formReadyRef.current  = true;
+      skipInitSaveRef.current = true; // skip the auto-save that fires from the initial state population
       setPhase('form');
     })();
   }, []);
@@ -159,6 +161,11 @@ const ScoreEditApp: React.FC = () => {
   // ── auto-save on any form state change (debounced 900 ms) ────────────────────
   useEffect(() => {
     if (!formReadyRef.current || !link || !game) return;
+    // Skip the very first fire after initialization — that fire is caused by the initial
+    // state population (setting status/innings/etc. from the existing score edit), not by
+    // an actual user change. Saving it would overwrite the stored score with the loaded
+    // values, which risks resetting them if anything loaded incorrectly.
+    if (skipInitSaveRef.current) { skipInitSaveRef.current = false; return; }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setIsSaving(true);
