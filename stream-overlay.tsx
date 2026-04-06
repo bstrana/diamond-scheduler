@@ -264,12 +264,9 @@ const StreamOverlayApp: React.FC = () => {
 
   const innInfo = isLive ? deriveInning(game) : null;
 
-  // Status badge
+  // Status badge — not shown when live (the in-game elements make it obvious)
   const statusBadge = isLive
-    ? <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
-        <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 6px #4ade80' }} />
-        LIVE
-      </span>
+    ? null
     : isFinal
     ? <span style={{ fontSize: 11, fontWeight: 700, color: mutedColor, textTransform: 'uppercase', letterSpacing: '0.06em' }}>FINAL</span>
     : isPostponed
