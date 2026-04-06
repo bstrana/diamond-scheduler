@@ -96,6 +96,7 @@ const ScoreEditApp: React.FC = () => {
   const [strikes, setStrikes] = useState<number>(0);
   const [baseRunners, setBaseRunners] = useState<{ first: boolean; second: boolean; third: boolean }>({ first: false, second: false, third: false });
   const [recap, setRecap] = useState<string>('');
+  const [pitcher, setPitcher] = useState<string>('');
   const [linescore, setLinescore] = useState<boolean>(false);
   const [hits,   setHits]   = useState<{ away: number | null; home: number | null }>({ away: null, home: null });
   const [errors, setErrors] = useState<{ away: number | null; home: number | null }>({ away: null, home: null });
@@ -142,6 +143,7 @@ const ScoreEditApp: React.FC = () => {
 
       const sourceRecap = existingEdit?.recap ?? g.recap;
       if (sourceRecap) setRecap(sourceRecap);
+      if (existingEdit?.pitcher) setPitcher(existingEdit.pitcher);
       if (existingEdit?.linescore) setLinescore(true);
       if (existingEdit?.hits)      setHits(existingEdit.hits);
       if (existingEdit?.errors)    setErrors(existingEdit.errors);
@@ -182,6 +184,7 @@ const ScoreEditApp: React.FC = () => {
           ...(status === 'live' && { outs, balls, strikes, baseRunners }),
         },
         recap: recap || undefined,
+        pitcher: pitcher || undefined,
         linescore,
         hits,
         errors,
@@ -197,7 +200,7 @@ const ScoreEditApp: React.FC = () => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // homeTotal and awayTotal are derived from innings — no need to list them separately
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, innings, outs, balls, strikes, baseRunners, recap, linescore, hits, errors]);
+  }, [status, innings, outs, balls, strikes, baseRunners, recap, pitcher, linescore, hits, errors]);
 
   // ── collapse header on scroll ────────────────────────────────────────────────
   useEffect(() => {
@@ -452,6 +455,20 @@ const ScoreEditApp: React.FC = () => {
                     ))}
                   </div>
                 </div>
+              </div>
+
+              {/* Current pitcher */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Current Pitcher <span className="text-xs font-normal text-slate-400">(shown in stream overlay)</span>
+                </label>
+                <input
+                  type="text"
+                  value={pitcher}
+                  onChange={e => setPitcher(e.target.value)}
+                  placeholder="e.g. Johnson"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
               </div>
 
               {/* Runners on base */}
