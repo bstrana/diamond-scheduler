@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.68",
+  "version": "1.0.69",
   "manifestVersion": 2,
 
   "image": {
@@ -121,6 +121,7 @@
     "1.0.65": "Feat: score-edit confirmation dialog when marking game Final (with link-expiry notice); App auto-publishes schedule via score-edit subscription when a game is finalized.",
     "1.0.66": "Feat: H (hits) and E (errors) columns added to game edit modal score table; Game type extended with hits/errors fields; auto-publish merges hits/errors from score edits.",
     "1.0.67": "Fix: score-edit page no longer auto-saves on initialization (prevents overwriting final scores); live-sync poll now re-publishes the schedule when final score edits are detected, ensuring the public schedule stays up to date even if SSE missed the event.",
-    "1.0.68": "Fix: 'Save as image' in game card fullscreen overlay now works for final games — remove allowTaint option so cross-origin team logos do not taint the canvas and silently block the download; use DOM-append click for reliable iframe download."
+    "1.0.68": "Fix: 'Save as image' in game card fullscreen overlay now works for final games — remove allowTaint option so cross-origin team logos do not taint the canvas and silently block the download; use DOM-append click for reliable iframe download.",
+    "1.0.69": "Maintenance: bump version to 1.0.69."
   }
 }
