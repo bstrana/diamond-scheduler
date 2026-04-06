@@ -237,7 +237,6 @@ const GameBar: React.FC<GameBarProps> = ({
       const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(cardRef.current, {
         useCORS: true,
-        allowTaint: true,
         scale: 2,
         backgroundColor: null,
       });
@@ -247,7 +246,10 @@ const GameBar: React.FC<GameBarProps> = ({
       const slug = `${away?.abbreviation ?? 'away'}-vs-${home?.abbreviation ?? 'home'}-${game.date}`;
       link.download = `${slug}.png`;
       link.href = canvas.toDataURL('image/png');
+      link.style.display = 'none';
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     } catch { /* ignore capture errors */ } finally {
       setIsCapturing(false);
     }
