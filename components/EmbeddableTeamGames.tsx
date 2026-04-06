@@ -113,7 +113,6 @@ const EmbeddableTeamGames: React.FC<EmbeddableTeamGamesProps> = ({
       const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(tableRef.current, {
         useCORS: true,
-        allowTaint: true,
         scale: 2,
         backgroundColor: '#ffffff',
         logging: false,
@@ -121,7 +120,10 @@ const EmbeddableTeamGames: React.FC<EmbeddableTeamGamesProps> = ({
       const link = document.createElement('a');
       link.download = `${selectedTeam?.name?.replace(/\s+/g, '-') ?? 'team'}-schedule.png`;
       link.href = canvas.toDataURL('image/png');
+      link.style.display = 'none';
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     } catch { /* ignore */ } finally {
       setIsSavingTable(false);
     }
@@ -167,7 +169,6 @@ const EmbeddableTeamGames: React.FC<EmbeddableTeamGamesProps> = ({
       const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(cardRef.current, {
         useCORS: true,
-        allowTaint: true,
         backgroundColor: null,
         scale: 2,
       });
@@ -176,7 +177,10 @@ const EmbeddableTeamGames: React.FC<EmbeddableTeamGamesProps> = ({
       const away = getTeam(game.awayTeamId);
       link.download = `${away?.abbreviation ?? 'AWAY'}-at-${home?.abbreviation ?? 'HOME'}-${game.date}.png`;
       link.href = canvas.toDataURL('image/png');
+      link.style.display = 'none';
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     } catch { /* ignore */ } finally {
       setIsCapturing(false);
     }
