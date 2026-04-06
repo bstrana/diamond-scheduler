@@ -2433,44 +2433,6 @@
       "ts": "Sun, 05 Apr 2026 00:00:00 GMT",
       "publishState": "published"
     },
-    "1.0.68": {
-      "manifest": {
-        "id": "io.github.bstrana.diamond-scheduler",
-        "title": "Diamond Scheduler",
-        "author": "bstrana",
-        "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
-        "tagline": "Baseball & multi-sport league scheduling",
-        "version": "1.0.68",
-        "website": "https://github.com/bstrana/diamond-scheduler",
-        "contactEmail": "support@example.com",
-        "healthCheckPath": "/health",
-        "httpPort": 8000,
-        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.68",
-        "addons": {
-          "localstorage": {}
-        },
-        "manifestVersion": 2,
-        "minBoxVersion": "9.1.0",
-        "icon": "file://appicon.png",
-        "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
-        "tags": [
-          "sports",
-          "scheduling",
-          "calendar",
-          "league"
-        ],
-        "mediaLinks": [
-          "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
-        ],
-        "changelog": "Fix: 'Save as image' in game card fullscreen overlay now works for final games — remove allowTaint option so cross-origin team logos do not taint the canvas and silently block the download; use DOM-append click for reliable iframe download.",
-        "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
-        "packagerName": "bstrana",
-        "packagerUrl": "https://github.com/bstrana"
-      },
-      "creationDate": "Mon, 06 Apr 2026 00:00:00 GMT",
-      "ts": "Mon, 06 Apr 2026 00:00:00 GMT",
-      "publishState": "published"
-    },
     "1.0.69": {
       "manifest": {
         "id": "io.github.bstrana.diamond-scheduler",
