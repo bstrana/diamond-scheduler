@@ -171,6 +171,23 @@ const GameBar: React.FC<GameBarProps> = ({
     return Array.from(new Set(leagues.map(l => l.category).filter(Boolean)));
   }, [leagues]);
 
+  // Teams available in the team-filter dropdown — limited to the selected league when one is chosen
+  const teamsForFilter = useMemo(() => {
+    if (selectedLeagueId === 'all') return teams;
+    const league = leagues.find(l => l.id === selectedLeagueId);
+    if (!league) return teams;
+    const ids = new Set((league.teams || []).map(t => t.id));
+    return teams.filter(t => ids.has(t.id));
+  }, [teams, leagues, selectedLeagueId]);
+
+  // Reset team selection when switching leagues and the selected team is no longer in the list
+  useEffect(() => {
+    if (selectedTeamId === 'all') return;
+    if (!teamsForFilter.some(t => t.id === selectedTeamId)) {
+      onTeamFilterChange('all');
+    }
+  }, [teamsForFilter, selectedTeamId, onTeamFilterChange]);
+
   const teamRecords = useMemo(() => {
     const records: Record<string, { w: number; l: number }> = {};
     games.forEach(g => {
@@ -600,7 +617,7 @@ const GameBar: React.FC<GameBarProps> = ({
                         <select value={selectedTeamId} onChange={(e) => onTeamFilterChange(e.target.value)} className="w-full rounded-md px-2 py-1.5 text-sm font-medium focus:outline-none focus:ring-2" style={{ backgroundColor: 'var(--embed-card-bg, #ffffff)', border: 'var(--embed-border-width, 1px) solid var(--embed-border, #cbd5e1)', borderRadius: 'var(--embed-card-radius, 0.375rem)', color: 'var(--embed-text, #334155)', fontFamily: 'var(--embed-font, inherit)', fontSize: 'var(--embed-font-size, 0.875rem)', '--tw-ring-color': 'var(--embed-primary, #4f46e5)' } as React.CSSProperties}>
                           <option value="all">{t('gameBar.allTeams')}</option>
                           <option disabled>──────────</option>
-                          {teams.map(t => (<option key={t.id} value={t.id}>{t.city} {t.name}</option>))}
+                          {teamsForFilter.map(t => (<option key={t.id} value={t.id}>{t.city} {t.name}</option>))}
                         </select>
                       </div>
                     )}
