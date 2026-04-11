@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.72",
+  "version": "1.0.73",
   "manifestVersion": 2,
 
   "image": {
@@ -125,6 +125,7 @@
     "1.0.69": "Maintenance: bump version to 1.0.69.",
     "1.0.70": "Feat: current pitcher field in score-edit page shown as static top bar in stream overlay; fix team filter dropdown scoped to selected league; remove redundant LIVE badge from stream overlay.",
     "1.0.71": "Fix: GameBar expand button moved to top-left of card so it is never clipped by overflow-y-hidden on small screens (final game cards are taller and were clipping the bottom-positioned button); add 'Hide past games' option in embed code generator for the game bar widget.",
-    "1.0.72": "Fix: GameBar fullscreen game card overlay now opens reliably on mobile — replace native requestFullscreen (which caused a race condition clearing the overlay on mobile browsers) with a pure CSS modal approach; ESC key still closes the overlay."
+    "1.0.72": "Fix: GameBar fullscreen game card overlay now opens reliably on mobile — replace native requestFullscreen (which caused a race condition clearing the overlay on mobile browsers) with a pure CSS modal approach; ESC key still closes the overlay.",
+    "1.0.73": "Fix: GameBar game card overlay now opens in true full-screen mode — requestFullscreen restored with a 600 ms timestamp guard that prevents the race condition where spurious fullscreenchange events cleared the overlay state on mobile; embed iframe snippet now includes allow=\"fullscreen\" for modern browser permissions policy."
   }
 }
