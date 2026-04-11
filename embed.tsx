@@ -29,6 +29,8 @@ const hideTeamFilter = urlParams.get('hide_team_filter') === '1';
 const hideStatusFilter = urlParams.get('hide_status_filter') === '1';
 const hideLeagueName = urlParams.get('hide_league_name') === '1';
 const hideGameNumber = urlParams.get('hide_game_number') === '1';
+const pastDaysParam = urlParams.get('past_days');
+const includePastDays = pastDaysParam !== null ? Math.max(0, parseInt(pastDaysParam, 10) || 0) : 30;
 const standingsInfoText = urlParams.get('info_text') || undefined;
 const orgName = urlParams.get('org_name') || undefined;
 const showCountry = urlParams.get('show_country') === '1';
@@ -226,6 +228,7 @@ if (!rootElement) {
           hideGameNumber={hideGameNumber}
           orgName={orgName}
           showCountry={showCountry}
+          includePastDays={includePastDays}
         />
       );
     }

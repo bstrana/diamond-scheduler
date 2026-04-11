@@ -57,6 +57,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   const [hideStatusFilter, setHideStatusFilter] = useState(false);
   const [hideLeagueName, setHideLeagueName] = useState(false);
   const [hideGameNumber, setHideGameNumber] = useState(false);
+  const [hidePastGames, setHidePastGames] = useState(false);
   const [showCountry, setShowCountry] = useState(false);
   const [standingsInfoText, setStandingsInfoText] = useState<string>('');
   const [standingsSort, setStandingsSort] = useState<string[]>([]);
@@ -149,6 +150,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
       if (embedView === 'gamebar' && hideStatusFilter) params.set('hide_status_filter', '1');
       if (embedView === 'gamebar' && hideLeagueName) params.set('hide_league_name', '1');
       if (embedView === 'gamebar' && hideGameNumber) params.set('hide_game_number', '1');
+      if (embedView === 'gamebar' && hidePastGames) params.set('past_days', '0');
       if (embedView === 'gamebar' && orgName) params.set('org_name', orgName);
       if (embedView === 'calendar' && viewType !== 'grid') params.set('view', viewType);
     }
@@ -183,6 +185,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
     hideStatusFilter,
     hideLeagueName,
     hideGameNumber,
+    hidePastGames,
     showCountry,
     standingsInfoText,
     standingsSort,
@@ -342,6 +345,15 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                         className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                       />
                       <span>{t('embed.showGameNumber')}</span>
+                    </label>
+                    <label className="flex items-center space-x-2 text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={hidePastGames}
+                        onChange={(e) => setHidePastGames(e.target.checked)}
+                        className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span>Hide past games</span>
                     </label>
                   </>
                 )}
@@ -789,6 +801,7 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
                 hideStatusFilter={hideStatusFilter}
                 hideLeagueName={hideLeagueName}
                 hideGameNumber={hideGameNumber}
+                includePastDays={hidePastGames ? 0 : 30}
               />
             ) : embedView === 'standings' ? (
               <EmbeddableStandings

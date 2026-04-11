@@ -222,29 +222,21 @@ const GameBar: React.FC<GameBarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [shareGameId]);
 
-  // Sync overlay state when the user exits fullscreen via ESC
+  // Close overlay on ESC key
   useEffect(() => {
-    const onFsChange = () => {
-      if (!document.fullscreenElement) setFullscreenGame(null);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFullscreenGame(null);
     };
-    document.addEventListener('fullscreenchange', onFsChange);
-    return () => document.removeEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const openFullscreen = async (game: Game) => {
+  const openFullscreen = (game: Game) => {
     setFullscreenGame(game);
-    try {
-      if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
-        await document.documentElement.requestFullscreen();
-      }
-    } catch { /* fullscreen not available */ }
   };
 
-  const closeFullscreen = async () => {
+  const closeFullscreen = () => {
     setFullscreenGame(null);
-    try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-    } catch { /* ignore */ }
   };
 
   const captureCard = async (game: Game) => {
@@ -542,10 +534,7 @@ const GameBar: React.FC<GameBarProps> = ({
       </div>
     );
 
-    // Portal into the fullscreen element when available (makes it work inside embedded iframes),
-    // otherwise fall back to document.body.
-    const portalTarget = (document.fullscreenElement as HTMLElement) || document.body;
-    return ReactDOM.createPortal(overlay, portalTarget);
+    return ReactDOM.createPortal(overlay, document.body);
   };
 
   return (
@@ -732,7 +721,7 @@ const GameBar: React.FC<GameBarProps> = ({
             scrollbarColor: '#cbd5e1 transparent'
           }}
         >
-          <div className="flex h-full items-center min-w-max py-4 px-2">
+          <div className="flex h-full items-start min-w-max py-4 px-2">
             {filteredGames.length === 0 ? (
               <div
                 className="flex items-center justify-center w-full h-full"
@@ -873,6 +862,7 @@ const GameBar: React.FC<GameBarProps> = ({
                     </button>
 
                     {/* Expand/story button — shown only when card is tapped */}
+                    {/* Positioned top-left so it is never clipped by overflow-y-hidden on the scroll container */}
                     {tappedCardId === game.id && (
                       <button
                         onClick={(e) => {
@@ -881,8 +871,8 @@ const GameBar: React.FC<GameBarProps> = ({
                         }}
                         style={{
                           position: 'absolute',
-                          bottom: '6px',
-                          right: '6px',
+                          top: '6px',
+                          left: '6px',
                           padding: '6px',
                           borderRadius: '8px',
                           backgroundColor: 'var(--embed-primary, #4f46e5)',
