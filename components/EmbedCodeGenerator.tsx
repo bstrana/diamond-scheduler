@@ -206,7 +206,8 @@ const EmbedCodeGenerator: React.FC<EmbedCodeGeneratorProps> = ({
   height="${finalHeight}px"
   frameborder="0"
   scrolling="auto"
-  allowfullscreen${transparencyAttr}
+  allowfullscreen
+  allow="fullscreen"${transparencyAttr}
   style="${bgStyle}border: 1px solid ${borderColor}; border-radius: ${borderRadius};">
 </iframe>`;
   }, [embedUrl, height, embedView, embedStyles]);

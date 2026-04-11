@@ -222,21 +222,46 @@ const GameBar: React.FC<GameBarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [shareGameId]);
 
-  // Close overlay on ESC key
+  // Timestamp of the last requestFullscreen call; used to ignore the
+  // fullscreenchange event that fires immediately when our own request
+  // fires or is rejected (prevents the race condition that cleared
+  // fullscreenGame before React could render the overlay).
+  const fsRequestedAt = React.useRef(0);
+
   useEffect(() => {
+    const onFsChange = () => {
+      // Ignore fullscreenchange events within 600 ms of our own request —
+      // some mobile browsers fire the event even when fullscreen is denied.
+      if (Date.now() - fsRequestedAt.current < 600) return;
+      if (!document.fullscreenElement) setFullscreenGame(null);
+    };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setFullscreenGame(null);
     };
+    document.addEventListener('fullscreenchange', onFsChange);
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      document.removeEventListener('keydown', onKeyDown);
+    };
   }, []);
 
   const openFullscreen = (game: Game) => {
     setFullscreenGame(game);
+    // Request native fullscreen so the iframe expands to fill the screen.
+    // Must be called synchronously inside a user-gesture handler.
+    type FSEl = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> };
+    const el = document.documentElement as FSEl;
+    const req = el.requestFullscreen?.bind(el) ?? el.webkitRequestFullscreen?.bind(el);
+    if (req && !document.fullscreenElement) {
+      fsRequestedAt.current = Date.now();
+      req().catch(() => {}); // ignore rejections — overlay still shows in-page
+    }
   };
 
   const closeFullscreen = () => {
     setFullscreenGame(null);
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
   };
 
   const captureCard = async (game: Game) => {
