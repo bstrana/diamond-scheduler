@@ -17,7 +17,7 @@
 
 /** latest.json */
 export interface WbscLastPlayResponse {
-  latestpn: number;   // confirmed field name
+  number: number;      // actual field name in latest.json
   status?: string;    // present only in some tournament setups
 }
 
@@ -215,9 +215,9 @@ export async function fetchWbscGameState(
 ): Promise<WbscGameState | null> {
   // fetchLastPlay throws on any HTTP / network / parse error
   const latest = await fetchLastPlay(wbscGameId);
-  if (latest.latestpn === lastKnownPlay) return null; // no new play since last tick
+  if (latest.number === lastKnownPlay) return null; // no new play since last tick
 
   // fetchPlayData throws on any HTTP / network / parse error
-  const playData = await fetchPlayData(wbscGameId, latest.latestpn);
-  return mapPlayData(latest.latestpn, playData, latest.status);
+  const playData = await fetchPlayData(wbscGameId, latest.number);
+  return mapPlayData(latest.number, playData, latest.status);
 }
