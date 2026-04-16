@@ -37,7 +37,10 @@
 
     "KC_REALM":        "diamond",
     "KC_CLIENT_ID":    "diamond-scheduler-server",
-    "KC_CLIENT_SECRET": ""
+    "KC_CLIENT_SECRET": "",
+
+    "WBSC_API_BASE": "",
+    "WBSC_API_KEY":  ""
   },
 
   "updateUrl":     "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/CloudronVersions.json",

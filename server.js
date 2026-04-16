@@ -180,6 +180,87 @@ app.get('/subscribe.ics', icsRateLimiter, async (req, res) => {
 
 app.get('/health', (_req, res) => res.sendStatus(200));
 
+// ── WBSC API proxy ────────────────────────────────────────────────────────────
+// Forwards requests to the WBSC scoring API server-side so the browser
+// doesn't hit CORS restrictions.  Set WBSC_API_BASE in the environment
+// (e.g. https://scoring.wbsc.org/api/v1) and optionally WBSC_API_KEY.
+//
+// Two endpoints are exposed:
+//   GET /wbsc-proxy/last-play?gameId={id}
+//        → proxies to WBSC "current play number" endpoint
+//   GET /wbsc-proxy/play-data?gameId={id}&playNumber={n}
+//        → proxies to WBSC "play data" endpoint
+//
+// TODO: adjust the upstream URL templates below to match the actual WBSC API.
+const wbscApiBase = (process.env.WBSC_API_BASE || '').replace(/\/$/, '');
+const wbscApiKey  = process.env.WBSC_API_KEY || '';
+
+const wbscRateLimiter = rateLimit({
+  windowMs: 10_000,  // 10-second window
+  max: 20,           // allow one request per 500 ms per IP with some headroom
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/** Validate that a WBSC game/play ID is a safe numeric string. */
+const isValidWbscId = (v) => typeof v === 'string' && /^\d{1,12}$/.test(v);
+
+app.get('/wbsc-proxy/last-play', wbscRateLimiter, async (req, res) => {
+  if (!wbscApiBase) {
+    res.status(503).json({ error: 'WBSC_API_BASE not configured on this server.' });
+    return;
+  }
+  const { gameId } = req.query;
+  if (!isValidWbscId(gameId)) {
+    res.status(400).json({ error: 'Invalid gameId.' });
+    return;
+  }
+
+  // TODO: replace with the actual WBSC endpoint URL for "latest play number"
+  const upstreamUrl = `${wbscApiBase}/game/${gameId}/last-play-number`;
+  try {
+    const headers = { 'Accept': 'application/json' };
+    if (wbscApiKey) headers['Authorization'] = `Bearer ${wbscApiKey}`;
+    const upstream = await fetch(upstreamUrl, { headers, signal: AbortSignal.timeout(5_000) });
+    const body = await upstream.text();
+    res.status(upstream.status)
+       .setHeader('Content-Type', 'application/json')
+       .send(body);
+  } catch (err) {
+    res.status(502).json({ error: 'WBSC upstream unreachable.', detail: String(err) });
+  }
+});
+
+app.get('/wbsc-proxy/play-data', wbscRateLimiter, async (req, res) => {
+  if (!wbscApiBase) {
+    res.status(503).json({ error: 'WBSC_API_BASE not configured on this server.' });
+    return;
+  }
+  const { gameId, playNumber } = req.query;
+  if (!isValidWbscId(gameId)) {
+    res.status(400).json({ error: 'Invalid gameId.' });
+    return;
+  }
+  if (!isValidWbscId(playNumber)) {
+    res.status(400).json({ error: 'Invalid playNumber.' });
+    return;
+  }
+
+  // TODO: replace with the actual WBSC endpoint URL for "play data"
+  const upstreamUrl = `${wbscApiBase}/game/${gameId}/plays/${playNumber}`;
+  try {
+    const headers = { 'Accept': 'application/json' };
+    if (wbscApiKey) headers['Authorization'] = `Bearer ${wbscApiKey}`;
+    const upstream = await fetch(upstreamUrl, { headers, signal: AbortSignal.timeout(5_000) });
+    const body = await upstream.text();
+    res.status(upstream.status)
+       .setHeader('Content-Type', 'application/json')
+       .send(body);
+  } catch (err) {
+    res.status(502).json({ error: 'WBSC upstream unreachable.', detail: String(err) });
+  }
+});
+
 // embed.html must be embeddable in cross-origin iframes – override the default
 // frame-ancestors 'self' restriction set by the security headers middleware above.
 app.use((req, res, next) => {

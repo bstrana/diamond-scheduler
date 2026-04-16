@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { CheckCircle, AlertCircle, Loader2, Plus, Minus } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2, Plus, Minus, RefreshCw } from 'lucide-react';
 import './index.css';
 import './i18n';
 import {
@@ -9,6 +9,7 @@ import {
   listScoreEditsByScheduleKey,
   saveScoreEdit,
 } from './services/storage';
+import { fetchWbscGameState } from './services/wbsc';
 import { ScoreLink, Game, Team } from './types';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -100,6 +101,14 @@ const ScoreEditApp: React.FC = () => {
   const [linescore, setLinescore] = useState<boolean>(false);
   const [hits,   setHits]   = useState<{ away: number | null; home: number | null }>({ away: null, home: null });
   const [errors, setErrors] = useState<{ away: number | null; home: number | null }>({ away: null, home: null });
+
+  // WBSC live sync state
+  const [wbscEnabled, setWbscEnabled] = useState(true);
+  const [wbscSyncing, setWbscSyncing] = useState(false);
+  const [wbscError, setWbscError]     = useState<string | null>(null);
+  const [wbscPlayNumber, setWbscPlayNumber] = useState(-1);
+  const [wbscLastDesc, setWbscLastDesc]     = useState<string | null>(null);
+  const wbscLastPlayRef = useRef(-1); // ref copy so the interval closure is stable
 
   const homeTotal = innings.reduce((s, i) => s + (i.home ?? 0), 0);
   const awayTotal = innings.reduce((s, i) => s + (i.away ?? 0), 0);
@@ -201,6 +210,50 @@ const ScoreEditApp: React.FC = () => {
   // homeTotal and awayTotal are derived from innings — no need to list them separately
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, innings, outs, balls, strikes, baseRunners, recap, pitcher, linescore, hits, errors]);
+
+  // ── WBSC live data polling ───────────────────────────────────────────────────
+  // Runs every 5 seconds when: game has a wbscGameId, status is live, and
+  // wbscEnabled is true.  On each tick:
+  //   1. fetch latest play number  → if unchanged, skip
+  //   2. fetch full play data      → map to form state fields
+  //   3. state changes trigger the existing 900 ms auto-save debounce
+  useEffect(() => {
+    if (!game?.wbscGameId || !wbscEnabled || status !== 'live') return;
+
+    const poll = async () => {
+      setWbscSyncing(true);
+      try {
+        const state = await fetchWbscGameState(game.wbscGameId!, wbscLastPlayRef.current);
+        if (!state) return; // no new play or network error
+
+        setWbscError(null);
+        wbscLastPlayRef.current = state.playNumber;
+        setWbscPlayNumber(state.playNumber);
+        setWbscLastDesc(state.description ?? null);
+
+        // Apply game state — these changes will trigger the auto-save debounce
+        // (900 ms), which writes the data to PocketBase and keeps the stream
+        // overlay and published schedule up to date.
+        setInnings(state.innings);
+        setOuts(state.outs);
+        setBalls(state.balls);
+        setStrikes(state.strikes);
+        setBaseRunners(state.baseRunners);
+        if (state.pitcher) setPitcher(state.pitcher);
+        if (state.status === 'final') setStatus('final');
+      } catch {
+        setWbscError('Fetch failed');
+      } finally {
+        setWbscSyncing(false);
+      }
+    };
+
+    poll(); // immediate first tick
+    const interval = setInterval(poll, 5_000);
+    return () => clearInterval(interval);
+  // wbscLastPlayRef is a ref so it is intentionally excluded from deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.wbscGameId, wbscEnabled, status]);
 
   // ── collapse header on scroll ────────────────────────────────────────────────
   useEffect(() => {
@@ -313,6 +366,58 @@ const ScoreEditApp: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* WBSC live sync status bar — visible when game has a WBSC ID */}
+          {game?.wbscGameId && (
+            <div className={`rounded-lg border px-4 py-3 space-y-2 ${
+              wbscError
+                ? 'border-red-200 bg-red-50'
+                : wbscEnabled
+                  ? 'border-indigo-200 bg-indigo-50'
+                  : 'border-slate-200 bg-slate-50'
+            }`}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  {wbscSyncing ? (
+                    <RefreshCw size={13} className="text-indigo-500 animate-spin flex-shrink-0" />
+                  ) : wbscError ? (
+                    <span className="inline-block w-2 h-2 rounded-full bg-red-400 flex-shrink-0" />
+                  ) : wbscEnabled ? (
+                    <span className="relative flex h-2 w-2 flex-shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500" />
+                    </span>
+                  ) : (
+                    <span className="inline-block w-2 h-2 rounded-full bg-slate-300 flex-shrink-0" />
+                  )}
+                  <span className={`text-xs font-semibold uppercase tracking-wide ${
+                    wbscError ? 'text-red-700' : wbscEnabled ? 'text-indigo-700' : 'text-slate-500'
+                  }`}>
+                    WBSC Live{wbscPlayNumber >= 0 ? ` · Play ${wbscPlayNumber}` : ''}
+                  </span>
+                  {wbscError && (
+                    <span className="text-xs text-red-600">{wbscError}</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWbscEnabled(v => !v)}
+                  className={`text-xs font-medium px-2 py-0.5 rounded-full border transition-colors flex-shrink-0 ${
+                    wbscEnabled
+                      ? 'border-indigo-300 text-indigo-600 hover:bg-indigo-100'
+                      : 'border-slate-300 text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  {wbscEnabled ? 'Pause' : 'Resume'}
+                </button>
+              </div>
+              {wbscLastDesc && wbscEnabled && (
+                <p className="text-xs text-indigo-700 leading-relaxed truncate" title={wbscLastDesc}>
+                  {wbscLastDesc}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Score by inning */}
           {(status === 'live' || status === 'final') && (
