@@ -89,33 +89,25 @@ export interface WbscGameState {
 
 // ── Internal fetch helpers ────────────────────────────────────────────────────
 
-async function fetchLastPlay(wbscGameId: string): Promise<WbscLastPlayResponse | null> {
-  try {
-    const res = await fetch(
-      `/wbsc-proxy/last-play?gameId=${encodeURIComponent(wbscGameId)}`,
-      { signal: AbortSignal.timeout(4_000) },
-    );
-    if (!res.ok) return null;
-    return (await res.json()) as WbscLastPlayResponse;
-  } catch {
-    return null;
-  }
+async function fetchLastPlay(wbscGameId: string): Promise<WbscLastPlayResponse> {
+  const res = await fetch(
+    `/wbsc-proxy/last-play?gameId=${encodeURIComponent(wbscGameId)}`,
+    { signal: AbortSignal.timeout(4_000) },
+  );
+  if (!res.ok) throw new Error(`last-play ${res.status}`);
+  return (await res.json()) as WbscLastPlayResponse;
 }
 
 async function fetchPlayData(
   wbscGameId: string,
   playNumber: number,
-): Promise<WbscPlayDataResponse | null> {
-  try {
-    const res = await fetch(
-      `/wbsc-proxy/play-data?gameId=${encodeURIComponent(wbscGameId)}&playNumber=${playNumber}`,
-      { signal: AbortSignal.timeout(4_000) },
-    );
-    if (!res.ok) return null;
-    return (await res.json()) as WbscPlayDataResponse;
-  } catch {
-    return null;
-  }
+): Promise<WbscPlayDataResponse> {
+  const res = await fetch(
+    `/wbsc-proxy/play-data?gameId=${encodeURIComponent(wbscGameId)}&playNumber=${playNumber}`,
+    { signal: AbortSignal.timeout(4_000) },
+  );
+  if (!res.ok) throw new Error(`play-data ${res.status}`);
+  return (await res.json()) as WbscPlayDataResponse;
 }
 
 // ── Data mapping ──────────────────────────────────────────────────────────────
@@ -221,12 +213,11 @@ export async function fetchWbscGameState(
   wbscGameId: string,
   lastKnownPlay: number,
 ): Promise<WbscGameState | null> {
+  // fetchLastPlay throws on any HTTP / network / parse error
   const latest = await fetchLastPlay(wbscGameId);
-  if (!latest) return null;
   if (latest.latestpn === lastKnownPlay) return null; // no new play since last tick
 
+  // fetchPlayData throws on any HTTP / network / parse error
   const playData = await fetchPlayData(wbscGameId, latest.latestpn);
-  if (!playData) return null;
-
   return mapPlayData(latest.latestpn, playData, latest.status);
 }
