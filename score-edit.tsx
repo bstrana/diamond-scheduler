@@ -243,8 +243,8 @@ const ScoreEditApp: React.FC = () => {
         if (state.hits)   setHits(state.hits);
         if (state.errors) setErrors(state.errors);
         if (state.status === 'final') setStatus('final');
-      } catch {
-        setWbscError('Fetch failed');
+      } catch (e) {
+        setWbscError(e instanceof Error ? e.message : 'Fetch failed');
       } finally {
         setWbscSyncing(false);
       }
