@@ -6,85 +6,85 @@
  *
  *   1. GET /wbsc-proxy/last-play?gameId={id}
  *        ← https://game.wbsc.org/gamedata/{gameid}/latest.json
- *        → { latestpn: 42, … }
+ *        Response field: latestpn  (latest play sequence number)
  *
  *   2. GET /wbsc-proxy/play-data?gameId={id}&playNumber={n}
  *        ← https://game.wbsc.org/gamedata/{gameid}/play{n}.json
- *        → full play record with score, count, runners, pitcher …
- *
- * The mapping functions below convert WBSC field names to the internal
- * model used by score-edit.tsx.  Field names inside WbscPlayDataResponse
- * should be adjusted once you inspect an actual play{n}.json response.
+ *        Relevant sections: situation, linescore, playdata[0].n
  */
 
 // ── WBSC API response shapes ──────────────────────────────────────────────────
 
-/**
- * Response from https://game.wbsc.org/gamedata/{gameid}/latest.json
- * Confirmed field: latestpn (latest play number).
- */
+/** latest.json */
 export interface WbscLastPlayResponse {
-  /** Latest play sequence number — use this to fetch the matching play file. */
-  latestpn: number;
-  /**
-   * Game status string if present in latest.json.
-   * Adjust the field name and known values once you inspect a real response.
-   */
-  status?: string;
+  latestpn: number;   // confirmed field name
+  status?: string;    // present only in some tournament setups
 }
 
-/** Response from the "play data" endpoint. */
+/** play{n}.json — situation block */
+interface WbscSituation {
+  currentinning: string;  // e.g. "BOT 10", "TOP 5"
+  pitcher:  string;       // "ĆURKOVIĆ Ante"  (defense — current pitcher)
+  batter:   string;       // "CRNJAK Bartol"  (offense — current batter)
+  batting:  string;       // "1 for 4"
+  avg:      string;       // ".250"
+  runner1:  number;       // 0 = empty, non-zero = runner on first
+  runner2:  number;       // 0 = empty, non-zero = runner on second
+  runner3:  number;       // 0 = empty, non-zero = runner on third
+  outs:     number;       // 0-3
+  balls:    number;       // 0-4
+  strikes:  number;       // 0-3
+  inning:   string;       // "10.1" (inning.out notation — informational)
+  extrainnings: string | null;
+}
+
+/** play{n}.json — linescore block */
+interface WbscLinescore {
+  /** Index 0 is null (placeholder); indices 1…N are runs for innings 1…N */
+  awayruns: (number | null)[];
+  homeruns: (number | null)[];
+  awaytotals: { R: number; H: number; E: number; LOB: number };
+  hometotals: { R: number; H: number; E: number; LOB: number };
+}
+
+/** play{n}.json — single entry in the playdata array */
+interface WbscPlayEntry {
+  t: string;   // timestamp ms
+  p: string;   // play id
+  n: string;   // play description  ← what we display
+  b: string;
+  a: string;
+  r1: string;
+  r2: string;
+  i: string;
+  x: string;
+  y: string;
+  hd: string;
+  hp: string;
+  hl: string;
+}
+
+/** Full play{n}.json response */
 export interface WbscPlayDataResponse {
-  play_number: number;
-  /** Human-readable description of the play, e.g. "Strike swinging". */
-  description?: string;
-  inning: {
-    number: number;          // 1-based inning number
-    /** Adjust if WBSC uses 'T'/'B' or 'top'/'bottom' instead. */
-    half: 'TOP' | 'BOTTOM';
-  };
-  count: {
-    outs: number;            // 0–3 (we cap at 2 in the UI)
-    balls: number;           // 0–4 (we cap at 3 in the UI)
-    strikes: number;         // 0–3 (we cap at 2 in the UI)
-  };
-  /** Which bases are occupied. Adjust field names to match actual API. */
-  runners: {
-    first: boolean;
-    second: boolean;
-    third: boolean;
-  };
-  score: {
-    home: number;
-    away: number;
-  };
-  /** Per-inning line score. One entry per completed or in-progress inning. */
-  linescore: Array<{
-    inning: number;          // 1-based
-    home: number | null;     // null = not yet played
-    away: number | null;
-  }>;
-  /** Defensive lineup — used to extract the current pitcher's name. */
-  defense?: {
-    pitcher?: {
-      name?: string;         // e.g. "Smith, J." — adjust path to actual API
-    };
-  };
+  situation: WbscSituation;
+  linescore: WbscLinescore;
+  playdata:  WbscPlayEntry[];
 }
 
 // ── Mapped game state (what score-edit.tsx consumes) ─────────────────────────
 
 export interface WbscGameState {
-  playNumber: number;
-  /** Plain-text play description for display. */
+  playNumber:  number;
   description?: string;
   status: 'live' | 'final' | 'postponed';
   innings: Array<{ home: number | null; away: number | null }>;
-  outs: number;
-  balls: number;
+  outs:    number;
+  balls:   number;
   strikes: number;
   baseRunners: { first: boolean; second: boolean; third: boolean };
   pitcher?: string;
+  hits?:   { away: number | null; home: number | null };
+  errors?: { away: number | null; home: number | null };
 }
 
 // ── Internal fetch helpers ────────────────────────────────────────────────────
@@ -96,9 +96,7 @@ async function fetchLastPlay(wbscGameId: string): Promise<WbscLastPlayResponse |
       { signal: AbortSignal.timeout(4_000) },
     );
     if (!res.ok) return null;
-    const json = await res.json();
-    // latest.json uses the field name "latestpn"
-    return json as WbscLastPlayResponse;
+    return (await res.json()) as WbscLastPlayResponse;
   } catch {
     return null;
   }
@@ -122,37 +120,88 @@ async function fetchPlayData(
 
 // ── Data mapping ──────────────────────────────────────────────────────────────
 
-function mapStatus(raw: string): WbscGameState['status'] {
+/**
+ * Parse "BOT 10" / "TOP 5" → { half: 'BOTTOM'|'TOP', number: 10 }
+ * Falls back gracefully when the string has an unexpected format.
+ */
+function parseCurrentInning(raw: string): { number: string; half: 'TOP' | 'BOTTOM' | null } {
+  const parts = raw.trim().toUpperCase().split(/\s+/);
+  const halfStr = parts[0] ?? '';
+  const numStr  = parts[1] ?? '';
+  const half: 'TOP' | 'BOTTOM' | null =
+    halfStr === 'TOP' ? 'TOP' :
+    halfStr === 'BOT' ? 'BOTTOM' :
+    null;
+  return { number: numStr || '—', half };
+}
+
+/**
+ * Build innings array from WBSC linescore arrays.
+ * WBSC uses index 0 as a null placeholder; innings start at index 1.
+ */
+function buildInnings(
+  awayruns: (number | null)[],
+  homeruns: (number | null)[],
+): Array<{ home: number | null; away: number | null }> {
+  const len = Math.max(awayruns.length, homeruns.length);
+  const innings: Array<{ home: number | null; away: number | null }> = [];
+  for (let i = 1; i < len; i++) {
+    innings.push({
+      away: awayruns[i] ?? null,
+      home: homeruns[i] ?? null,
+    });
+  }
+  return innings.length > 0 ? innings : [{ home: null, away: null }];
+}
+
+function mapStatus(raw: string | undefined): WbscGameState['status'] {
+  if (!raw) return 'live';
   const s = raw.toLowerCase();
   if (s.includes('final') || s.includes('complet') || s.includes('end')) return 'final';
   if (s.includes('postpone') || s.includes('cancel') || s.includes('suspend')) return 'postponed';
   return 'live';
 }
 
-function mapPlayDataToState(
-  playData: WbscPlayDataResponse,
-  rawStatus: string,
+function mapPlayData(
+  latestpn: number,
+  data: WbscPlayDataResponse,
+  rawStatus: string | undefined,
 ): WbscGameState {
-  // Build innings array from linescore; always have at least one row.
-  const innings: WbscGameState['innings'] =
-    playData.linescore.length > 0
-      ? playData.linescore.map(row => ({ home: row.home, away: row.away }))
-      : [{ home: null, away: null }];
+  const { situation, linescore, playdata } = data;
+
+  // Play description: first entry in playdata array, field "n"
+  const description = playdata[0]?.n?.trim() || undefined;
+
+  // Inning — derived from currentinning string (e.g. "BOT 10")
+  // (Not stored in WbscGameState directly; used only for future extension.)
+  const _inning = parseCurrentInning(situation.currentinning ?? '');
+  void _inning; // currently informational; remove void if you add it to the state shape
+
+  // Linescore → innings array
+  const innings = buildInnings(linescore.awayruns, linescore.homeruns);
 
   return {
-    playNumber: playData.play_number,  // adjust field name once play{n}.json is inspected
-    description: playData.description,
+    playNumber:  latestpn,
+    description,
     status: mapStatus(rawStatus),
     innings,
-    outs:    Math.min(playData.count.outs,    2),
-    balls:   Math.min(playData.count.balls,   3),
-    strikes: Math.min(playData.count.strikes, 2),
+    outs:    Math.min(situation.outs,    2),
+    balls:   Math.min(situation.balls,   3),
+    strikes: Math.min(situation.strikes, 2),
     baseRunners: {
-      first:  !!playData.runners.first,
-      second: !!playData.runners.second,
-      third:  !!playData.runners.third,
+      first:  situation.runner1 !== 0,
+      second: situation.runner2 !== 0,
+      third:  situation.runner3 !== 0,
     },
-    pitcher: playData.defense?.pitcher?.name,
+    pitcher: situation.pitcher || undefined,
+    hits: {
+      away: linescore.awaytotals.H ?? null,
+      home: linescore.hometotals.H ?? null,
+    },
+    errors: {
+      away: linescore.awaytotals.E ?? null,
+      home: linescore.hometotals.E ?? null,
+    },
   };
 }
 
@@ -161,23 +210,23 @@ function mapPlayDataToState(
 /**
  * Fetch the latest WBSC game state.
  *
- * Returns `null` when:
- * - Either API call fails (network error, proxy misconfigured, etc.)
- * - The play number has not advanced past `lastKnownPlay` (no new data)
+ * Returns null when:
+ * - Either API call fails (network / proxy error)
+ * - The play number has not advanced past lastKnownPlay (no new play yet)
  *
- * @param wbscGameId   WBSC numeric game identifier stored on the Game record.
+ * @param wbscGameId     WBSC numeric game ID stored on the Game record.
  * @param lastKnownPlay  Play number from the previous successful fetch (-1 on first call).
  */
 export async function fetchWbscGameState(
   wbscGameId: string,
   lastKnownPlay: number,
 ): Promise<WbscGameState | null> {
-  const lastPlay = await fetchLastPlay(wbscGameId);
-  if (!lastPlay) return null;
-  if (lastPlay.latestpn === lastKnownPlay) return null; // no new play since last tick
+  const latest = await fetchLastPlay(wbscGameId);
+  if (!latest) return null;
+  if (latest.latestpn === lastKnownPlay) return null; // no new play since last tick
 
-  const playData = await fetchPlayData(wbscGameId, lastPlay.latestpn);
+  const playData = await fetchPlayData(wbscGameId, latest.latestpn);
   if (!playData) return null;
 
-  return mapPlayDataToState(playData, lastPlay.status ?? '');
+  return mapPlayData(latest.latestpn, playData, latest.status);
 }

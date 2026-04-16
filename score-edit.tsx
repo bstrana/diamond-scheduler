@@ -240,6 +240,8 @@ const ScoreEditApp: React.FC = () => {
         setStrikes(state.strikes);
         setBaseRunners(state.baseRunners);
         if (state.pitcher) setPitcher(state.pitcher);
+        if (state.hits)   setHits(state.hits);
+        if (state.errors) setErrors(state.errors);
         if (state.status === 'final') setStatus('final');
       } catch {
         setWbscError('Fetch failed');
