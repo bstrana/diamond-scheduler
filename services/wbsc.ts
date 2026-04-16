@@ -15,11 +15,10 @@
 
 // ── WBSC API response shapes ──────────────────────────────────────────────────
 
-/** latest.json */
-export interface WbscLastPlayResponse {
-  latestpn: number;   // confirmed field name
-  status?: string;    // present only in some tournament setups
-}
+/**
+ * latest.json returns a plain JSON number — the current play sequence number.
+ * (No wrapper object.)
+ */
 
 /** play{n}.json — situation block */
 interface WbscSituation {
@@ -89,13 +88,16 @@ export interface WbscGameState {
 
 // ── Internal fetch helpers ────────────────────────────────────────────────────
 
-async function fetchLastPlay(wbscGameId: string): Promise<WbscLastPlayResponse> {
+async function fetchLastPlay(wbscGameId: string): Promise<number> {
   const res = await fetch(
     `/wbsc-proxy/last-play?gameId=${encodeURIComponent(wbscGameId)}`,
     { signal: AbortSignal.timeout(4_000) },
   );
   if (!res.ok) throw new Error(`last-play ${res.status}`);
-  return (await res.json()) as WbscLastPlayResponse;
+  const data = await res.json();
+  const n = typeof data === 'number' ? data : Number(data?.number ?? data?.latestpn ?? NaN);
+  if (!Number.isFinite(n)) throw new Error('last-play: unexpected response shape');
+  return n;
 }
 
 async function fetchPlayData(
@@ -213,11 +215,11 @@ export async function fetchWbscGameState(
   wbscGameId: string,
   lastKnownPlay: number,
 ): Promise<WbscGameState | null> {
-  // fetchLastPlay throws on any HTTP / network / parse error
-  const latest = await fetchLastPlay(wbscGameId);
-  if (latest.latestpn === lastKnownPlay) return null; // no new play since last tick
+  // fetchLastPlay throws on any HTTP / network / parse error; returns plain number
+  const playNumber = await fetchLastPlay(wbscGameId);
+  if (playNumber === lastKnownPlay) return null; // no new play since last tick
 
   // fetchPlayData throws on any HTTP / network / parse error
-  const playData = await fetchPlayData(wbscGameId, latest.latestpn);
-  return mapPlayData(latest.latestpn, playData, latest.status);
+  const playData = await fetchPlayData(wbscGameId, playNumber);
+  return mapPlayData(playNumber, playData, undefined);
 }
