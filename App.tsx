@@ -675,6 +675,7 @@ const App: React.FC = () => {
       interleague: game.interleague,
       hits: game.hits,
       errors: game.errors,
+      wbscGameId: game.wbscGameId,
     });
     setShowEditModal(true);
   };
@@ -707,6 +708,7 @@ const App: React.FC = () => {
       interleague: newGameForm.interleague || undefined,
       hits: newGameForm.hits !== undefined ? newGameForm.hits : editingGame.hits,
       errors: newGameForm.errors !== undefined ? newGameForm.errors : editingGame.errors,
+      wbscGameId: newGameForm.wbscGameId !== undefined ? (newGameForm.wbscGameId || undefined) : editingGame.wbscGameId,
     };
 
     if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
@@ -752,6 +754,7 @@ const App: React.FC = () => {
       currentInning: newGameForm.currentInning !== undefined ? newGameForm.currentInning : editingGame.currentInning,
       inningHalf: newGameForm.inningHalf !== undefined ? newGameForm.inningHalf : editingGame.inningHalf,
       interleague: newGameForm.interleague || undefined,
+      wbscGameId: newGameForm.wbscGameId !== undefined ? (newGameForm.wbscGameId || undefined) : editingGame.wbscGameId,
     };
 
     if (updatedGame.homeTeamId === updatedGame.awayTeamId) {
@@ -949,6 +952,7 @@ const App: React.FC = () => {
         leagueIds: newGameForm.leagueIds,
         gameNumber: newGameForm.gameNumber,
         interleague: (newGameForm.interleague || interleagueDays.includes(newGameForm.date || '')) || undefined,
+        wbscGameId: newGameForm.wbscGameId || undefined,
     };
     setGames([...games, game]);
     setShowAddModal(false);
@@ -1032,6 +1036,8 @@ const App: React.FC = () => {
     ? Array.from(new Map(formLeagues.flatMap(l => l.teams).map(t => [t.id, t])).values())
     : [];
   const formFields = Array.from(new Set(formLeagues.flatMap(l => l.fields || [])));
+  // True when any of the currently selected leagues has WBSC tracking enabled
+  const formHasWbsc = formLeagues.some(l => l.wbscTracker);
 
   // All teams across all leagues (used by Calendar so games from any league render correctly)
   const allTeams = React.useMemo(() => {
@@ -1638,6 +1644,22 @@ const App: React.FC = () => {
                              )}
                         </div>
 
+                        {formHasWbsc && (
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              WBSC Game ID
+                              <span className="ml-1 text-xs font-normal text-slate-400">(optional)</span>
+                            </label>
+                            <input
+                              type="text"
+                              className="w-full border rounded-md p-2 text-sm font-mono"
+                              placeholder="e.g. 12345"
+                              value={newGameForm.wbscGameId || ''}
+                              onChange={e => setNewGameForm({...newGameForm, wbscGameId: e.target.value})}
+                            />
+                          </div>
+                        )}
+
                         <div className="pt-2">
                             <button type="submit" className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors">
                                 {t('gameForm.addToSchedule')}
@@ -1652,6 +1674,7 @@ const App: React.FC = () => {
         {showEditModal && editingGame && (() => {
           const editFormLeagueIds = newGameForm.leagueIds || getGameLeagueIds(editingGame);
           const editFormLeagues = leagues.filter(l => editFormLeagueIds.includes(l.id));
+          const editFormHasWbsc = editFormLeagues.some(l => l.wbscTracker);
           const editFormTeams = editFormLeagues.length > 0
             ? Array.from(new Map(editFormLeagues.flatMap(l => l.teams).map(t => [t.id, t])).values())
             : [];
@@ -1970,6 +1993,24 @@ const App: React.FC = () => {
                                 onChange={e => setNewGameForm({...newGameForm, recap: e.target.value})}
                             />
                         </div>
+
+                        {/* WBSC Game ID */}
+                        {editFormHasWbsc && (
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              WBSC Game ID
+                              <span className="ml-1 text-xs font-normal text-slate-400">(optional)</span>
+                            </label>
+                            <input
+                              type="text"
+                              className="w-full border rounded-md p-2 text-sm font-mono"
+                              placeholder="e.g. 12345"
+                              value={newGameForm.wbscGameId !== undefined ? newGameForm.wbscGameId : (editingGame.wbscGameId || '')}
+                              onChange={e => setNewGameForm({...newGameForm, wbscGameId: e.target.value})}
+                            />
+                            <p className="text-xs text-slate-400 mt-1">Used by the WBSC data service to fetch live scores and play-by-play.</p>
+                          </div>
+                        )}
 
                         {/* Live Stream URL */}
                         <div>
