@@ -180,6 +180,80 @@ app.get('/subscribe.ics', icsRateLimiter, async (req, res) => {
 
 app.get('/health', (_req, res) => res.sendStatus(200));
 
+// ── WBSC API proxy ────────────────────────────────────────────────────────────
+// Forwards requests to game.wbsc.org server-side to avoid browser CORS.
+//
+// WBSC data endpoints (public, no auth required):
+//   latest play number : https://game.wbsc.org/gamedata/{gameid}/latest.json
+//   play data          : https://game.wbsc.org/gamedata/{gameid}/play{n}.json
+//
+// Our proxy surfaces them as:
+//   GET /wbsc-proxy/last-play?gameId={id}
+//   GET /wbsc-proxy/play-data?gameId={id}&playNumber={n}
+//
+// WBSC_API_BASE env var can override the base URL (default: https://game.wbsc.org/gamedata).
+const wbscApiBase = (process.env.WBSC_API_BASE || 'https://game.wbsc.org/gamedata').replace(/\/$/, '');
+
+const wbscRateLimiter = rateLimit({
+  windowMs: 10_000,  // 10-second window
+  max: 20,           // headroom for up to ~2 scorers polling every 5 s
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/** Validate that a WBSC game/play ID is a safe numeric string. */
+const isValidWbscId = (v) => typeof v === 'string' && /^\d{1,12}$/.test(v);
+
+app.get('/wbsc-proxy/last-play', wbscRateLimiter, async (req, res) => {
+  const { gameId } = req.query;
+  if (!isValidWbscId(gameId)) {
+    res.status(400).json({ error: 'Invalid gameId.' });
+    return;
+  }
+
+  // https://game.wbsc.org/gamedata/{gameid}/latest.json
+  const upstreamUrl = `${wbscApiBase}/${gameId}/latest.json`;
+  try {
+    const upstream = await fetch(upstreamUrl, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(5_000),
+    });
+    const body = await upstream.text();
+    res.status(upstream.status)
+       .setHeader('Content-Type', 'application/json')
+       .send(body);
+  } catch (err) {
+    res.status(502).json({ error: 'WBSC upstream unreachable.', detail: String(err) });
+  }
+});
+
+app.get('/wbsc-proxy/play-data', wbscRateLimiter, async (req, res) => {
+  const { gameId, playNumber } = req.query;
+  if (!isValidWbscId(gameId)) {
+    res.status(400).json({ error: 'Invalid gameId.' });
+    return;
+  }
+  if (!isValidWbscId(playNumber)) {
+    res.status(400).json({ error: 'Invalid playNumber.' });
+    return;
+  }
+
+  // https://game.wbsc.org/gamedata/{gameid}/play{n}.json  (number embedded in filename)
+  const upstreamUrl = `${wbscApiBase}/${gameId}/play${playNumber}.json`;
+  try {
+    const upstream = await fetch(upstreamUrl, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(5_000),
+    });
+    const body = await upstream.text();
+    res.status(upstream.status)
+       .setHeader('Content-Type', 'application/json')
+       .send(body);
+  } catch (err) {
+    res.status(502).json({ error: 'WBSC upstream unreachable.', detail: String(err) });
+  }
+});
+
 // embed.html must be embeddable in cross-origin iframes – override the default
 // frame-ancestors 'self' restriction set by the security headers middleware above.
 app.use((req, res, next) => {
