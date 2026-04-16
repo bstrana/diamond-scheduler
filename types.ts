@@ -26,6 +26,7 @@ export interface League {
   teams: Team[];
   fields?: string[];
   announcement?: string;
+  wbscTracker?: boolean; // Enable WBSC game ID field on games in this league
 }
 
 export interface Game {
@@ -58,6 +59,7 @@ export interface Game {
   interleague?: boolean; // Counts toward combined standings
   hits?: { away: number | null; home: number | null };
   errors?: { away: number | null; home: number | null };
+  wbscGameId?: string; // WBSC external game identifier for score/play-by-play feed
 }
 
 export type ViewMode = 'calendar' | 'list' | 'teams' | 'leagues' | 'league_builder' | 'scheduler' | 'embed' | 'gamebar' | 'help' | 'bracket' | 'score_links' | 'tenant_settings';

@@ -35,6 +35,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
   const [category, setCategory] = useState('');
   const [announcement, setAnnouncement] = useState('');
   const [leagueColor, setLeagueColor] = useState('#4f46e5');
+  const [wbscTracker, setWbscTracker] = useState(false);
   
   // Fields State
   const [fields, setFields] = useState<string[]>([]);
@@ -263,6 +264,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
             setCategory(league.category);
             setAnnouncement(league.announcement || '');
             setLeagueColor(league.color || '#4f46e5');
+            setWbscTracker(league.wbscTracker || false);
             setTeams([...league.teams]);
             setFields([...(league.fields || [])]);
         }
@@ -413,6 +415,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
             teams: teams,
             fields: fields,
             announcement: sanitizedAnnouncement,
+            wbscTracker: wbscTracker || undefined,
         };
         onLeagueUpdated(updatedLeague);
     } else {
@@ -428,6 +431,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
             teams: teams,
             fields: fields,
             announcement: sanitizedAnnouncement,
+            wbscTracker: wbscTracker || undefined,
         };
         onLeagueCreated(newLeague);
         // Reset form after create
@@ -438,6 +442,7 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
         setCategory('');
         setAnnouncement('');
         setLeagueColor('#4f46e5');
+        setWbscTracker(false);
         setTeams([]);
         setFields([]);
     }
@@ -608,6 +613,25 @@ const LeagueBuilder: React.FC<LeagueBuilderProps> = ({
                 maxLength={500}
               />
               <p className="text-xs text-slate-500 mt-1">{t('league.announcementHelp')}</p>
+            </div>
+
+            {/* WBSC Game Tracker */}
+            <div className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 bg-slate-50">
+              <input
+                id="wbsc-tracker"
+                type="checkbox"
+                checked={wbscTracker}
+                onChange={e => setWbscTracker(e.target.checked)}
+                className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <div>
+                <label htmlFor="wbsc-tracker" className="text-sm font-medium text-slate-700 cursor-pointer">
+                  WBSC Game Tracker
+                </label>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  When enabled, a WBSC game ID field appears on each game in this league for linking to external score and play-by-play data.
+                </p>
+              </div>
             </div>
 
             {/* Playing Fields */}
