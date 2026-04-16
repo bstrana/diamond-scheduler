@@ -2,31 +2,35 @@
  * WBSC live game data integration.
  *
  * Each 5-second poll cycle makes two calls through the server-side proxy
- * (which forwards to the real WBSC API and avoids CORS):
+ * (which forwards to game.wbsc.org and avoids browser CORS):
  *
  *   1. GET /wbsc-proxy/last-play?gameId={id}
- *        → current play sequence number + game status
+ *        ← https://game.wbsc.org/gamedata/{gameid}/latest.json
+ *        → { latestpn: 42, … }
  *
  *   2. GET /wbsc-proxy/play-data?gameId={id}&playNumber={n}
- *        → full game state at that play (score, count, runners, pitcher …)
+ *        ← https://game.wbsc.org/gamedata/{gameid}/play{n}.json
+ *        → full play record with score, count, runners, pitcher …
  *
  * The mapping functions below convert WBSC field names to the internal
- * model used by score-edit.tsx.  Adjust the interface field names to match
- * whichever WBSC API version you're targeting.
+ * model used by score-edit.tsx.  Field names inside WbscPlayDataResponse
+ * should be adjusted once you inspect an actual play{n}.json response.
  */
 
 // ── WBSC API response shapes ──────────────────────────────────────────────────
-// Adjust field names here when you have the actual WBSC API documentation.
 
-/** Response from the "current play number" endpoint. */
+/**
+ * Response from https://game.wbsc.org/gamedata/{gameid}/latest.json
+ * Confirmed field: latestpn (latest play number).
+ */
 export interface WbscLastPlayResponse {
-  /** Monotonically increasing play sequence number. */
-  play_number: number;
+  /** Latest play sequence number — use this to fetch the matching play file. */
+  latestpn: number;
   /**
-   * Game lifecycle status string returned by WBSC.
-   * Known values (adjust to match actual API): 'IN_PROGRESS', 'FINAL', 'POSTPONED', …
+   * Game status string if present in latest.json.
+   * Adjust the field name and known values once you inspect a real response.
    */
-  status: string;
+  status?: string;
 }
 
 /** Response from the "play data" endpoint. */
@@ -92,7 +96,9 @@ async function fetchLastPlay(wbscGameId: string): Promise<WbscLastPlayResponse |
       { signal: AbortSignal.timeout(4_000) },
     );
     if (!res.ok) return null;
-    return (await res.json()) as WbscLastPlayResponse;
+    const json = await res.json();
+    // latest.json uses the field name "latestpn"
+    return json as WbscLastPlayResponse;
   } catch {
     return null;
   }
@@ -134,7 +140,7 @@ function mapPlayDataToState(
       : [{ home: null, away: null }];
 
   return {
-    playNumber: playData.play_number,
+    playNumber: playData.play_number,  // adjust field name once play{n}.json is inspected
     description: playData.description,
     status: mapStatus(rawStatus),
     innings,
@@ -168,10 +174,10 @@ export async function fetchWbscGameState(
 ): Promise<WbscGameState | null> {
   const lastPlay = await fetchLastPlay(wbscGameId);
   if (!lastPlay) return null;
-  if (lastPlay.play_number === lastKnownPlay) return null; // no new play
+  if (lastPlay.latestpn === lastKnownPlay) return null; // no new play since last tick
 
-  const playData = await fetchPlayData(wbscGameId, lastPlay.play_number);
+  const playData = await fetchPlayData(wbscGameId, lastPlay.latestpn);
   if (!playData) return null;
 
-  return mapPlayDataToState(playData, lastPlay.status);
+  return mapPlayDataToState(playData, lastPlay.status ?? '');
 }

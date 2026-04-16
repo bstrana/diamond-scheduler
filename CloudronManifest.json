@@ -39,8 +39,7 @@
     "KC_CLIENT_ID":    "diamond-scheduler-server",
     "KC_CLIENT_SECRET": "",
 
-    "WBSC_API_BASE": "",
-    "WBSC_API_KEY":  ""
+    "WBSC_API_BASE": "https://game.wbsc.org/gamedata"
   },
 
   "updateUrl":     "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/CloudronVersions.json",

@@ -181,23 +181,22 @@ app.get('/subscribe.ics', icsRateLimiter, async (req, res) => {
 app.get('/health', (_req, res) => res.sendStatus(200));
 
 // ── WBSC API proxy ────────────────────────────────────────────────────────────
-// Forwards requests to the WBSC scoring API server-side so the browser
-// doesn't hit CORS restrictions.  Set WBSC_API_BASE in the environment
-// (e.g. https://scoring.wbsc.org/api/v1) and optionally WBSC_API_KEY.
+// Forwards requests to game.wbsc.org server-side to avoid browser CORS.
 //
-// Two endpoints are exposed:
+// WBSC data endpoints (public, no auth required):
+//   latest play number : https://game.wbsc.org/gamedata/{gameid}/latest.json
+//   play data          : https://game.wbsc.org/gamedata/{gameid}/play{n}.json
+//
+// Our proxy surfaces them as:
 //   GET /wbsc-proxy/last-play?gameId={id}
-//        → proxies to WBSC "current play number" endpoint
 //   GET /wbsc-proxy/play-data?gameId={id}&playNumber={n}
-//        → proxies to WBSC "play data" endpoint
 //
-// TODO: adjust the upstream URL templates below to match the actual WBSC API.
-const wbscApiBase = (process.env.WBSC_API_BASE || '').replace(/\/$/, '');
-const wbscApiKey  = process.env.WBSC_API_KEY || '';
+// WBSC_API_BASE env var can override the base URL (default: https://game.wbsc.org/gamedata).
+const wbscApiBase = (process.env.WBSC_API_BASE || 'https://game.wbsc.org/gamedata').replace(/\/$/, '');
 
 const wbscRateLimiter = rateLimit({
   windowMs: 10_000,  // 10-second window
-  max: 20,           // allow one request per 500 ms per IP with some headroom
+  max: 20,           // headroom for up to ~2 scorers polling every 5 s
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -206,22 +205,19 @@ const wbscRateLimiter = rateLimit({
 const isValidWbscId = (v) => typeof v === 'string' && /^\d{1,12}$/.test(v);
 
 app.get('/wbsc-proxy/last-play', wbscRateLimiter, async (req, res) => {
-  if (!wbscApiBase) {
-    res.status(503).json({ error: 'WBSC_API_BASE not configured on this server.' });
-    return;
-  }
   const { gameId } = req.query;
   if (!isValidWbscId(gameId)) {
     res.status(400).json({ error: 'Invalid gameId.' });
     return;
   }
 
-  // TODO: replace with the actual WBSC endpoint URL for "latest play number"
-  const upstreamUrl = `${wbscApiBase}/game/${gameId}/last-play-number`;
+  // https://game.wbsc.org/gamedata/{gameid}/latest.json
+  const upstreamUrl = `${wbscApiBase}/${gameId}/latest.json`;
   try {
-    const headers = { 'Accept': 'application/json' };
-    if (wbscApiKey) headers['Authorization'] = `Bearer ${wbscApiKey}`;
-    const upstream = await fetch(upstreamUrl, { headers, signal: AbortSignal.timeout(5_000) });
+    const upstream = await fetch(upstreamUrl, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(5_000),
+    });
     const body = await upstream.text();
     res.status(upstream.status)
        .setHeader('Content-Type', 'application/json')
@@ -232,10 +228,6 @@ app.get('/wbsc-proxy/last-play', wbscRateLimiter, async (req, res) => {
 });
 
 app.get('/wbsc-proxy/play-data', wbscRateLimiter, async (req, res) => {
-  if (!wbscApiBase) {
-    res.status(503).json({ error: 'WBSC_API_BASE not configured on this server.' });
-    return;
-  }
   const { gameId, playNumber } = req.query;
   if (!isValidWbscId(gameId)) {
     res.status(400).json({ error: 'Invalid gameId.' });
@@ -246,12 +238,13 @@ app.get('/wbsc-proxy/play-data', wbscRateLimiter, async (req, res) => {
     return;
   }
 
-  // TODO: replace with the actual WBSC endpoint URL for "play data"
-  const upstreamUrl = `${wbscApiBase}/game/${gameId}/plays/${playNumber}`;
+  // https://game.wbsc.org/gamedata/{gameid}/play{n}.json  (number embedded in filename)
+  const upstreamUrl = `${wbscApiBase}/${gameId}/play${playNumber}.json`;
   try {
-    const headers = { 'Accept': 'application/json' };
-    if (wbscApiKey) headers['Authorization'] = `Bearer ${wbscApiKey}`;
-    const upstream = await fetch(upstreamUrl, { headers, signal: AbortSignal.timeout(5_000) });
+    const upstream = await fetch(upstreamUrl, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(5_000),
+    });
     const body = await upstream.text();
     res.status(upstream.status)
        .setHeader('Content-Type', 'application/json')
