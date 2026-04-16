@@ -131,7 +131,6 @@
     "1.0.73": "Fix: GameBar game card overlay now opens in true full-screen mode — requestFullscreen restored with a 600 ms timestamp guard that prevents the race condition where spurious fullscreenchange events cleared the overlay state on mobile; embed iframe snippet now includes allow=\"fullscreen\" for modern browser permissions policy.",
     "1.0.74": "Feat: WBSC game tracker — league settings gain a 'WBSC Game Tracker' checkbox; when enabled, a WBSC Game ID field appears on the Add and Edit game modals for that league, storing the external identifier for future score and play-by-play data integration.",
     "1.0.75": "Feat: WBSC live data integration — score-edit page polls game.wbsc.org every 5 s via a server-side proxy (avoids CORS); two-step fetch gets latest play number then full play data; situation, linescore, base runners, hits, errors, and pitcher auto-populate the score form and trigger the 900 ms auto-save debounce.",
-    "1.0.76": "Fix: WBSC proxy errors (wrong game ID, unreachable upstream, missing route) now surface in the WBSC status banner instead of failing silently; error message includes the HTTP status or failure reason for diagnostics.",
     "1.0.77": "Maintenance: bump version to 1.0.77."
   }
 }
