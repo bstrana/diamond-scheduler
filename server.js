@@ -180,7 +180,114 @@ app.get('/subscribe.ics', icsRateLimiter, async (req, res) => {
 
 app.get('/health', (_req, res) => res.sendStatus(200));
 
-// ── WBSC API proxy ────────────────────────────────────────────────────────────
+// ── Public schedule JSON API ──────────────────────────────────────────────────
+// GET /schedule.json?key={schedule_key}[&team={name_or_abbr}]
+//
+// Returns the published schedule as clean JSON. Optional ?team= filter
+// (case-insensitive) matches home or away team name or abbreviation.
+//
+// Response shape:
+//   { scheduleKey, generatedAt, games: [...], teams: [...], leagues: [...] }
+//
+// Each game includes resolved homeTeam/awayTeam objects and a flat
+// homeScore/awayScore derived from the innings totals.
+
+const scheduleJsonRateLimiter = rateLimit({
+  windowMs: 60_000,       // 1-minute window
+  max: 60,                // 1 req/s burst headroom
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.get('/schedule.json', scheduleJsonRateLimiter, async (req, res) => {
+  const { key, team } = req.query;
+
+  if (!key || typeof key !== 'string') {
+    res.status(400).json({ error: 'Missing required query parameter: key' });
+    return;
+  }
+  const sanitizedKey = key.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 100);
+  if (!sanitizedKey) {
+    res.status(400).json({ error: 'Invalid key.' });
+    return;
+  }
+  if (!pbUrl || !scheduleCollection) {
+    res.status(503).json({ error: 'Service unavailable.' });
+    return;
+  }
+
+  const params = new URLSearchParams();
+  params.append('filter', `schedule_key="${sanitizedKey}" && active=true`);
+  params.append('perPage', '1');
+  const url = `${pbUrl.replace(/\/$/, '')}/api/collections/${scheduleCollection}/records?${params.toString()}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      res.status(404).json({ error: 'Schedule not found.' });
+      return;
+    }
+    const payload = await response.json();
+    const record = payload.items?.[0];
+    if (!record?.data) {
+      res.status(404).json({ error: 'Schedule not found.' });
+      return;
+    }
+
+    const { games = [], teams = [], leagues = [] } = record.data;
+    const teamsById = new Map(teams.map(t => [t.id, t]));
+
+    // Resolve team objects and compute flat scores for each game
+    let enrichedGames = games.map(g => {
+      const homeTeam = teamsById.get(g.homeTeamId) ?? null;
+      const awayTeam = teamsById.get(g.awayTeamId) ?? null;
+      const innings = g.scores?.innings ?? [];
+      const homeScore = innings.reduce((s, i) => s + (i.home ?? 0), 0);
+      const awayScore = innings.reduce((s, i) => s + (i.away ?? 0), 0);
+      return {
+        id:        g.id,
+        date:      g.date,
+        time:      g.time ?? null,
+        location:  g.location ?? null,
+        status:    g.status ?? 'scheduled',
+        gameNumber: g.gameNumber ?? null,
+        leagueIds: g.leagueIds ?? [],
+        homeTeam,
+        awayTeam,
+        homeScore: g.status === 'scheduled' ? null : homeScore,
+        awayScore: g.status === 'scheduled' ? null : awayScore,
+        innings:   g.status === 'scheduled' ? [] : innings,
+        hits:      g.hits   ?? null,
+        errors:    g.errors ?? null,
+      };
+    });
+
+    // Optional team filter — matches name or abbreviation, case-insensitive
+    if (team && typeof team === 'string') {
+      const q = team.trim().toLowerCase();
+      enrichedGames = enrichedGames.filter(g =>
+        g.homeTeam?.name?.toLowerCase() === q ||
+        g.homeTeam?.abbreviation?.toLowerCase() === q ||
+        g.awayTeam?.name?.toLowerCase() === q ||
+        g.awayTeam?.abbreviation?.toLowerCase() === q,
+      );
+    }
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'public, max-age=30');
+    res.json({
+      scheduleKey:  sanitizedKey,
+      generatedAt:  new Date().toISOString(),
+      games:        enrichedGames,
+      teams,
+      leagues,
+    });
+  } catch {
+    res.status(500).json({ error: 'Service error.' });
+  }
+});
+
+
 // Forwards requests to game.wbsc.org server-side to avoid browser CORS.
 //
 // WBSC data endpoints (public, no auth required):

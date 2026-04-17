@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.79",
+  "version": "1.0.80",
   "manifestVersion": 2,
 
   "image": {
@@ -133,6 +133,7 @@
     "1.0.75": "Feat: WBSC live data integration — score-edit page polls game.wbsc.org every 5 s via a server-side proxy (avoids CORS); two-step fetch gets latest play number then full play data; situation, linescore, base runners, hits, errors, and pitcher auto-populate the score form and trigger the 900 ms auto-save debounce.",
     "1.0.77": "Maintenance: bump version to 1.0.77.",
     "1.0.78": "Fix: add /wbsc-proxy/ location block to nginx config — without it nginx served index.html for WBSC proxy requests instead of forwarding them to Node.js, causing a JSON parse error in the score-edit WBSC status banner.",
-    "1.0.79": "Fix: WBSC latest.json returns a plain JSON number, not an object — fetchLastPlay now reads it directly instead of looking for a .number or .latestpn field."
+    "1.0.79": "Fix: WBSC latest.json returns a plain JSON number, not an object — fetchLastPlay now reads it directly instead of looking for a .number or .latestpn field.",
+    "1.0.80": "Feat: public GET /schedule.json?key=…&team=… endpoint — returns published schedule as clean JSON with resolved team objects and flat scores; optional team filter matches name or abbreviation (case-insensitive); 30-second cache."
   }
 }
