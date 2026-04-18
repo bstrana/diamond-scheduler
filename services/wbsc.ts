@@ -180,7 +180,7 @@ function mapPlayData(
   return {
     playNumber:  latestpn,
     description,
-    status: mapStatus(rawStatus),
+    status: mapStatus(rawStatus ?? situation.currentinning),
     innings,
     outs:    Math.min(situation.outs,    2),
     balls:   Math.min(situation.balls,   3),
