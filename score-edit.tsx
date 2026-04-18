@@ -98,6 +98,8 @@ const ScoreEditApp: React.FC = () => {
   const [baseRunners, setBaseRunners] = useState<{ first: boolean; second: boolean; third: boolean }>({ first: false, second: false, third: false });
   const [recap, setRecap] = useState<string>('');
   const [pitcher, setPitcher] = useState<string>('');
+  const [batter,  setBatter]  = useState<string>('');
+  const [batting, setBatting] = useState<string>('');
   const [linescore, setLinescore] = useState<boolean>(false);
   const [hits,   setHits]   = useState<{ away: number | null; home: number | null }>({ away: null, home: null });
   const [errors, setErrors] = useState<{ away: number | null; home: number | null }>({ away: null, home: null });
@@ -194,6 +196,8 @@ const ScoreEditApp: React.FC = () => {
         },
         recap: recap || undefined,
         pitcher: pitcher || undefined,
+        batter:  batter  || undefined,
+        batting: batting || undefined,
         linescore,
         hits,
         errors,
@@ -209,7 +213,7 @@ const ScoreEditApp: React.FC = () => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // homeTotal and awayTotal are derived from innings — no need to list them separately
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, innings, outs, balls, strikes, baseRunners, recap, pitcher, linescore, hits, errors]);
+  }, [status, innings, outs, balls, strikes, baseRunners, recap, pitcher, batter, batting, linescore, hits, errors]);
 
   // ── WBSC live data polling ───────────────────────────────────────────────────
   // Runs every 5 seconds when: game has a wbscGameId, status is live, and
@@ -240,6 +244,8 @@ const ScoreEditApp: React.FC = () => {
         setStrikes(state.strikes);
         setBaseRunners(state.baseRunners);
         if (state.pitcher) setPitcher(state.pitcher);
+        if (state.batter)  setBatter(state.batter);
+        if (state.batting) setBatting(state.batting);
         if (state.hits)   setHits(state.hits);
         if (state.errors) setErrors(state.errors);
         if (state.status === 'final') setStatus('final');

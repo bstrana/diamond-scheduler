@@ -82,6 +82,9 @@ export interface WbscGameState {
   strikes: number;
   baseRunners: { first: boolean; second: boolean; third: boolean };
   pitcher?: string;
+  batter?:  string;
+  batting?: string;  // e.g. "1 for 4"
+  avg?:     string;  // e.g. ".250"
   hits?:   { away: number | null; home: number | null };
   errors?: { away: number | null; home: number | null };
 }
@@ -188,6 +191,9 @@ function mapPlayData(
       third:  situation.runner3 !== 0,
     },
     pitcher: situation.pitcher || undefined,
+    batter:  situation.batter  || undefined,
+    batting: situation.batting || undefined,
+    avg:     situation.avg     || undefined,
     hits: {
       away: linescore.awaytotals.H ?? null,
       home: linescore.hometotals.H ?? null,

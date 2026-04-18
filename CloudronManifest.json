@@ -4,7 +4,7 @@
   "author": "bstrana",
   "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
   "tagline": "Baseball & multi-sport league scheduling",
-  "version": "1.0.82",
+  "version": "1.0.83",
   "manifestVersion": 2,
 
   "image": {
@@ -136,6 +136,7 @@
     "1.0.79": "Fix: WBSC latest.json returns a plain JSON number, not an object — fetchLastPlay now reads it directly instead of looking for a .number or .latestpn field.",
     "1.0.80": "Feat: public GET /schedule.json?key=…&team=… endpoint — returns published schedule as clean JSON with resolved team objects and flat scores; optional team filter matches name or abbreviation (case-insensitive); 30-second cache.",
     "1.0.81": "Maintenance: bump version to 1.0.81.",
-    "1.0.82": "Fix: add migration 7 to add pitcher field to score_edits PocketBase collection — without it, the current pitcher was silently dropped on save and never reached the stream overlay."
+    "1.0.82": "Fix: add migration 7 to add pitcher field to score_edits PocketBase collection — without it, the current pitcher was silently dropped on save and never reached the stream overlay.",
+    "1.0.83": "Feat: batter bar in stream overlay — live card shows 'AT BAT' strip below the scoreboard with current batter name and game batting line (e.g. 1 for 4); populated automatically from WBSC tracking; migration 8 adds batter/batting fields to score_edits."
   }
 }
