@@ -295,6 +295,7 @@ const StreamOverlayApp: React.FC = () => {
           padding: '5px 14px',
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'flex-end',
           gap: 8,
         }}>
           <span style={{
@@ -461,28 +462,9 @@ const StreamOverlayApp: React.FC = () => {
           padding: '5px 14px',
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'flex-end',
           gap: 8,
         }}>
-          <span style={{
-            fontSize: 11,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            color: isLight ? '#64748b' : 'rgba(226,232,240,0.5)',
-            flexShrink: 0,
-          }}>AT BAT</span>
-          <span style={{
-            fontSize: 14,
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            color: isLight ? '#1e293b' : 'rgba(226,232,240,0.9)',
-            flex: 1,
-            minWidth: 0,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}>{batter.trim()}</span>
           {batting.trim() && (
             <span style={{
               fontSize: 12,
@@ -492,6 +474,25 @@ const StreamOverlayApp: React.FC = () => {
               fontVariantNumeric: 'tabular-nums',
             }}>{batting.trim()}</span>
           )}
+          <span style={{
+            fontSize: 14,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            color: isLight ? '#1e293b' : 'rgba(226,232,240,0.9)',
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}>{batter.trim()}</span>
+          <span style={{
+            fontSize: 11,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            color: isLight ? '#64748b' : 'rgba(226,232,240,0.5)',
+            flexShrink: 0,
+          }}>AT BAT</span>
         </div>
       )}
 
