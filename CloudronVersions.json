@@ -2787,7 +2787,7 @@
         "contactEmail": "support@example.com",
         "healthCheckPath": "/health",
         "httpPort": 8000,
-        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.80",
+        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.85",
         "addons": {
           "localstorage": {}
         },
@@ -2825,7 +2825,7 @@
         "contactEmail": "support@example.com",
         "healthCheckPath": "/health",
         "httpPort": 8000,
-        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.81",
+        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.85",
         "addons": {
           "localstorage": {}
         },
@@ -2863,7 +2863,7 @@
         "contactEmail": "support@example.com",
         "healthCheckPath": "/health",
         "httpPort": 8000,
-        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.82",
+        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.85",
         "addons": {
           "localstorage": {}
         },
@@ -2901,7 +2901,7 @@
         "contactEmail": "support@example.com",
         "healthCheckPath": "/health",
         "httpPort": 8000,
-        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.83",
+        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.85",
         "addons": {
           "localstorage": {}
         },
@@ -2939,7 +2939,7 @@
         "contactEmail": "support@example.com",
         "healthCheckPath": "/health",
         "httpPort": 8000,
-        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.84",
+        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.85",
         "addons": {
           "localstorage": {}
         },
