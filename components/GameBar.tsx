@@ -188,17 +188,50 @@ const GameBar: React.FC<GameBarProps> = ({
     }
   }, [teamsForFilter, selectedTeamId, onTeamFilterChange]);
 
-  const teamRecords = useMemo(() => {
-    const records: Record<string, { w: number; l: number }> = {};
+  // W-L tallied per league — each game is counted only in the leagues it belongs to.
+  const leagueRecords = useMemo(() => {
+    const byLeague: Record<string, Record<string, { w: number; l: number }>> = {};
     games.forEach(g => {
-      if (g.status !== 'final' || !g.scores) return;
-      if (!records[g.homeTeamId]) records[g.homeTeamId] = { w: 0, l: 0 };
-      if (!records[g.awayTeamId]) records[g.awayTeamId] = { w: 0, l: 0 };
-      if (g.scores.home > g.scores.away) { records[g.homeTeamId].w++; records[g.awayTeamId].l++; }
-      else if (g.scores.away > g.scores.home) { records[g.awayTeamId].w++; records[g.homeTeamId].l++; }
+      if ((g.status !== 'final' && g.status !== 'forfeit') || !g.scores) return;
+      const lids = getGameLeagueIds(g);
+      if (lids.length === 0) return;
+      const hr = g.scores.home, ar = g.scores.away;
+      lids.forEach(lid => {
+        byLeague[lid] ??= {};
+        byLeague[lid][g.homeTeamId] ??= { w: 0, l: 0 };
+        byLeague[lid][g.awayTeamId] ??= { w: 0, l: 0 };
+        if (hr > ar) { byLeague[lid][g.homeTeamId].w++; byLeague[lid][g.awayTeamId].l++; }
+        else if (ar > hr) { byLeague[lid][g.awayTeamId].w++; byLeague[lid][g.homeTeamId].l++; }
+      });
     });
-    return records;
+    return byLeague;
   }, [games]);
+
+  // Return a team's W-L in the context of a specific game's league(s).
+  // Single-league games: direct lookup.
+  // Multi-league (interleague) games: union all games that share any of those leagues
+  // so each game is counted exactly once even when it belongs to multiple leagues.
+  const gameTeamRecord = (teamId: string, g: Game): { w: number; l: number } | null => {
+    const lids = getGameLeagueIds(g);
+    if (lids.length === 0) return null;
+    if (lids.length === 1) return leagueRecords[lids[0]]?.[teamId] ?? null;
+    const lidSet = new Set(lids);
+    const rec = { w: 0, l: 0 };
+    let found = false;
+    games.forEach(fg => {
+      if ((fg.status !== 'final' && fg.status !== 'forfeit') || !fg.scores) return;
+      if (!getGameLeagueIds(fg).some(id => lidSet.has(id))) return;
+      const hr = fg.scores.home, ar = fg.scores.away;
+      if (fg.homeTeamId === teamId) {
+        found = true;
+        if (hr > ar) rec.w++; else if (ar > hr) rec.l++;
+      } else if (fg.awayTeamId === teamId) {
+        found = true;
+        if (ar > hr) rec.w++; else if (hr > ar) rec.l++;
+      }
+    });
+    return found ? rec : null;
+  };
 
   useEffect(() => {
     if (!showFiltersMenu) return;
@@ -1153,11 +1186,11 @@ const GameBar: React.FC<GameBarProps> = ({
                                   ({getCountryCode(team.country)})
                                 </span>
                               )}
-                              {team && teamRecords[team.id] && (
+                              {team && (() => { const r = gameTeamRecord(team.id, game); return r && (
                                 <span className="text-xs font-medium" style={{ color: 'var(--embed-text, #94a3b8)' }}>
-                                  {teamRecords[team.id].w}-{teamRecords[team.id].l}
+                                  {r.w}-{r.l}
                                 </span>
-                              )}
+                              ); })()}
                             </div>
                           </div>
                           {hasScore && score !== null && (
@@ -1211,11 +1244,11 @@ const GameBar: React.FC<GameBarProps> = ({
                               >
                                 {away.city}
                               </span>
-                              {teamRecords[away.id] && (
+                              {(() => { const r = gameTeamRecord(away.id, game); return r && (
                                 <span className="text-xs font-medium" style={{ color: 'var(--embed-text, #94a3b8)' }}>
-                                  {teamRecords[away.id].w}-{teamRecords[away.id].l}
+                                  {r.w}-{r.l}
                                 </span>
-                              )}
+                              ); })()}
                             </div>
                           </div>
                           {hasScore && (
@@ -1270,11 +1303,11 @@ const GameBar: React.FC<GameBarProps> = ({
                               >
                                 {home.city}
                               </span>
-                              {teamRecords[home.id] && (
+                              {(() => { const r = gameTeamRecord(home.id, game); return r && (
                                 <span className="text-xs font-medium" style={{ color: 'var(--embed-text, #94a3b8)' }}>
-                                  {teamRecords[home.id].w}-{teamRecords[home.id].l}
+                                  {r.w}-{r.l}
                                 </span>
-                              )}
+                              ); })()}
                             </div>
                           </div>
                           {hasScore && (
