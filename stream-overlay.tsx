@@ -142,7 +142,10 @@ const StreamOverlayApp: React.FC = () => {
   const [homeTeam, setHomeTeam] = useState<Team | null>(null);
   const [awayTeam, setAwayTeam] = useState<Team | null>(null);
   const [showLinescore, setShowLinescore] = useState(false);
+  const [showRecap,     setShowRecap]     = useState(true);
   const [pitcher, setPitcher] = useState('');
+  const [batter,  setBatter]  = useState('');
+  const [batting, setBatting] = useState('');
   const [gameHits,   setGameHits]   = useState<{ away: number | null; home: number | null } | null>(null);
   const [gameErrors, setGameErrors] = useState<{ away: number | null; home: number | null } | null>(null);
   const gameRef = useRef<Game | null>(null);
@@ -176,7 +179,10 @@ const StreamOverlayApp: React.FC = () => {
 
       if (edit) {
         setShowLinescore(!!edit.linescore);
+        setShowRecap(edit.showRecap !== false);
         setPitcher(edit.pitcher ?? '');
+        setBatter(edit.batter   ?? '');
+        setBatting(edit.batting ?? '');
         setGameHits(edit.hits ?? null);
         setGameErrors(edit.errors ?? null);
       }
@@ -204,7 +210,10 @@ const StreamOverlayApp: React.FC = () => {
       if (edit.gameId !== link.gameId) return;
       setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, recap: edit.recap?.trim() || undefined } : prev);
       setShowLinescore(!!edit.linescore);
+      setShowRecap(edit.showRecap !== false);
       setPitcher(edit.pitcher ?? '');
+      setBatter(edit.batter   ?? '');
+      setBatting(edit.batting ?? '');
       setGameHits(edit.hits ?? null);
       setGameErrors(edit.errors ?? null);
     });
@@ -216,7 +225,10 @@ const StreamOverlayApp: React.FC = () => {
       if (edit) {
         setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, recap: edit.recap?.trim() || undefined } : prev);
         setShowLinescore(!!edit.linescore);
+        setShowRecap(edit.showRecap !== false);
         setPitcher(edit.pitcher ?? '');
+        setBatter(edit.batter   ?? '');
+        setBatting(edit.batting ?? '');
         setGameHits(edit.hits ?? null);
         setGameErrors(edit.errors ?? null);
       }
@@ -287,6 +299,7 @@ const StreamOverlayApp: React.FC = () => {
           padding: '5px 14px',
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'flex-end',
           gap: 8,
         }}>
           <span style={{
@@ -445,8 +458,50 @@ const StreamOverlayApp: React.FC = () => {
 
       </div>
 
+      {/* Batter bar — static text at bottom, live only */}
+      {isLive && batter.trim() && (
+        <div style={{
+          borderTop: `1px solid ${dividerColor}`,
+          background: isLight ? 'rgba(241,245,249,0.9)' : 'rgba(8,14,26,0.7)',
+          padding: '5px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: 8,
+        }}>
+          {batting.trim() && (
+            <span style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: isLight ? '#64748b' : 'rgba(226,232,240,0.45)',
+              flexShrink: 0,
+              fontVariantNumeric: 'tabular-nums',
+            }}>{batting.trim()}</span>
+          )}
+          <span style={{
+            fontSize: 14,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            color: isLight ? '#1e293b' : 'rgba(226,232,240,0.9)',
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}>{batter.trim()}</span>
+          <span style={{
+            fontSize: 11,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            color: isLight ? '#64748b' : 'rgba(226,232,240,0.5)',
+            flexShrink: 0,
+          }}>AT BAT</span>
+        </div>
+      )}
+
       {/* Recap ticker — inside shell so border-radius clips it */}
-      {game.recap?.trim() && (
+      {showRecap && game.recap?.trim() && (
         <div style={{
           borderTop: `1px solid ${dividerColor}`,
           overflow: 'hidden',

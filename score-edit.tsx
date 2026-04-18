@@ -98,7 +98,11 @@ const ScoreEditApp: React.FC = () => {
   const [baseRunners, setBaseRunners] = useState<{ first: boolean; second: boolean; third: boolean }>({ first: false, second: false, third: false });
   const [recap, setRecap] = useState<string>('');
   const [pitcher, setPitcher] = useState<string>('');
-  const [linescore, setLinescore] = useState<boolean>(false);
+  const [batter,  setBatter]  = useState<string>('');
+  const [batting, setBatting] = useState<string>('');
+  const [linescore,  setLinescore]  = useState<boolean>(false);
+  const [showRecap,  setShowRecap]  = useState<boolean>(true);
+  const [generatingRecap, setGeneratingRecap] = useState(false);
   const [hits,   setHits]   = useState<{ away: number | null; home: number | null }>({ away: null, home: null });
   const [errors, setErrors] = useState<{ away: number | null; home: number | null }>({ away: null, home: null });
 
@@ -154,6 +158,7 @@ const ScoreEditApp: React.FC = () => {
       if (sourceRecap) setRecap(sourceRecap);
       if (existingEdit?.pitcher) setPitcher(existingEdit.pitcher);
       if (existingEdit?.linescore) setLinescore(true);
+      if (existingEdit?.showRecap === false) setShowRecap(false);
       if (existingEdit?.hits)      setHits(existingEdit.hits);
       if (existingEdit?.errors)    setErrors(existingEdit.errors);
 
@@ -194,7 +199,10 @@ const ScoreEditApp: React.FC = () => {
         },
         recap: recap || undefined,
         pitcher: pitcher || undefined,
+        batter:  batter  || undefined,
+        batting: batting || undefined,
         linescore,
+        showRecap,
         hits,
         errors,
       });
@@ -209,7 +217,7 @@ const ScoreEditApp: React.FC = () => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // homeTotal and awayTotal are derived from innings — no need to list them separately
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, innings, outs, balls, strikes, baseRunners, recap, pitcher, linescore, hits, errors]);
+  }, [status, innings, outs, balls, strikes, baseRunners, recap, pitcher, batter, batting, linescore, showRecap, hits, errors]);
 
   // ── WBSC live data polling ───────────────────────────────────────────────────
   // Runs every 5 seconds when: game has a wbscGameId, status is live, and
@@ -240,6 +248,8 @@ const ScoreEditApp: React.FC = () => {
         setStrikes(state.strikes);
         setBaseRunners(state.baseRunners);
         if (state.pitcher) setPitcher(state.pitcher);
+        if (state.batter)  setBatter(state.batter);
+        if (state.batting) setBatting(state.batting);
         if (state.hits)   setHits(state.hits);
         if (state.errors) setErrors(state.errors);
         if (state.status === 'final') setStatus('final');
@@ -263,6 +273,52 @@ const ScoreEditApp: React.FC = () => {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  const generateRecapFromToday = async () => {
+    if (!link || !game) return;
+    setGeneratingRecap(true);
+    try {
+      const [schedule, edits] = await Promise.all([
+        loadPublishedScheduleByKey(link.scheduleKey),
+        listScoreEditsByScheduleKey(link.scheduleKey),
+      ]);
+      if (!schedule) return;
+
+      const today = new Date().toISOString().slice(0, 10);
+      const editMap = new Map(edits.map(e => [e.gameId, e]));
+      const allTeams: Team[] = [];
+      schedule.leagues.forEach((l: any) => l.teams.forEach((t: Team) => {
+        if (!allTeams.find(x => x.id === t.id)) allTeams.push(t);
+      }));
+      const teamsById = new Map(allTeams.map(t => [t.id, t]));
+
+      const todayGames = (schedule.games as Game[]).filter(g => g.date === today && g.id !== game.id);
+      if (todayGames.length === 0) return;
+
+      const abbr = (t: Team | undefined) =>
+        t ? (t.abbreviation || t.name.slice(0, 3).toUpperCase()) : '???';
+      const sumSide = (g: Game, side: 'home' | 'away') => {
+        const scores = editMap.get(g.id)?.scores ?? g.scores;
+        return scores?.innings?.reduce((s: number, i: any) => s + (i[side] ?? 0), 0) ?? (scores as any)?.[side] ?? 0;
+      };
+
+      const parts = todayGames.map(g => {
+        const home = teamsById.get(g.homeTeamId);
+        const away = teamsById.get(g.awayTeamId);
+        const status = editMap.get(g.id)?.status ?? g.status;
+        if (status === 'final')
+          return `${abbr(away)} ${sumSide(g, 'away')} ${abbr(home)} ${sumSide(g, 'home')} (F)`;
+        if (status === 'live')
+          return `${abbr(away)} ${sumSide(g, 'away')} ${abbr(home)} ${sumSide(g, 'home')} (LIVE)`;
+        if (status === 'postponed')
+          return `${abbr(away)} vs ${abbr(home)} (PPD)`;
+        return g.time ? `${abbr(away)} vs ${abbr(home)} ${g.time}` : `${abbr(away)} vs ${abbr(home)}`;
+      });
+      setRecap(parts.join(' · '));
+    } finally {
+      setGeneratingRecap(false);
+    }
+  };
 
   const addInning = () => setInnings(prev => [...prev, { home: null, away: null }]);
   const removeInning = () => setInnings(prev => prev.length > 1 ? prev.slice(0, -1) : prev);
@@ -590,9 +646,20 @@ const ScoreEditApp: React.FC = () => {
 
           {/* Recap */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Game Recap <span className="text-xs font-normal text-slate-400">(shown scrolling in stream overlay)</span>
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm font-medium text-slate-700">
+                Game Recap <span className="text-xs font-normal text-slate-400">(scrolling ticker in overlay)</span>
+              </label>
+              <button
+                type="button"
+                onClick={generateRecapFromToday}
+                disabled={generatingRecap}
+                className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border border-indigo-300 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
+              >
+                {generatingRecap && <Loader2 size={10} className="animate-spin" />}
+                Today's Scores
+              </button>
+            </div>
             <textarea
               value={recap}
               onChange={e => setRecap(e.target.value)}
@@ -602,16 +669,25 @@ const ScoreEditApp: React.FC = () => {
             />
           </div>
 
-          {/* Linescore toggle */}
+          {/* Overlay Settings */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Overlay Settings</label>
-            <label className="flex items-center gap-3 cursor-pointer select-none">
-              <div className="relative flex-shrink-0" onClick={() => setLinescore(v => !v)}>
-                <div className={`w-10 h-6 rounded-full transition-colors duration-200 ${linescore ? 'bg-indigo-500' : 'bg-slate-300'}`} />
-                <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${linescore ? 'translate-x-4' : ''}`} />
-              </div>
-              <span className="text-sm text-slate-700">Show line score by inning in overlay</span>
-            </label>
+            <div className="space-y-2">
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <div className="relative flex-shrink-0" onClick={() => setLinescore(v => !v)}>
+                  <div className={`w-10 h-6 rounded-full transition-colors duration-200 ${linescore ? 'bg-indigo-500' : 'bg-slate-300'}`} />
+                  <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${linescore ? 'translate-x-4' : ''}`} />
+                </div>
+                <span className="text-sm text-slate-700">Show line score by inning in overlay</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <div className="relative flex-shrink-0" onClick={() => setShowRecap(v => !v)}>
+                  <div className={`w-10 h-6 rounded-full transition-colors duration-200 ${showRecap ? 'bg-indigo-500' : 'bg-slate-300'}`} />
+                  <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${showRecap ? 'translate-x-4' : ''}`} />
+                </div>
+                <span className="text-sm text-slate-700">Show recap ticker in overlay</span>
+              </label>
+            </div>
           </div>
 
           {/* Auto-save indicator */}

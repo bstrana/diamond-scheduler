@@ -39,9 +39,10 @@ interface WbscSituation {
 
 /** play{n}.json — linescore block */
 interface WbscLinescore {
-  /** Index 0 is null (placeholder); indices 1…N are runs for innings 1…N */
-  awayruns: (number | null)[];
-  homeruns: (number | null)[];
+  /** Index 0 is null (placeholder); indices 1…N are runs for innings 1…N.
+   *  WBSC uses "x" when the home team did not bat in the last inning. */
+  awayruns: (number | string | null)[];
+  homeruns: (number | string | null)[];
   awaytotals: { R: number; H: number; E: number; LOB: number };
   hometotals: { R: number; H: number; E: number; LOB: number };
 }
@@ -82,6 +83,9 @@ export interface WbscGameState {
   strikes: number;
   baseRunners: { first: boolean; second: boolean; third: boolean };
   pitcher?: string;
+  batter?:  string;
+  batting?: string;  // e.g. "1 for 4"
+  avg?:     string;  // e.g. ".250"
   hits?:   { away: number | null; home: number | null };
   errors?: { away: number | null; home: number | null };
 }
@@ -129,20 +133,28 @@ function parseCurrentInning(raw: string): { number: string; half: 'TOP' | 'BOTTO
   return { number: numStr || '—', half };
 }
 
+/** Convert a WBSC linescore cell to a number or null.
+ *  "x" means the home team did not bat — treat as null (not scored). */
+const toScore = (v: number | string | null | undefined): number | null => {
+  if (v == null || v === 'x' || v === 'X') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
 /**
  * Build innings array from WBSC linescore arrays.
  * WBSC uses index 0 as a null placeholder; innings start at index 1.
  */
 function buildInnings(
-  awayruns: (number | null)[],
-  homeruns: (number | null)[],
+  awayruns: (number | string | null)[],
+  homeruns: (number | string | null)[],
 ): Array<{ home: number | null; away: number | null }> {
   const len = Math.max(awayruns.length, homeruns.length);
   const innings: Array<{ home: number | null; away: number | null }> = [];
   for (let i = 1; i < len; i++) {
     innings.push({
-      away: awayruns[i] ?? null,
-      home: homeruns[i] ?? null,
+      away: toScore(awayruns[i]),
+      home: toScore(homeruns[i]),
     });
   }
   return innings.length > 0 ? innings : [{ home: null, away: null }];
@@ -177,7 +189,7 @@ function mapPlayData(
   return {
     playNumber:  latestpn,
     description,
-    status: mapStatus(rawStatus),
+    status: mapStatus(rawStatus ?? situation.currentinning),
     innings,
     outs:    Math.min(situation.outs,    2),
     balls:   Math.min(situation.balls,   3),
@@ -188,6 +200,9 @@ function mapPlayData(
       third:  situation.runner3 !== 0,
     },
     pitcher: situation.pitcher || undefined,
+    batter:  situation.batter  || undefined,
+    batting: situation.batting || undefined,
+    avg:     situation.avg     || undefined,
     hits: {
       away: linescore.awaytotals.H ?? null,
       home: linescore.hometotals.H ?? null,
