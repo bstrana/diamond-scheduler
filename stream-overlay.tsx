@@ -142,6 +142,7 @@ const StreamOverlayApp: React.FC = () => {
   const [homeTeam, setHomeTeam] = useState<Team | null>(null);
   const [awayTeam, setAwayTeam] = useState<Team | null>(null);
   const [showLinescore, setShowLinescore] = useState(false);
+  const [showRecap,     setShowRecap]     = useState(true);
   const [pitcher, setPitcher] = useState('');
   const [batter,  setBatter]  = useState('');
   const [batting, setBatting] = useState('');
@@ -178,6 +179,7 @@ const StreamOverlayApp: React.FC = () => {
 
       if (edit) {
         setShowLinescore(!!edit.linescore);
+        setShowRecap(edit.showRecap !== false);
         setPitcher(edit.pitcher ?? '');
         setBatter(edit.batter   ?? '');
         setBatting(edit.batting ?? '');
@@ -208,6 +210,7 @@ const StreamOverlayApp: React.FC = () => {
       if (edit.gameId !== link.gameId) return;
       setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, recap: edit.recap?.trim() || undefined } : prev);
       setShowLinescore(!!edit.linescore);
+      setShowRecap(edit.showRecap !== false);
       setPitcher(edit.pitcher ?? '');
       setBatter(edit.batter   ?? '');
       setBatting(edit.batting ?? '');
@@ -222,6 +225,7 @@ const StreamOverlayApp: React.FC = () => {
       if (edit) {
         setGame(prev => prev ? { ...prev, status: edit.status, scores: edit.scores ?? prev.scores, recap: edit.recap?.trim() || undefined } : prev);
         setShowLinescore(!!edit.linescore);
+        setShowRecap(edit.showRecap !== false);
         setPitcher(edit.pitcher ?? '');
         setBatter(edit.batter   ?? '');
         setBatting(edit.batting ?? '');
@@ -497,7 +501,7 @@ const StreamOverlayApp: React.FC = () => {
       )}
 
       {/* Recap ticker — inside shell so border-radius clips it */}
-      {game.recap?.trim() && (
+      {showRecap && game.recap?.trim() && (
         <div style={{
           borderTop: `1px solid ${dividerColor}`,
           overflow: 'hidden',

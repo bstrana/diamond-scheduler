@@ -88,6 +88,7 @@ export interface ScoreEdit {
   pitcher?: string;
   batter?:  string;
   batting?: string;
+  showRecap?: boolean;
   hits?: { away: number | null; home: number | null };
   errors?: { away: number | null; home: number | null };
   updated?: string;
