@@ -9,7 +9,7 @@ import {
   listScoreEditsByScheduleKey,
   saveScoreEdit,
 } from './services/storage';
-import { fetchWbscGameState } from './services/wbsc';
+import { fetchWbscGameState, fetchWbscHittingHighlights } from './services/wbsc';
 import { ScoreLink, Game, Team } from './types';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -102,7 +102,8 @@ const ScoreEditApp: React.FC = () => {
   const [batting, setBatting] = useState<string>('');
   const [linescore,  setLinescore]  = useState<boolean>(false);
   const [showRecap,  setShowRecap]  = useState<boolean>(true);
-  const [generatingRecap, setGeneratingRecap] = useState(false);
+  const [generatingRecap,   setGeneratingRecap]   = useState(false);
+  const [generatingHitters, setGeneratingHitters] = useState(false);
   const [hits,   setHits]   = useState<{ away: number | null; home: number | null }>({ away: null, home: null });
   const [errors, setErrors] = useState<{ away: number | null; home: number | null }>({ away: null, home: null });
 
@@ -318,6 +319,16 @@ const ScoreEditApp: React.FC = () => {
     } finally {
       setGeneratingRecap(false);
     }
+  };
+
+  const generateBestHitters = async () => {
+    if (!game?.wbscGameId) return;
+    setGeneratingHitters(true);
+    try {
+      const highlights = await fetchWbscHittingHighlights(game.wbscGameId);
+      if (highlights) setRecap(prev => prev ? `${prev} · ${highlights}` : highlights);
+    } catch { /* silently ignore — WBSC may be unavailable */ }
+    finally { setGeneratingHitters(false); }
   };
 
   const addInning = () => setInnings(prev => [...prev, { home: null, away: null }]);
@@ -673,15 +684,28 @@ const ScoreEditApp: React.FC = () => {
               <label className="text-sm font-medium text-slate-700">
                 Game Recap <span className="text-xs font-normal text-slate-400">(scrolling ticker in overlay)</span>
               </label>
-              <button
-                type="button"
-                onClick={generateRecapFromToday}
-                disabled={generatingRecap}
-                className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border border-indigo-300 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
-              >
-                {generatingRecap && <Loader2 size={10} className="animate-spin" />}
-                Today's Scores
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={generateRecapFromToday}
+                  disabled={generatingRecap}
+                  className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border border-indigo-300 text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
+                >
+                  {generatingRecap && <Loader2 size={10} className="animate-spin" />}
+                  Today's Scores
+                </button>
+                {game?.wbscGameId && (
+                  <button
+                    type="button"
+                    onClick={generateBestHitters}
+                    disabled={generatingHitters}
+                    className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border border-amber-300 text-amber-600 hover:bg-amber-50 disabled:opacity-50"
+                  >
+                    {generatingHitters && <Loader2 size={10} className="animate-spin" />}
+                    Best Hitters
+                  </button>
+                )}
+              </div>
             </div>
             <textarea
               value={recap}

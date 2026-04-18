@@ -118,6 +118,11 @@ async function fetchPlayData(
 
 // ── Data mapping ──────────────────────────────────────────────────────────────
 
+/** Strip HTML tags from a WBSC description string.
+ *  <br> tags become " · " so multi-line descriptions stay readable as one line. */
+const stripHtml = (s: string): string =>
+  s.replace(/<br\s*\/?>/gi, ' · ').replace(/<[^>]+>/g, '').replace(/\s{2,}/g, ' ').trim();
+
 /**
  * Parse "BOT 10" / "TOP 5" → { half: 'BOTTOM'|'TOP', number: 10 }
  * Falls back gracefully when the string has an unexpected format.
@@ -175,8 +180,8 @@ function mapPlayData(
 ): WbscGameState {
   const { situation, linescore, playdata } = data;
 
-  // Play description: first entry in playdata array, field "n"
-  const description = playdata[0]?.n?.trim() || undefined;
+  // Play description: first entry in playdata array, field "n" (strip HTML tags)
+  const description = playdata[0]?.n ? stripHtml(playdata[0].n) || undefined : undefined;
 
   // Inning — derived from currentinning string (e.g. "BOT 10")
   // (Not stored in WbscGameState directly; used only for future extension.)
@@ -237,4 +242,56 @@ export async function fetchWbscGameState(
   // fetchPlayData throws on any HTTP / network / parse error
   const playData = await fetchPlayData(wbscGameId, playNumber);
   return mapPlayData(playNumber, playData, undefined);
+}
+
+/**
+ * Parse the playdata array for extra-base hits (HR, 3B, 2B).
+ * Returns a formatted string like "HR: Smith · 3B: Jones · 2B: Williams, Davis"
+ * or an empty string if none found.
+ *
+ * Player name is read from play.b (batter field) when present,
+ * otherwise extracted as the first segment of the stripped description.
+ */
+function parseHittingHighlights(plays: WbscPlayEntry[]): string {
+  const hr: string[] = [], triples: string[] = [], doubles: string[] = [];
+
+  plays.forEach(play => {
+    const upper = (play.n ?? '').toUpperCase();
+    if (!upper.includes('HOME RUN') && !upper.includes('TRIPLE') && !upper.includes('DOUBLE')) return;
+
+    // Split on <br> to get segments; first segment often contains the player name
+    const segments = (play.n ?? '')
+      .replace(/<br\s*\/?>/gi, '|')
+      .replace(/<[^>]+>/g, '')
+      .split('|')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const player = (play.b ?? '').trim() || segments[0] || '';
+
+    if (upper.includes('HOME RUN')) {
+      if (player) hr.push(player);
+    } else if (upper.includes('TRIPLE')) {
+      if (player) triples.push(player);
+    } else if (upper.includes('DOUBLE') && !upper.includes('DOUBLE PLAY') && !upper.includes('DOUBLE STEAL')) {
+      if (player) doubles.push(player);
+    }
+  });
+
+  const unique = (arr: string[]) => [...new Set(arr)];
+  const parts: string[] = [];
+  if (hr.length)      parts.push(`HR: ${unique(hr).join(', ')}`);
+  if (triples.length) parts.push(`3B: ${unique(triples).join(', ')}`);
+  if (doubles.length) parts.push(`2B: ${unique(doubles).join(', ')}`);
+  return parts.join(' · ');
+}
+
+/**
+ * Fetch extra-base hitting highlights for a WBSC game.
+ * Returns a formatted string or empty string if no hits found or on error.
+ */
+export async function fetchWbscHittingHighlights(wbscGameId: string): Promise<string> {
+  const playNumber = await fetchLastPlay(wbscGameId);
+  const playData   = await fetchPlayData(wbscGameId, playNumber);
+  return parseHittingHighlights(playData.playdata);
 }
