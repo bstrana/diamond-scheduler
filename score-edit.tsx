@@ -634,6 +634,29 @@ const ScoreEditApp: React.FC = () => {
                 />
               </div>
 
+              {/* Current batter */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Current Batter <span className="text-xs font-normal text-slate-400">(shown in stream overlay)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={batter}
+                    onChange={e => setBatter(e.target.value)}
+                    placeholder="e.g. Smith"
+                    className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                  <input
+                    type="text"
+                    value={batting}
+                    onChange={e => setBatting(e.target.value)}
+                    placeholder="1 for 4"
+                    className="w-24 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                </div>
+              </div>
+
               {/* Runners on base */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Runners on Base <span className="text-xs font-normal text-slate-400">(tap to toggle)</span></label>
