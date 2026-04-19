@@ -4,7 +4,7 @@ import {
   CheckCircle, ChevronDown, ChevronUp, Radio, MapPin,
   BarChart2, Layers, Palette, RefreshCw, Globe, Zap,
   Moon, Printer, GitBranch, QrCode, Wand2, PlusCircle,
-  Download, Upload, FileText, Info
+  Download, Upload, FileText, Info, Link2, Monitor, Activity
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -200,9 +200,146 @@ const HelpPage: React.FC = () => {
             <p className="font-semibold text-slate-700">Score by Inning</p>
             <p>In the Edit Game modal, once status is <em>Live</em> or <em>Final</em>, use <strong>+ Inning</strong> to add inning columns. Enter runs per inning for each team — total runs are calculated automatically. The inning-by-inning box score is displayed on Calendar list cards and in the Game Bar embed.</p>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
+              <p className="font-semibold text-slate-700">Count &amp; Outs</p>
+              <p>Enter current <strong>balls</strong> (0–3), <strong>strikes</strong> (0–2), and <strong>outs</strong> (0–2). These are shown in the linescore area of the stream overlay.</p>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
+              <p className="font-semibold text-slate-700">Base Runners</p>
+              <p>Toggle first, second, and third base to mark occupied bases. The base diamond in the overlay updates in real time.</p>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
+              <p className="font-semibold text-slate-700">Current Pitcher</p>
+              <p>Entering a pitcher name causes a <strong>NOW PITCHING</strong> bar to appear at the top of the stream overlay. Clear the field to hide it.</p>
+            </div>
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
+              <p className="font-semibold text-slate-700">Current Batter</p>
+              <p>Entering a batter name (and optionally a batting line such as "1 for 4") displays an <strong>AT BAT</strong> bar at the bottom of the stream overlay.</p>
+            </div>
+          </div>
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
             <p className="font-semibold text-slate-700 flex items-center gap-1.5"><Radio size={14} className="text-indigo-500" /> Live Stream URL</p>
             <p>Add a stream URL to any game. A <strong>Watch</strong> link with a radio icon appears on Calendar cards and Game Bar cards. Clicking it opens the stream in a new tab without leaving the schedule page.</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'scorelinks',
+      icon: <Link2 size={18} />,
+      title: 'Score Links & Live Score Entry',
+      color: 'text-sky-600',
+      content: (
+        <div className="space-y-4 text-sm text-slate-600">
+          <p>
+            <strong>Score Links</strong> let any authorised person update a game's score directly from a browser — no app login required. They're ideal for scorekeepers in the stands or tablet operators at the field.
+          </p>
+          <div className="bg-sky-50 border border-sky-200 rounded-lg p-4 space-y-2">
+            <p className="font-semibold text-sky-800 flex items-center gap-1.5"><Link2 size={14} /> Generating a Score Link</p>
+            <ol className="list-decimal list-inside space-y-1 text-sky-700">
+              <li>Open the <strong>Score Links</strong> manager (link icon in the top navigation).</li>
+              <li>Find the game and click <strong>Generate Link</strong>.</li>
+              <li>Share the unique URL with your scorekeeper — no login required to use it.</li>
+            </ol>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
+            <p className="font-semibold text-slate-700">What the scorekeeper can enter</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {[
+                { label: 'Game status', text: 'Set to Live, Final, or Postponed.' },
+                { label: 'Innings', text: 'Add innings with + and enter runs for each team.' },
+                { label: 'Outs / Balls / Strikes', text: 'Current count in a simple 3-field row.' },
+                { label: 'Base runners', text: 'Toggle first, second, and third base on/off.' },
+                { label: 'Current Pitcher', text: 'Name shown in the stream overlay top bar.' },
+                { label: 'Current Batter', text: 'Name and batting line (e.g. "1 for 4") shown in the stream overlay bottom bar.' },
+                { label: "Today's Scores", text: "Auto-populate the recap with all of today's results from this schedule." },
+                { label: 'Best Hitters', text: 'Append HR/3B/2B leaders from the WBSC play log (requires WBSC Game ID).' },
+              ].map(({ label, text }) => (
+                <div key={label} className="bg-white border border-slate-200 rounded p-2">
+                  <p className="font-semibold text-slate-700 text-xs">{label}</p>
+                  <p className="text-xs">{text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p className="font-semibold text-amber-800 mb-1">Auto-save</p>
+            <p className="text-amber-700 text-sm">Every field saves automatically after a short pause. Changes appear in the stream overlay and embedded widgets within seconds — no Save button needed.</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'overlay',
+      icon: <Monitor size={18} />,
+      title: 'Stream Overlay',
+      color: 'text-violet-600',
+      content: (
+        <div className="space-y-4 text-sm text-slate-600">
+          <p>
+            The <strong>Stream Overlay</strong> is a browser-source page for OBS, Streamlabs, or any broadcast tool that supports browser sources. It renders real-time game data over your video feed with a transparent background.
+          </p>
+          <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 space-y-2">
+            <p className="font-semibold text-violet-800 flex items-center gap-1.5"><Monitor size={14} /> Adding to OBS</p>
+            <ol className="list-decimal list-inside space-y-1 text-violet-700">
+              <li>In the Score Links manager, copy the <strong>Overlay URL</strong> for the game.</li>
+              <li>In OBS, add a new <strong>Browser Source</strong>.</li>
+              <li>Paste the URL, set the resolution to match your stream (e.g. 1920 × 1080), and enable <em>Transparent background</em>.</li>
+              <li>Position the layer above your video source. It updates automatically as scores are entered.</li>
+            </ol>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[
+              { title: 'Pitcher bar (top)', text: 'Shows NOW PITCHING with the pitcher\'s name, right-aligned. Visible only during live games when a pitcher name is set.' },
+              { title: 'Batter bar (bottom)', text: 'Shows AT BAT with the batter\'s name and optional batting line (e.g. "1 for 4"), right-aligned. Visible during live games when a batter is set.' },
+              { title: 'Linescore', text: 'Inning-by-inning box score, count (balls-strikes-outs), and base runner diamond. Toggle on/off via Overlay Settings on the Score Entry page.' },
+              { title: 'Recap ticker', text: 'Scrolls the recap text across the bottom. Toggle independently with the Show Recap switch in Overlay Settings — hide during play, reveal at the end.' },
+            ].map(({ title, text }) => (
+              <div key={title} className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
+                <p className="font-semibold text-slate-700">{title}</p>
+                <p>{text}</p>
+              </div>
+            ))}
+          </div>
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-xs text-emerald-700">
+            <strong>Live polling:</strong> The overlay polls for updates every 5 seconds and stays in sync with the score entry page in near real-time.
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: 'wbsc',
+      icon: <Activity size={18} />,
+      title: 'WBSC Live Game Tracker',
+      color: 'text-green-600',
+      content: (
+        <div className="space-y-4 text-sm text-slate-600">
+          <p>
+            Games on the <strong>WBSC platform</strong> (game.wbsc.org) can be tracked automatically. When a WBSC Game ID is set, the Score Entry page polls the WBSC API every 5 seconds and fills in scores, count, base runners, pitcher, batter, and play descriptions — no manual entry needed.
+          </p>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
+            <p className="font-semibold text-green-800">Enabling WBSC tracking</p>
+            <ol className="list-decimal list-inside space-y-1 text-green-700">
+              <li>Find the WBSC numeric game ID in the game.wbsc.org URL for that game.</li>
+              <li>Open the <strong>Edit Game</strong> modal and enter it in the <strong>WBSC Game ID</strong> field.</li>
+              <li>Open the Score Entry page (Score Link). Tracking starts automatically.</li>
+            </ol>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[
+              { label: 'Scores', text: 'Inning-by-inning runs for both teams sync automatically, including the "x" marker when the home team doesn\'t bat in the final inning.' },
+              { label: 'Game situation', text: 'Balls, strikes, outs, and base runners update in real time from the WBSC feed.' },
+              { label: 'Pitcher & batter', text: 'Current pitcher and batter names are pulled from WBSC and displayed in the stream overlay bars automatically.' },
+              { label: 'Play description', text: 'The latest play description is shown in the linescore area of the overlay during live play.' },
+              { label: 'Auto-Final', text: 'When WBSC marks the game as FINAL, the status is automatically changed to Final in the schedule and standings.' },
+              { label: 'Best Hitters', text: 'Click the Best Hitters button on the Score Entry page to fetch HR/3B/2B leaders from the WBSC play log and append them to the recap.' },
+            ].map(({ label, text }) => (
+              <div key={label} className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <p className="font-semibold text-slate-700 mb-0.5">{label}</p>
+                <p>{text}</p>
+              </div>
+            ))}
           </div>
         </div>
       ),
@@ -288,6 +425,7 @@ const HelpPage: React.FC = () => {
               <p className="font-semibold text-slate-700 flex items-center gap-1.5"><BarChart2 size={14} /> Standings</p>
               <p>Standings are calculated automatically from all <em>Final</em> games with recorded scores. They include <strong>GP</strong> (games played), W, L, PCT, GB (games behind), RS (runs scored), RA (runs allowed), and DIFF.</p>
               <p>The embedded Standings widget also shows a <strong>Watch Live</strong> button when a game in that league is live with a stream URL.</p>
+              <p className="text-xs bg-amber-50 border border-amber-200 rounded p-2 text-amber-700 mt-1"><strong>League-scoped W-L records:</strong> W-L records shown on Game Bar and Calendar cards are calculated only from games in the same league(s) as that game. A game tagged to two leagues counts wins and losses toward both.</p>
             </div>
           </div>
         </div>
@@ -407,7 +545,7 @@ const HelpPage: React.FC = () => {
       content: (
         <div className="space-y-4 text-sm text-slate-600">
           <p>Use the <strong>Import / Export</strong> buttons in the Calendar toolbar to move game data in and out of the app.</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="bg-sky-50 border border-sky-200 rounded-lg p-4 space-y-2">
               <p className="font-semibold text-sky-800 flex items-center gap-1.5"><Upload size={14} /> Import CSV</p>
               <p>Upload a <code className="bg-white border border-sky-200 px-1 rounded text-xs">.csv</code> file to bulk-add games. Each row maps to a game — team names are matched against your existing roster. Unrecognised teams are skipped with a warning.</p>
@@ -420,8 +558,16 @@ const HelpPage: React.FC = () => {
             </div>
             <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 space-y-2">
               <p className="font-semibold text-violet-800 flex items-center gap-1.5"><FileText size={14} /> Export ICS</p>
-              <p>Downloads a standard <code className="bg-white border border-violet-200 px-1 rounded text-xs">.ics</code> calendar file. Import it into Google Calendar, Apple Calendar, Outlook, or any calendar app to see games as events with date, time, location, and team names.</p>
+              <p>Downloads a standard <code className="bg-white border border-violet-200 px-1 rounded text-xs">.ics</code> calendar file. Import it once into Google Calendar, Apple Calendar, or Outlook.</p>
             </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
+              <p className="font-semibold text-amber-800 flex items-center gap-1.5"><RefreshCw size={14} /> iCal Subscription</p>
+              <p>Use the live subscription URL (<code className="bg-white border border-amber-200 px-1 rounded text-xs">/subscribe.ics?key=…</code>) in your calendar app instead of importing a one-time file. The calendar app checks for updates automatically — new games and score changes appear without re-importing.</p>
+            </div>
+          </div>
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
+            <p className="font-semibold text-slate-700 flex items-center gap-1.5"><Globe size={14} /> Public Schedule API</p>
+            <p>Every published schedule is available as a machine-readable JSON feed at <code className="bg-white border border-slate-200 px-1 rounded text-xs">/schedule.json?key=your-key</code>. Use it to build custom integrations, scoreboards, or mobile apps that read live schedule data directly.</p>
           </div>
         </div>
       ),
@@ -443,7 +589,7 @@ const HelpPage: React.FC = () => {
             { title: 'Bracket embed', text: 'Use the "Series / Playoff Bracket" embed type in the Embed Code tab to put a live, updating bracket on your website — rounds are ordered automatically by first game date.' },
             { title: 'Dark mode', text: 'Toggle dark mode with the Moon/Sun button in the top-right header. Your preference is saved across sessions.' },
             { title: 'Conflict detection', text: 'After generating a schedule, the Scheduler shows a warning if any team has two games on the same date.' },
-            { title: 'W-L record on cards', text: 'Game Bar and Calendar list cards show each team\'s season W-L record (e.g. 3-2) calculated from all final games.' },
+            { title: 'W-L record on cards', text: 'Game Bar and Calendar list cards show each team\'s W-L record scoped to the league(s) of that game — not a combined total across all leagues.' },
             { title: 'Both teams in single-team view', text: 'When a team filter is active, embeds and calendar cards show both the selected team AND the opponent — not just the opponent.' },
             { title: 'Multi-league games', text: 'A single game can be tagged to multiple leagues at once — useful for playoff rounds spanning divisions.' },
             { title: 'Game Bar quick-update', text: 'Open a game from any embedded Game Bar widget and use Save & Publish to push score updates live without leaving the page.' },
@@ -451,6 +597,11 @@ const HelpPage: React.FC = () => {
             { title: 'Schedule key per season', text: 'Use a different schedule key for each season or tournament so you can load historical schedules later without overwriting the current one.' },
             { title: 'Export to calendar apps', text: 'Use Export ICS (Calendar toolbar) to push your schedule to Google Calendar, Apple Calendar, or Outlook — each game becomes a calendar event with time, location, and team names.' },
             { title: 'Standings info text', text: 'In the Embed Code tab for Standings, type an Info Text note (e.g. "Updated after each game") — it appears inline at the bottom left of the embedded table next to the share button.' },
+            { title: 'iCal subscription vs. export', text: 'Use the /subscribe.ics?key=… URL in your calendar app (Google Calendar → "Other calendars → From URL") to get live updates whenever games change. One-time ICS export doesn\'t stay in sync.' },
+            { title: 'Pitcher & batter in overlay', text: 'Enter pitcher and batter names on the Score Entry page to show NOW PITCHING and AT BAT bars on the stream overlay. WBSC tracking fills these in automatically.' },
+            { title: 'Show/hide recap ticker', text: 'Use the Show Recap toggle in Overlay Settings to hide the scrolling recap ticker during active play and reveal it at the end of the game or between innings.' },
+            { title: 'WBSC Best Hitters', text: 'After a WBSC-tracked game, click Best Hitters on the Score Entry page to append a list of home run, triple, and double hitters to the recap text automatically.' },
+            { title: 'Public schedule API', text: 'The /schedule.json?key=… endpoint returns your full published schedule as JSON — use it for custom scoreboards, mobile apps, or any external integration.' },
           ].map(({ title, text }) => (
             <div key={title} className="flex items-start space-x-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
               <CheckCircle size={14} className="mt-0.5 text-emerald-500 flex-shrink-0" />
