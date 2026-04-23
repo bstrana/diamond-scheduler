@@ -147,6 +147,8 @@ const Calendar: React.FC<CalendarProps> = ({
     return leagueIds.map(id => getLeague(id)).filter(Boolean) as League[];
   };
 
+  const todayStr = formatDate(new Date());
+
   // W-L records from all final games in the current filtered set
   const teamRecords = useMemo(() => {
     const records: Record<string, { w: number; l: number }> = {};
@@ -201,7 +203,6 @@ const Calendar: React.FC<CalendarProps> = ({
 
   // Logic for List View: Upcoming games from today onwards
   const upcomingGames = useMemo(() => {
-    const todayStr = formatDate(new Date());
     return filteredGames
       .filter(g => g.date >= todayStr)
       .sort((a, b) => {
@@ -420,7 +421,7 @@ const Calendar: React.FC<CalendarProps> = ({
                         let opponent: Team | null = null;
                         let isSelectedTeamHome = false;
                         let isSelectedTeamAway = false;
-                        
+
                         if (isSingleTeamFilter) {
                             if (game.homeTeamId === selectedTeamId) {
                                 opponent = away;
@@ -431,13 +432,15 @@ const Calendar: React.FC<CalendarProps> = ({
                             }
                         }
 
+                        const isOverdue = game.status === 'scheduled' && game.date < todayStr;
+
                         return (
-                        <div 
+                        <div
                             key={game.id}
                             draggable
                             onDragStart={(e) => handleDragStart(e, game.id)}
                             onClick={(e) => { e.stopPropagation(); onGameClick(game); }}
-                            className="text-xs p-1.5 rounded border border-slate-100 hover:border-blue-300 hover:bg-blue-50 cursor-grab active:cursor-grabbing shadow-sm transition-all bg-white relative group/game"
+                            className={`text-xs p-1.5 rounded border cursor-grab active:cursor-grabbing shadow-sm transition-all bg-white relative group/game ${isOverdue ? 'border-amber-300 bg-amber-50 hover:border-amber-400 hover:bg-amber-100' : 'border-slate-100 hover:border-blue-300 hover:bg-blue-50'}`}
                         >
                             <div className="absolute top-0.5 right-0.5 flex space-x-1 opacity-0 group-hover/game:opacity-100 transition-opacity z-10">
                                 <button
@@ -525,7 +528,7 @@ const Calendar: React.FC<CalendarProps> = ({
                                 <div className="flex flex-col items-end space-y-1 flex-shrink-0">
                                     <div className="flex items-center gap-1">
                                         <span className="text-[10px] text-slate-500 font-medium">{game.time}</span>
-                                {game.status !== 'scheduled' && (
+                                {game.status !== 'scheduled' ? (
                                     <span className={`text-[8px] px-1 py-0.5 rounded uppercase font-bold tracking-wider leading-none
                                     ${game.status === 'final' ? 'bg-slate-200 text-slate-600' : ''}
                                     ${game.status === 'live' ? 'bg-emerald-100 text-emerald-700 animate-pulse' : ''}
@@ -533,7 +536,9 @@ const Calendar: React.FC<CalendarProps> = ({
                                     `}>
                                     {game.status === 'live' ? 'LIVE' : game.status === 'postponed' ? 'PPD' : 'FIN'}
                                     </span>
-                                )}
+                                ) : isOverdue ? (
+                                    <span className="text-[8px] px-1 py-0.5 rounded uppercase font-bold tracking-wider leading-none bg-amber-200 text-amber-700">!</span>
+                                ) : null}
                             </div>
                                     <div className="flex items-center text-[9px] text-slate-400">
                                         <MapPin size={8} className="mr-0.5 flex-shrink-0" />
@@ -601,11 +606,12 @@ const Calendar: React.FC<CalendarProps> = ({
                                     : null;
 
                                   const isSelected = selectedGameIds.has(game.id);
+                                  const isOverdue = game.status === 'scheduled' && game.date < todayStr;
                                   return (
                                     <div
                                         key={game.id}
                                         onClick={(e) => isSelectMode ? toggleGameSelect(game.id, e) : onGameClick(game)}
-                                        className={`bg-white p-4 rounded-xl border shadow-sm transition-all cursor-pointer relative group overflow-hidden ${isSelected ? 'border-indigo-400 ring-2 ring-indigo-200 shadow-md' : 'border-slate-200 hover:shadow-md'}`}
+                                        className={`p-4 rounded-xl border shadow-sm transition-all cursor-pointer relative group overflow-hidden ${isSelected ? 'bg-white border-indigo-400 ring-2 ring-indigo-200 shadow-md' : isOverdue ? 'bg-amber-50 border-amber-300 hover:border-amber-400 hover:shadow-md' : 'bg-white border-slate-200 hover:shadow-md'}`}
                                     >
                                         {/* Bulk-select checkbox */}
                                         {isSelectMode && (
@@ -661,7 +667,12 @@ const Calendar: React.FC<CalendarProps> = ({
                                             ) : game.status === 'final' ? (
                                                 <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-700 text-white">FINAL</span>
                                             ) : (
-                                                <span className="text-lg font-bold text-slate-800">{game.time}</span>
+                                                <>
+                                                    <span className="text-lg font-bold text-slate-800">{game.time}</span>
+                                                    {isOverdue && (
+                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-400 text-white uppercase tracking-wide">Needs update</span>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
 
