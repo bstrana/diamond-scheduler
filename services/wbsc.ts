@@ -52,7 +52,7 @@ interface WbscPlayEntry {
   t: string;   // timestamp ms
   p: string;   // play id
   n: string;   // play description  ← what we display
-  b: string;
+  b: string;   // numeric WBSC player ID (not a display name)
   a: string;
   r1: string;
   r2: string;
@@ -249,8 +249,10 @@ export async function fetchWbscGameState(
  * Returns a formatted string like "HR: Smith · 3B: Jones · 2B: Williams, Davis"
  * or an empty string if none found.
  *
- * Player name is read from play.b (batter field) when present,
- * otherwise extracted as the first segment of the stripped description.
+ * play.b is a numeric WBSC player ID — not usable as a display name.
+ * The name is extracted from play.n: if the hit keyword appears mid-segment
+ * (e.g. "Smith J. HOME RUN (1)") the text before the keyword is the name;
+ * otherwise the first segment that doesn't contain a hit keyword is used.
  */
 function parseHittingHighlights(plays: WbscPlayEntry[]): string {
   const hr: string[] = [], triples: string[] = [], doubles: string[] = [];
@@ -259,7 +261,6 @@ function parseHittingHighlights(plays: WbscPlayEntry[]): string {
     const upper = (play.n ?? '').toUpperCase();
     if (!upper.includes('HOME RUN') && !upper.includes('TRIPLE') && !upper.includes('DOUBLE')) return;
 
-    // Split on <br> to get segments; first segment often contains the player name
     const segments = (play.n ?? '')
       .replace(/<br\s*\/?>/gi, '|')
       .replace(/<[^>]+>/g, '')
@@ -267,7 +268,24 @@ function parseHittingHighlights(plays: WbscPlayEntry[]): string {
       .map(s => s.trim())
       .filter(Boolean);
 
-    const player = (play.b ?? '').trim() || segments[0] || '';
+    // Find the player name from description segments only (play.b is a numeric ID).
+    // Strategy: if a segment contains the hit keyword, the name precedes it.
+    // Otherwise use the first segment that doesn't look like a stat or keyword line.
+    const HIT_KEYWORDS = /\b(HOME RUN|TRIPLE|DOUBLE|SINGLE|BALL|STRIKE|FOUL|SCORE|WALK|OUT|INNING|GAME|WIN|LOSS)\b/i;
+    let player = '';
+    for (const seg of segments) {
+      const segUpper = seg.toUpperCase();
+      const kwIdx = segUpper.search(/\b(HOME RUN|TRIPLE|DOUBLE)\b/);
+      if (kwIdx > 0) {
+        // Name is before the keyword on the same line
+        player = seg.slice(0, kwIdx).trim();
+        break;
+      }
+      if (!HIT_KEYWORDS.test(seg) && !/^\d/.test(seg) && seg.length > 1) {
+        player = seg;
+        break;
+      }
+    }
 
     if (upper.includes('HOME RUN')) {
       if (player) hr.push(player);
