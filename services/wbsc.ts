@@ -213,7 +213,9 @@ function mapPlayData(
     for (const entry of Object.values(boxscore)) {
       if (!entry || typeof entry !== 'object') continue;
       const entryName = (entry.NAME ?? '').toString().trim().toUpperCase();
-      if (entryName && pitcherName.includes(entryName.split(' ')[0]) || entryName.includes(pitcherName.split(' ')[0])) {
+      const pWords = pitcherName.split(/\s+/).filter(w => w.length > 2);
+      const eWords = entryName.split(/\s+/).filter(w => w.length > 2);
+      if (entryName && pWords.length && eWords.length && pWords.some(w => eWords.includes(w))) {
         if (typeof entry.PITCHES === 'number') {
           pitchCount = entry.PITCHES;
           break;
