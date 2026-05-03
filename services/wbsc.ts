@@ -107,7 +107,7 @@ export interface WbscGameState {
 async function fetchLastPlay(wbscGameId: string): Promise<number> {
   const res = await fetch(
     `/wbsc-proxy/last-play?gameId=${encodeURIComponent(wbscGameId)}`,
-    { signal: AbortSignal.timeout(2_500) },
+    { signal: AbortSignal.timeout(3_000) },
   );
   if (!res.ok) throw new Error(`last-play ${res.status}`);
   const data = await res.json();
@@ -122,7 +122,7 @@ async function fetchPlayData(
 ): Promise<WbscPlayDataResponse> {
   const res = await fetch(
     `/wbsc-proxy/play-data?gameId=${encodeURIComponent(wbscGameId)}&playNumber=${playNumber}`,
-    { signal: AbortSignal.timeout(2_500) },
+    { signal: AbortSignal.timeout(3_000) },
   );
   if (!res.ok) throw new Error(`play-data ${res.status}`);
   return (await res.json()) as WbscPlayDataResponse;
@@ -216,8 +216,12 @@ function mapPlayData(
       const pWords = pitcherName.split(/\s+/).filter(w => w.length > 2);
       const eWords = entryName.split(/\s+/).filter(w => w.length > 2);
       if (entryName && pWords.length && eWords.length && pWords.some(w => eWords.includes(w))) {
-        if (typeof entry.PITCHES === 'number') {
-          pitchCount = entry.PITCHES;
+        const raw = entry.PITCHES ?? entry['NP'];
+        const count = typeof raw === 'number' ? raw
+          : typeof raw === 'string' ? parseInt(raw, 10)
+          : NaN;
+        if (Number.isFinite(count) && count > 0) {
+          pitchCount = count;
           break;
         }
       }
