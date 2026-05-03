@@ -143,9 +143,10 @@ const StreamOverlayApp: React.FC = () => {
   const [awayTeam, setAwayTeam] = useState<Team | null>(null);
   const [showLinescore, setShowLinescore] = useState(false);
   const [showRecap,     setShowRecap]     = useState(true);
-  const [pitcher, setPitcher] = useState('');
-  const [batter,  setBatter]  = useState('');
-  const [batting, setBatting] = useState('');
+  const [pitcher,    setPitcher]    = useState('');
+  const [pitchCount, setPitchCount] = useState<number | null>(null);
+  const [batter,     setBatter]     = useState('');
+  const [batting,    setBatting]    = useState('');
   const [gameHits,   setGameHits]   = useState<{ away: number | null; home: number | null } | null>(null);
   const [gameErrors, setGameErrors] = useState<{ away: number | null; home: number | null } | null>(null);
   const gameRef = useRef<Game | null>(null);
@@ -181,6 +182,7 @@ const StreamOverlayApp: React.FC = () => {
         setShowLinescore(!!edit.linescore);
         setShowRecap(edit.showRecap !== false);
         setPitcher(edit.pitcher ?? '');
+        setPitchCount(edit.pitchCount ?? null);
         setBatter(edit.batter   ?? '');
         setBatting(edit.batting ?? '');
         setGameHits(edit.hits ?? null);
@@ -212,6 +214,7 @@ const StreamOverlayApp: React.FC = () => {
       setShowLinescore(!!edit.linescore);
       setShowRecap(edit.showRecap !== false);
       setPitcher(edit.pitcher ?? '');
+      setPitchCount(edit.pitchCount ?? null);
       setBatter(edit.batter   ?? '');
       setBatting(edit.batting ?? '');
       setGameHits(edit.hits ?? null);
@@ -227,6 +230,7 @@ const StreamOverlayApp: React.FC = () => {
         setShowLinescore(!!edit.linescore);
         setShowRecap(edit.showRecap !== false);
         setPitcher(edit.pitcher ?? '');
+        setPitchCount(edit.pitchCount ?? null);
         setBatter(edit.batter   ?? '');
         setBatting(edit.batting ?? '');
         setGameHits(edit.hits ?? null);
@@ -320,6 +324,15 @@ const StreamOverlayApp: React.FC = () => {
             overflow: 'hidden',
             textOverflow: 'ellipsis',
           }}>{pitcher.trim()}</span>
+          {pitchCount != null && (
+            <span style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: isLight ? '#4f46e5' : '#a5b4fc',
+              flexShrink: 0,
+              letterSpacing: '0.04em',
+            }}>{pitchCount}P</span>
+          )}
         </div>
       )}
 

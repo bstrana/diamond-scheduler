@@ -97,9 +97,10 @@ const ScoreEditApp: React.FC = () => {
   const [strikes, setStrikes] = useState<number>(0);
   const [baseRunners, setBaseRunners] = useState<{ first: boolean; second: boolean; third: boolean }>({ first: false, second: false, third: false });
   const [recap, setRecap] = useState<string>('');
-  const [pitcher, setPitcher] = useState<string>('');
-  const [batter,  setBatter]  = useState<string>('');
-  const [batting, setBatting] = useState<string>('');
+  const [pitcher,    setPitcher]    = useState<string>('');
+  const [pitchCount, setPitchCount] = useState<number | null>(null);
+  const [batter,     setBatter]     = useState<string>('');
+  const [batting,    setBatting]    = useState<string>('');
   const [linescore,  setLinescore]  = useState<boolean>(false);
   const [showRecap,  setShowRecap]  = useState<boolean>(true);
   const [generatingRecap,   setGeneratingRecap]   = useState(false);
@@ -157,7 +158,8 @@ const ScoreEditApp: React.FC = () => {
 
       const sourceRecap = existingEdit?.recap ?? g.recap;
       if (sourceRecap) setRecap(sourceRecap);
-      if (existingEdit?.pitcher) setPitcher(existingEdit.pitcher);
+      if (existingEdit?.pitcher)    setPitcher(existingEdit.pitcher);
+      if (existingEdit?.pitchCount != null) setPitchCount(existingEdit.pitchCount);
       if (existingEdit?.linescore) setLinescore(true);
       if (existingEdit?.showRecap === false) setShowRecap(false);
       if (existingEdit?.hits)      setHits(existingEdit.hits);
@@ -198,10 +200,11 @@ const ScoreEditApp: React.FC = () => {
           innings: innings.map(i => ({ home: i.home, away: i.away })),
           ...(status === 'live' && { outs, balls, strikes, baseRunners }),
         },
-        recap: recap || undefined,
-        pitcher: pitcher || undefined,
-        batter:  batter  || undefined,
-        batting: batting || undefined,
+        recap:      recap   || undefined,
+        pitcher:    pitcher || undefined,
+        pitchCount: pitchCount ?? undefined,
+        batter:     batter  || undefined,
+        batting:    batting || undefined,
         linescore,
         showRecap,
         hits,
@@ -218,7 +221,7 @@ const ScoreEditApp: React.FC = () => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // homeTotal and awayTotal are derived from innings — no need to list them separately
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, innings, outs, balls, strikes, baseRunners, recap, pitcher, batter, batting, linescore, showRecap, hits, errors]);
+  }, [status, innings, outs, balls, strikes, baseRunners, recap, pitcher, pitchCount, batter, batting, linescore, showRecap, hits, errors]);
 
   // ── WBSC live data polling ───────────────────────────────────────────────────
   // Runs every 5 seconds when: game has a wbscGameId, status is live, and
@@ -249,6 +252,7 @@ const ScoreEditApp: React.FC = () => {
         setStrikes(state.strikes);
         setBaseRunners(state.baseRunners);
         if (state.pitcher) setPitcher(state.pitcher);
+        setPitchCount(state.pitchCount ?? null);
         if (state.batter)  setBatter(state.batter);
         if (state.batting) setBatting(state.batting);
         if (state.hits)   setHits(state.hits);
