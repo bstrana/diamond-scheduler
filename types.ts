@@ -47,6 +47,8 @@ export interface Game {
     balls?: number;      // 0-3
     strikes?: number;    // 0-2
     baseRunners?: { first?: boolean; second?: boolean; third?: boolean };
+    inningHalf?: 'top' | 'bottom';
+    currentInning?: number;
   };
   recap?: string;
   leagueId?: string; // Deprecated: kept for backward compatibility
@@ -85,9 +87,10 @@ export interface ScoreEdit {
   scores?: Game['scores'];
   recap?: string;
   linescore?: boolean;
-  pitcher?: string;
-  batter?:  string;
-  batting?: string;
+  pitcher?:    string;
+  pitchCount?: number;
+  batter?:     string;
+  batting?:    string;
   showRecap?: boolean;
   hits?: { away: number | null; home: number | null };
   errors?: { away: number | null; home: number | null };

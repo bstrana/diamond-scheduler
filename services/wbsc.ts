@@ -64,11 +64,20 @@ interface WbscPlayEntry {
   hl: string;
 }
 
+/** play{n}.json — single boxscore player entry (keyed by numeric player ID) */
+interface WbscBoxscorePlayer {
+  NAME?:   string;
+  PITCHES?: number;
+  [key: string]: unknown;
+}
+
 /** Full play{n}.json response */
 export interface WbscPlayDataResponse {
   situation: WbscSituation;
   linescore: WbscLinescore;
   playdata:  WbscPlayEntry[];
+  /** Flat map of player-id → stats; present for pitch counts and batting lines */
+  boxscore?: Record<string, WbscBoxscorePlayer>;
 }
 
 // ── Mapped game state (what score-edit.tsx consumes) ─────────────────────────
@@ -82,10 +91,13 @@ export interface WbscGameState {
   balls:   number;
   strikes: number;
   baseRunners: { first: boolean; second: boolean; third: boolean };
-  pitcher?: string;
-  batter?:  string;
-  batting?: string;  // e.g. "1 for 4"
-  avg?:     string;  // e.g. ".250"
+  inningNumber?: number;
+  inningHalf?:   'top' | 'bottom';
+  pitcher?:    string;
+  pitchCount?: number;
+  batter?:     string;
+  batting?:    string;  // e.g. "1 for 4"
+  avg?:        string;  // e.g. ".250"
   hits?:   { away: number | null; home: number | null };
   errors?: { away: number | null; home: number | null };
 }
@@ -95,7 +107,7 @@ export interface WbscGameState {
 async function fetchLastPlay(wbscGameId: string): Promise<number> {
   const res = await fetch(
     `/wbsc-proxy/last-play?gameId=${encodeURIComponent(wbscGameId)}`,
-    { signal: AbortSignal.timeout(4_000) },
+    { signal: AbortSignal.timeout(2_500) },
   );
   if (!res.ok) throw new Error(`last-play ${res.status}`);
   const data = await res.json();
@@ -110,7 +122,7 @@ async function fetchPlayData(
 ): Promise<WbscPlayDataResponse> {
   const res = await fetch(
     `/wbsc-proxy/play-data?gameId=${encodeURIComponent(wbscGameId)}&playNumber=${playNumber}`,
-    { signal: AbortSignal.timeout(4_000) },
+    { signal: AbortSignal.timeout(2_500) },
   );
   if (!res.ok) throw new Error(`play-data ${res.status}`);
   return (await res.json()) as WbscPlayDataResponse;
@@ -178,18 +190,37 @@ function mapPlayData(
   data: WbscPlayDataResponse,
   rawStatus: string | undefined,
 ): WbscGameState {
-  const { situation, linescore, playdata } = data;
+  const { situation, linescore, playdata, boxscore } = data;
 
   // Play description: first entry in playdata array, field "n" (strip HTML tags)
   const description = playdata[0]?.n ? stripHtml(playdata[0].n) || undefined : undefined;
 
-  // Inning — derived from currentinning string (e.g. "BOT 10")
-  // (Not stored in WbscGameState directly; used only for future extension.)
-  const _inning = parseCurrentInning(situation.currentinning ?? '');
-  void _inning; // currently informational; remove void if you add it to the state shape
+  // Inning — derived from currentinning string (e.g. "BOT 10", "TOP 5")
+  const parsedInning = parseCurrentInning(situation.currentinning ?? '');
+  const inningNumber = parsedInning.number ? Number(parsedInning.number) : undefined;
+  const inningHalf: 'top' | 'bottom' | undefined =
+    parsedInning.half === 'TOP'    ? 'top' :
+    parsedInning.half === 'BOTTOM' ? 'bottom' :
+    undefined;
 
   // Linescore → innings array
   const innings = buildInnings(linescore.awayruns, linescore.homeruns);
+
+  // Pitch count — find the current pitcher's entry in the boxscore by name match
+  let pitchCount: number | undefined;
+  const pitcherName = (situation.pitcher || '').trim().toUpperCase();
+  if (boxscore && pitcherName) {
+    for (const entry of Object.values(boxscore)) {
+      if (!entry || typeof entry !== 'object') continue;
+      const entryName = (entry.NAME ?? '').toString().trim().toUpperCase();
+      if (entryName && pitcherName.includes(entryName.split(' ')[0]) || entryName.includes(pitcherName.split(' ')[0])) {
+        if (typeof entry.PITCHES === 'number') {
+          pitchCount = entry.PITCHES;
+          break;
+        }
+      }
+    }
+  }
 
   return {
     playNumber:  latestpn,
@@ -204,10 +235,13 @@ function mapPlayData(
       second: situation.runner2 !== 0,
       third:  situation.runner3 !== 0,
     },
-    pitcher: situation.pitcher || undefined,
-    batter:  situation.batter  || undefined,
-    batting: situation.batting || undefined,
-    avg:     situation.avg     || undefined,
+    inningNumber: Number.isFinite(inningNumber) ? inningNumber : undefined,
+    inningHalf,
+    pitcher:    situation.pitcher || undefined,
+    pitchCount,
+    batter:     situation.batter  || undefined,
+    batting:    situation.batting || undefined,
+    avg:        situation.avg     || undefined,
     hits: {
       away: linescore.awaytotals.H ?? null,
       home: linescore.hometotals.H ?? null,
