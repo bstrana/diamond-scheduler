@@ -95,7 +95,7 @@ export interface WbscGameState {
 async function fetchLastPlay(wbscGameId: string): Promise<number> {
   const res = await fetch(
     `/wbsc-proxy/last-play?gameId=${encodeURIComponent(wbscGameId)}`,
-    { signal: AbortSignal.timeout(4_000) },
+    { signal: AbortSignal.timeout(2_500) },
   );
   if (!res.ok) throw new Error(`last-play ${res.status}`);
   const data = await res.json();
@@ -110,7 +110,7 @@ async function fetchPlayData(
 ): Promise<WbscPlayDataResponse> {
   const res = await fetch(
     `/wbsc-proxy/play-data?gameId=${encodeURIComponent(wbscGameId)}&playNumber=${playNumber}`,
-    { signal: AbortSignal.timeout(4_000) },
+    { signal: AbortSignal.timeout(2_500) },
   );
   if (!res.ok) throw new Error(`play-data ${res.status}`);
   return (await res.json()) as WbscPlayDataResponse;

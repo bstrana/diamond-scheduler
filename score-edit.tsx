@@ -262,7 +262,7 @@ const ScoreEditApp: React.FC = () => {
     };
 
     poll(); // immediate first tick
-    const interval = setInterval(poll, 5_000);
+    const interval = setInterval(poll, 3_000);
     return () => clearInterval(interval);
   // wbscLastPlayRef is a ref so it is intentionally excluded from deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
