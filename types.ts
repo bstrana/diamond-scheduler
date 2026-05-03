@@ -47,6 +47,8 @@ export interface Game {
     balls?: number;      // 0-3
     strikes?: number;    // 0-2
     baseRunners?: { first?: boolean; second?: boolean; third?: boolean };
+    inningHalf?: 'top' | 'bottom';
+    currentInning?: number;
   };
   recap?: string;
   leagueId?: string; // Deprecated: kept for backward compatibility

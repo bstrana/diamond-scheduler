@@ -97,6 +97,8 @@ const ScoreEditApp: React.FC = () => {
   const [strikes, setStrikes] = useState<number>(0);
   const [baseRunners, setBaseRunners] = useState<{ first: boolean; second: boolean; third: boolean }>({ first: false, second: false, third: false });
   const [recap, setRecap] = useState<string>('');
+  const [wbscInningHalf,   setWbscInningHalf]   = useState<'top' | 'bottom' | null>(null);
+  const [wbscInningNumber, setWbscInningNumber] = useState<number | null>(null);
   const [pitcher,    setPitcher]    = useState<string>('');
   const [pitchCount, setPitchCount] = useState<number | null>(null);
   const [batter,     setBatter]     = useState<string>('');
@@ -198,7 +200,10 @@ const ScoreEditApp: React.FC = () => {
           home:    homeTotal,
           away:    awayTotal,
           innings: innings.map(i => ({ home: i.home, away: i.away })),
-          ...(status === 'live' && { outs, balls, strikes, baseRunners }),
+          ...(status === 'live' && { outs, balls, strikes, baseRunners,
+            ...(wbscInningHalf   && { inningHalf:    wbscInningHalf }),
+            ...(wbscInningNumber && { currentInning: wbscInningNumber }),
+          }),
         },
         recap:      recap   || undefined,
         pitcher:    pitcher || undefined,
@@ -221,7 +226,7 @@ const ScoreEditApp: React.FC = () => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   // homeTotal and awayTotal are derived from innings — no need to list them separately
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, innings, outs, balls, strikes, baseRunners, recap, pitcher, pitchCount, batter, batting, linescore, showRecap, hits, errors]);
+  }, [status, innings, outs, balls, strikes, baseRunners, wbscInningHalf, wbscInningNumber, recap, pitcher, pitchCount, batter, batting, linescore, showRecap, hits, errors]);
 
   // ── WBSC live data polling ───────────────────────────────────────────────────
   // Runs every 5 seconds when: game has a wbscGameId, status is live, and
@@ -251,6 +256,8 @@ const ScoreEditApp: React.FC = () => {
         setBalls(state.balls);
         setStrikes(state.strikes);
         setBaseRunners(state.baseRunners);
+        setWbscInningHalf(state.inningHalf ?? null);
+        setWbscInningNumber(state.inningNumber ?? null);
         if (state.pitcher) setPitcher(state.pitcher);
         setPitchCount(state.pitchCount ?? null);
         if (state.batter)  setBatter(state.batter);

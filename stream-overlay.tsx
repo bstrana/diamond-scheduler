@@ -20,15 +20,33 @@ const bg = params.get('bg') || 'transparent';
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const deriveInning = (game: Game): { inning: string; half: 'top' | 'bottom' | null } => {
-  const innings = game.scores?.innings;
-  if (!innings || innings.length === 0) {
+  // Prefer WBSC-sourced inning data stored in scores (most accurate)
+  if (game.scores?.currentInning != null) {
     return {
-      inning: game.currentInning != null ? String(game.currentInning) : '—',
+      inning: String(game.scores.currentInning),
+      half: game.scores.inningHalf ?? null,
+    };
+  }
+  // Fallback: use top-level game fields (manually set)
+  if (game.currentInning != null) {
+    return {
+      inning: String(game.currentInning),
       half: game.inningHalf ?? null,
     };
   }
+  // Last resort: infer from the linescore shape
+  const innings = game.scores?.innings;
+  if (!innings || innings.length === 0) return { inning: '—', half: null };
   const last = innings[innings.length - 1];
-  return { inning: String(innings.length), half: last?.home != null ? 'bottom' : 'top' };
+  // If away scored but home hasn't batted yet → bottom half in progress
+  if (last?.away != null && last?.home == null) {
+    return { inning: String(innings.length), half: 'bottom' };
+  }
+  // Both sides complete → top of the next inning
+  if (last?.away != null && last?.home != null) {
+    return { inning: String(innings.length + 1), half: 'top' };
+  }
+  return { inning: String(innings.length), half: 'top' };
 };
 
 // ── Sub-components ────────────────────────────────────────────────────────────

@@ -91,6 +91,8 @@ export interface WbscGameState {
   balls:   number;
   strikes: number;
   baseRunners: { first: boolean; second: boolean; third: boolean };
+  inningNumber?: number;
+  inningHalf?:   'top' | 'bottom';
   pitcher?:    string;
   pitchCount?: number;
   batter?:     string;
@@ -193,10 +195,13 @@ function mapPlayData(
   // Play description: first entry in playdata array, field "n" (strip HTML tags)
   const description = playdata[0]?.n ? stripHtml(playdata[0].n) || undefined : undefined;
 
-  // Inning — derived from currentinning string (e.g. "BOT 10")
-  // (Not stored in WbscGameState directly; used only for future extension.)
-  const _inning = parseCurrentInning(situation.currentinning ?? '');
-  void _inning; // currently informational; remove void if you add it to the state shape
+  // Inning — derived from currentinning string (e.g. "BOT 10", "TOP 5")
+  const parsedInning = parseCurrentInning(situation.currentinning ?? '');
+  const inningNumber = parsedInning.number ? Number(parsedInning.number) : undefined;
+  const inningHalf: 'top' | 'bottom' | undefined =
+    parsedInning.half === 'TOP'    ? 'top' :
+    parsedInning.half === 'BOTTOM' ? 'bottom' :
+    undefined;
 
   // Linescore → innings array
   const innings = buildInnings(linescore.awayruns, linescore.homeruns);
@@ -230,6 +235,8 @@ function mapPlayData(
       second: situation.runner2 !== 0,
       third:  situation.runner3 !== 0,
     },
+    inningNumber: Number.isFinite(inningNumber) ? inningNumber : undefined,
+    inningHalf,
     pitcher:    situation.pitcher || undefined,
     pitchCount,
     batter:     situation.batter  || undefined,
