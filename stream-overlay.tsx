@@ -342,7 +342,7 @@ const StreamOverlayApp: React.FC = () => {
             overflow: 'hidden',
             textOverflow: 'ellipsis',
           }}>{pitcher.trim()}</span>
-          {pitchCount != null && (
+          {pitchCount != null && pitchCount > 0 && (
             <span style={{
               fontSize: 12,
               fontWeight: 700,

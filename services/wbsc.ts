@@ -216,8 +216,12 @@ function mapPlayData(
       const pWords = pitcherName.split(/\s+/).filter(w => w.length > 2);
       const eWords = entryName.split(/\s+/).filter(w => w.length > 2);
       if (entryName && pWords.length && eWords.length && pWords.some(w => eWords.includes(w))) {
-        if (typeof entry.PITCHES === 'number') {
-          pitchCount = entry.PITCHES;
+        const raw = entry.PITCHES ?? entry['NP'];
+        const count = typeof raw === 'number' ? raw
+          : typeof raw === 'string' ? parseInt(raw, 10)
+          : NaN;
+        if (Number.isFinite(count) && count > 0) {
+          pitchCount = count;
           break;
         }
       }
