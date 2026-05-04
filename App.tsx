@@ -374,10 +374,13 @@ const App: React.FC = () => {
     };
   }, [userId, orgId]);
 
-  // Sync the Keycloak token into PocketBase so @request.auth.* collection rules work.
+  // Sync the Keycloak token into PocketBase auth store and the write-protection proxy.
   useEffect(() => {
     if (keycloak.token) {
       storageApi.authenticatePocketBase(keycloak.token);
+      storageApi.setKcTokenForPbProxy(keycloak.token);
+    } else {
+      storageApi.setKcTokenForPbProxy(null);
     }
   }, [keycloak.token]);
 
@@ -387,7 +390,10 @@ const App: React.FC = () => {
       if (!keycloak.authenticated) return;
       if (keycloak.isTokenExpired(30)) {
         await keycloak.updateToken(30);
-        if (keycloak.token) storageApi.authenticatePocketBase(keycloak.token);
+        if (keycloak.token) {
+          storageApi.authenticatePocketBase(keycloak.token);
+          storageApi.setKcTokenForPbProxy(keycloak.token);
+        }
       }
     });
   }, [keycloak]);
