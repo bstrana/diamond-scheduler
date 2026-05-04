@@ -2,12 +2,18 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import http from 'http';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const distDir = path.join(__dirname, 'dist');
+
+// Trust the nginx reverse proxy so req.ip reflects the real client IP.
+// Without this every request appears to come from 127.0.0.1, collapsing all
+// rate-limit buckets into one global counter.
+app.set('trust proxy', 1);
 
 // Rate limiting for ICS endpoint
 const icsRateLimiter = rateLimit({
@@ -330,7 +336,8 @@ app.get('/wbsc-proxy/last-play', wbscRateLimiter, async (req, res) => {
        .setHeader('Content-Type', 'application/json')
        .send(body);
   } catch (err) {
-    res.status(502).json({ error: 'WBSC upstream unreachable.', detail: String(err) });
+    console.error('[wbsc-proxy]', err);
+    res.status(502).json({ error: 'Upstream unreachable.' });
   }
 });
 
@@ -357,21 +364,124 @@ app.get('/wbsc-proxy/play-data', wbscRateLimiter, async (req, res) => {
        .setHeader('Content-Type', 'application/json')
        .send(body);
   } catch (err) {
-    res.status(502).json({ error: 'WBSC upstream unreachable.', detail: String(err) });
+    console.error('[wbsc-proxy]', err);
+    res.status(502).json({ error: 'Upstream unreachable.' });
   }
 });
 
-// embed.html must be embeddable in cross-origin iframes – override the default
-// frame-ancestors 'self' restriction set by the security headers middleware above.
-app.use((req, res, next) => {
-  if (req.path === '/embed.html') {
-    res.removeHeader('X-Frame-Options');
-    res.setHeader(
-      'Content-Security-Policy',
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https:; frame-ancestors *;"
-    );
+const pbProxyLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 300,  // generous headroom for SSE + normal SPA use per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// ── PocketBase write-protection proxy ────────────────────────────────────────
+// Active when nginx is configured with PB_WRITE_PROTECTION=true.
+// nginx routes /_pb/ → /_pb-proxy/ here; we validate the Keycloak token
+// (sent by the SPA as X-Kc-Token) for protected collection writes, then
+// forward every request to PocketBase with X-Internal-Token injected.
+// SSE (realtime) connections are handled transparently via stream piping.
+//
+// To disable: set PB_WRITE_PROTECTION=false in /app/data/config.env and restart.
+// nginx will then route /_pb/ directly to PocketBase (this handler is unused).
+
+const pbInternalToken  = process.env.PB_INTERNAL_TOKEN || '';
+const pbUpstream       = 'http://127.0.0.1:8090';
+const PROTECTED_COLLS  = new Set(['app_state', 'tenants', 'score_links', 'published_schedules']);
+const WRITE_METHODS    = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
+// Hop-by-hop headers must not be forwarded
+const HOP_BY_HOP = new Set([
+  'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
+  'te', 'trailer', 'transfer-encoding', 'upgrade',
+]);
+
+// Cache of validated Keycloak tokens: token → { ok: bool, exp: ms }
+const kcCache = new Map();
+
+async function isKcTokenValid(token) {
+  const now = Date.now();
+  const hit = kcCache.get(token);
+  if (hit && hit.exp > now) return hit.ok;
+
+  const kcUrl   = process.env.KC_URL || process.env.VITE_KEYCLOAK_URL || '';
+  const realm   = process.env.VITE_KEYCLOAK_REALM || '';
+  if (!kcUrl || !realm) {
+    // Keycloak not configured: deny by default. Set KEYCLOAK_DISABLED=true to
+    // explicitly allow all writes (local dev only — never set in production).
+    return (process.env.KEYCLOAK_DISABLED || '').toLowerCase() === 'true';
   }
-  next();
+
+  try {
+    const r = await fetch(
+      `${kcUrl}/realms/${encodeURIComponent(realm)}/protocol/openid-connect/userinfo`,
+      { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(3_000) },
+    );
+    const ok = r.ok;
+    kcCache.set(token, { ok, exp: now + 60_000 });
+    if (kcCache.size > 500) {
+      // First pass: evict expired entries
+      for (const [k, v] of kcCache) if (v.exp < now) kcCache.delete(k);
+      // Second pass: if still over limit, evict oldest by insertion order
+      if (kcCache.size > 400) {
+        for (const k of kcCache.keys()) {
+          kcCache.delete(k);
+          if (kcCache.size <= 400) break;
+        }
+      }
+    }
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+function needsKcAuth(method, path) {
+  if (!WRITE_METHODS.has(method)) return false;
+  const m = path.match(/^\/api\/collections\/([^/?]+)/);
+  return m ? PROTECTED_COLLS.has(m[1]) : false;
+}
+
+app.use('/_pb-proxy', pbProxyLimiter, async (req, res) => {
+  const method = req.method.toUpperCase();
+  const path   = req.url; // e.g. /api/collections/app_state/records?...
+
+  // Validate Keycloak token for protected collection writes
+  if (needsKcAuth(method, path)) {
+    const raw   = (req.headers['x-kc-token'] || '').toString().trim();
+    if (!raw || !(await isKcTokenValid(raw))) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+  }
+
+  // Build forwarded headers: strip hop-by-hop and X-Kc-Token, inject internal token
+  const fwd = {};
+  for (const [k, v] of Object.entries(req.headers)) {
+    if (!HOP_BY_HOP.has(k.toLowerCase()) && k.toLowerCase() !== 'x-kc-token') fwd[k] = v;
+  }
+  fwd['host']              = '127.0.0.1:8090';
+  fwd['x-internal-token'] = pbInternalToken;
+
+  const pbReq = http.request(
+    `${pbUpstream}${path}`,
+    { method: req.method, headers: fwd },
+    (pbRes) => {
+      const respHdrs = {};
+      for (const [k, v] of Object.entries(pbRes.headers)) {
+        if (!HOP_BY_HOP.has(k.toLowerCase())) respHdrs[k] = v;
+      }
+      res.writeHead(pbRes.statusCode, respHdrs);
+      pbRes.pipe(res, { end: true });
+    },
+  );
+
+  pbReq.on('error', (err) => {
+    console.error('[pb-proxy]', err);
+    if (!res.headersSent) res.status(502).json({ error: 'Upstream unreachable.' });
+  });
+
+  req.pipe(pbReq, { end: true });
 });
 
 app.use(express.static(distDir));

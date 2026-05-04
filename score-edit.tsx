@@ -272,9 +272,12 @@ const ScoreEditApp: React.FC = () => {
       }
     };
 
-    poll(); // immediate first tick
-    const interval = setInterval(poll, 4_000);
-    return () => clearInterval(interval);
+    // Self-rescheduling timeout: next poll starts 4 s after the previous one
+    // *completes*, preventing overlap when WBSC fetches are slow or timed out.
+    let timeoutId: ReturnType<typeof setTimeout>;
+    const schedule = () => { timeoutId = setTimeout(async () => { await poll(); schedule(); }, 4_000); };
+    poll().then(schedule); // immediate first tick, then schedule
+    return () => clearTimeout(timeoutId);
   // wbscLastPlayRef is a ref so it is intentionally excluded from deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.wbscGameId, wbscEnabled, status]);

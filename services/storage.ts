@@ -86,6 +86,25 @@ export const authenticatePocketBase = (token: string) => {
   pocketbaseClient.authStore.save(token, null);
 };
 
+/**
+ * Attach the Keycloak access token as X-Kc-Token on every PocketBase request.
+ * The Node.js proxy (/_pb-proxy/) reads this header and validates it against
+ * Keycloak before allowing writes to protected collections. PocketBase itself
+ * never sees the Keycloak token, so no OIDC configuration in PocketBase is needed.
+ * Call this whenever the Keycloak token changes (init + refresh).
+ */
+export const setKcTokenForPbProxy = (token: string | null) => {
+  if (!pocketbaseClient) return;
+  if (token) {
+    pocketbaseClient.beforeSend = (url: string, options: { headers?: Record<string, string>; [key: string]: unknown }) => {
+      options.headers = { ...(options.headers ?? {}), 'X-Kc-Token': token };
+      return { url, options };
+    };
+  } else {
+    pocketbaseClient.beforeSend = undefined;
+  }
+};
+
 let keycloakRefreshFn: (() => Promise<void>) | null = null;
 
 /**
@@ -851,6 +870,7 @@ export const listAllTenants = async (): Promise<Tenant[]> => {
 export const subscribeScoreEdits = (
   scheduleKey: string,
   callback: (edit: ScoreEdit) => void,
+  onReady?: () => void,
 ): (() => void) => {
   if (!pocketbaseClient || !scoreEditsCollection) return () => {};
   let unsubFn: (() => Promise<void>) | null = null;
@@ -864,7 +884,7 @@ export const subscribeScoreEdits = (
         callback(scoreEditFromRecord(e.record));
       }
     })
-    .then(fn => { unsubFn = fn; })
+    .then(fn => { unsubFn = fn; onReady?.(); })
     .catch(() => { /* SSE unavailable — fallback poll handles updates */ });
   return () => { unsubFn?.(); };
 };

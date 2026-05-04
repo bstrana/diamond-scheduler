@@ -374,10 +374,13 @@ const App: React.FC = () => {
     };
   }, [userId, orgId]);
 
-  // Sync the Keycloak token into PocketBase so @request.auth.* collection rules work.
+  // Sync the Keycloak token into PocketBase auth store and the write-protection proxy.
   useEffect(() => {
     if (keycloak.token) {
       storageApi.authenticatePocketBase(keycloak.token);
+      storageApi.setKcTokenForPbProxy(keycloak.token);
+    } else {
+      storageApi.setKcTokenForPbProxy(null);
     }
   }, [keycloak.token]);
 
@@ -387,7 +390,10 @@ const App: React.FC = () => {
       if (!keycloak.authenticated) return;
       if (keycloak.isTokenExpired(30)) {
         await keycloak.updateToken(30);
-        if (keycloak.token) storageApi.authenticatePocketBase(keycloak.token);
+        if (keycloak.token) {
+          storageApi.authenticatePocketBase(keycloak.token);
+          storageApi.setKcTokenForPbProxy(keycloak.token);
+        }
       }
     });
   }, [keycloak]);
@@ -881,10 +887,12 @@ const App: React.FC = () => {
     // Initial fetch to pick up any edits that arrived before we subscribed
     check();
     // Real-time: re-run check whenever a score edit arrives for this schedule
-    const unsubscribe = storageApi.subscribeScoreEdits(scheduleKey, () => { check(); });
-    // Fallback poll every 30 s in case SSE drops or is unavailable
-    const id = setInterval(check, 30_000);
-    return () => { clearInterval(id); unsubscribe(); };
+    // Fallback poll every 30 s; cancelled once SSE confirms it is live.
+    let fallbackId: ReturnType<typeof setInterval> | null = setInterval(check, 30_000);
+    const unsubscribe = storageApi.subscribeScoreEdits(scheduleKey, () => { check(); }, () => {
+      if (fallbackId !== null) { clearInterval(fallbackId); fallbackId = null; }
+    });
+    return () => { if (fallbackId !== null) clearInterval(fallbackId); unsubscribe(); };
   }, [scheduleKey, userId, orgId]);
 
   // ─────────────────────────────────────────────────────────────────────────────

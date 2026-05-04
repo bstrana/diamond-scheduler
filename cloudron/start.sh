@@ -28,6 +28,13 @@ VITE_KEYCLOAK_URL=https://keycloak.example.com
 VITE_KEYCLOAK_REALM=diamond
 VITE_KEYCLOAK_CLIENT_ID=diamond-scheduler
 
+# ── PocketBase write protection (optional, default: false) ────────────────────
+# Set to true to route all /_pb/ traffic through the Node.js proxy, which
+# validates the Keycloak token before allowing writes to app_state, tenants,
+# score_links, and published_schedules. score_edits remains public (score page).
+# To roll back: set to false and restart — nginx goes direct again.
+PB_WRITE_PROTECTION=false
+
 # ── App identity ──────────────────────────────────────────────────────────────
 VITE_APP_ID=scheduler
 
@@ -66,10 +73,34 @@ while IFS= read -r _line || [ -n "${_line}" ]; do
   fi
 done < "${CONFIG_FILE}"
 
+# ── PocketBase internal token (generated once, persisted across restarts) ─────
+# nginx always injects this into /_pb/ proxy requests so PocketBase rules can
+# reject requests that bypass nginx entirely.
+PB_TOKEN_FILE="/app/data/pb_internal_token"
+if [ ! -f "${PB_TOKEN_FILE}" ]; then
+    openssl rand -hex 32 > "${PB_TOKEN_FILE}"
+    chmod 600 "${PB_TOKEN_FILE}"
+fi
+export PB_INTERNAL_TOKEN="$(cat "${PB_TOKEN_FILE}")"
+
+# ── PocketBase write-protection mode ─────────────────────────────────────────
+# PB_WRITE_PROTECTION=true  → /_pb/ routes through Node.js (Keycloak-gated writes)
+# PB_WRITE_PROTECTION=false → /_pb/ routes directly to PocketBase (no KC check)
+if [ "${PB_WRITE_PROTECTION:-false}" = "true" ]; then
+    PB_PROXY_PASS="http://127.0.0.1:3001/_pb-proxy/"
+    echo "==> PocketBase write protection: ENABLED (Node.js proxy)"
+else
+    PB_PROXY_PASS="http://127.0.0.1:8090/"
+    echo "==> PocketBase write protection: DISABLED (direct)"
+fi
+
 # ── Runtime env vars ──────────────────────────────────────────────────────────
 # PB_URL is the absolute internal URL used by server.js (Node.js ICS endpoint).
 # The browser SPA uses the relative URL /_pb baked in at Docker build time.
 export PB_URL="http://127.0.0.1:8090"
+# Restrict PocketBase CORS to the app's own origin. Falls back to '*' only
+# when Cloudron hasn't set APP_ORIGIN (local dev / first-boot edge cases).
+export PB_ORIGINS="${APP_ORIGIN:-*}"
 export VITE_PB_COLLECTION="${VITE_PB_COLLECTION:-app_state}"
 
 # Default values for all other collection/feature vars.
@@ -96,8 +127,11 @@ fi
 # /etc/nginx/sites-enabled/ is read-only at runtime; render the template into
 # the writable /tmp/nginx/sites-enabled/ that nginx is configured to include.
 mkdir -p /tmp/nginx/sites-enabled
-sed "s|__KC_ORIGIN__|${KC_ORIGIN}|g" /app/nginx.conf.template \
-    > /tmp/nginx/sites-enabled/default
+sed \
+    -e "s|__KC_ORIGIN__|${KC_ORIGIN}|g" \
+    -e "s|__PB_PROXY_PASS__|${PB_PROXY_PASS}|g" \
+    -e "s|__PB_INTERNAL_TOKEN__|${PB_INTERNAL_TOKEN}|g" \
+    /app/nginx.conf.template > /tmp/nginx/sites-enabled/default
 
 # ── Stamp runtime values into the pre-built SPA ───────────────────────────────
 # /app is read-only in Cloudron; copy the image-built dist to writable storage
