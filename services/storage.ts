@@ -870,6 +870,7 @@ export const listAllTenants = async (): Promise<Tenant[]> => {
 export const subscribeScoreEdits = (
   scheduleKey: string,
   callback: (edit: ScoreEdit) => void,
+  onReady?: () => void,
 ): (() => void) => {
   if (!pocketbaseClient || !scoreEditsCollection) return () => {};
   let unsubFn: (() => Promise<void>) | null = null;
@@ -883,7 +884,7 @@ export const subscribeScoreEdits = (
         callback(scoreEditFromRecord(e.record));
       }
     })
-    .then(fn => { unsubFn = fn; })
+    .then(fn => { unsubFn = fn; onReady?.(); })
     .catch(() => { /* SSE unavailable — fallback poll handles updates */ });
   return () => { unsubFn?.(); };
 };

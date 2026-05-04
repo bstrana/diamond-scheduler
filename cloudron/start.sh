@@ -98,6 +98,9 @@ fi
 # PB_URL is the absolute internal URL used by server.js (Node.js ICS endpoint).
 # The browser SPA uses the relative URL /_pb baked in at Docker build time.
 export PB_URL="http://127.0.0.1:8090"
+# Restrict PocketBase CORS to the app's own origin. Falls back to '*' only
+# when Cloudron hasn't set APP_ORIGIN (local dev / first-boot edge cases).
+export PB_ORIGINS="${APP_ORIGIN:-*}"
 export VITE_PB_COLLECTION="${VITE_PB_COLLECTION:-app_state}"
 
 # Default values for all other collection/feature vars.

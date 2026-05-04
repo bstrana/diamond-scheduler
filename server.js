@@ -10,6 +10,11 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const distDir = path.join(__dirname, 'dist');
 
+// Trust the nginx reverse proxy so req.ip reflects the real client IP.
+// Without this every request appears to come from 127.0.0.1, collapsing all
+// rate-limit buckets into one global counter.
+app.set('trust proxy', 1);
+
 // Rate limiting for ICS endpoint
 const icsRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -331,7 +336,8 @@ app.get('/wbsc-proxy/last-play', wbscRateLimiter, async (req, res) => {
        .setHeader('Content-Type', 'application/json')
        .send(body);
   } catch (err) {
-    res.status(502).json({ error: 'WBSC upstream unreachable.', detail: String(err) });
+    console.error('[wbsc-proxy]', err);
+    res.status(502).json({ error: 'Upstream unreachable.' });
   }
 });
 
@@ -358,8 +364,16 @@ app.get('/wbsc-proxy/play-data', wbscRateLimiter, async (req, res) => {
        .setHeader('Content-Type', 'application/json')
        .send(body);
   } catch (err) {
-    res.status(502).json({ error: 'WBSC upstream unreachable.', detail: String(err) });
+    console.error('[wbsc-proxy]', err);
+    res.status(502).json({ error: 'Upstream unreachable.' });
   }
+});
+
+const pbProxyLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 300,  // generous headroom for SSE + normal SPA use per IP
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // ── PocketBase write-protection proxy ────────────────────────────────────────
@@ -392,7 +406,11 @@ async function isKcTokenValid(token) {
 
   const kcUrl   = process.env.KC_URL || process.env.VITE_KEYCLOAK_URL || '';
   const realm   = process.env.VITE_KEYCLOAK_REALM || '';
-  if (!kcUrl || !realm) return true; // Keycloak not configured — dev passthrough
+  if (!kcUrl || !realm) {
+    // Keycloak not configured: deny by default. Set KEYCLOAK_DISABLED=true to
+    // explicitly allow all writes (local dev only — never set in production).
+    return (process.env.KEYCLOAK_DISABLED || '').toLowerCase() === 'true';
+  }
 
   try {
     const r = await fetch(
@@ -400,9 +418,17 @@ async function isKcTokenValid(token) {
       { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(3_000) },
     );
     const ok = r.ok;
-    kcCache.set(token, { ok, exp: now + 30_000 });
+    kcCache.set(token, { ok, exp: now + 60_000 });
     if (kcCache.size > 500) {
+      // First pass: evict expired entries
       for (const [k, v] of kcCache) if (v.exp < now) kcCache.delete(k);
+      // Second pass: if still over limit, evict oldest by insertion order
+      if (kcCache.size > 400) {
+        for (const k of kcCache.keys()) {
+          kcCache.delete(k);
+          if (kcCache.size <= 400) break;
+        }
+      }
     }
     return ok;
   } catch {
@@ -416,7 +442,7 @@ function needsKcAuth(method, path) {
   return m ? PROTECTED_COLLS.has(m[1]) : false;
 }
 
-app.use('/_pb-proxy', async (req, res) => {
+app.use('/_pb-proxy', pbProxyLimiter, async (req, res) => {
   const method = req.method.toUpperCase();
   const path   = req.url; // e.g. /api/collections/app_state/records?...
 
@@ -451,23 +477,11 @@ app.use('/_pb-proxy', async (req, res) => {
   );
 
   pbReq.on('error', (err) => {
-    if (!res.headersSent) res.status(502).json({ error: 'PocketBase unavailable', detail: String(err) });
+    console.error('[pb-proxy]', err);
+    if (!res.headersSent) res.status(502).json({ error: 'Upstream unreachable.' });
   });
 
   req.pipe(pbReq, { end: true });
-});
-
-// embed.html must be embeddable in cross-origin iframes – override the default
-// frame-ancestors 'self' restriction set by the security headers middleware above.
-app.use((req, res, next) => {
-  if (req.path === '/embed.html') {
-    res.removeHeader('X-Frame-Options');
-    res.setHeader(
-      'Content-Security-Policy',
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https:; frame-ancestors *;"
-    );
-  }
-  next();
 });
 
 app.use(express.static(distDir));
