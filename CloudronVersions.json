@@ -1,5 +1,5 @@
 {
-  "stable": "1.0.90",
+  "stable": "1.0.91",
   "versions": {
     "1.0.0": {
       "manifest": {
@@ -638,7 +638,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: React error #31 — strict typeof guards on all Keycloak token claim extractions prevent objects leaking into JSX.",
+        "changelog": "Fix: React error #31 \u2014 strict typeof guards on all Keycloak token claim extractions prevent objects leaking into JSX.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -676,7 +676,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: ICS /subscribe.ics returning 503 — VITE_PB_SCHEDULE_COLLECTION and other vars were missing 'export' in start.sh so Node.js never received them.",
+        "changelog": "Fix: ICS /subscribe.ics returning 503 \u2014 VITE_PB_SCHEDULE_COLLECTION and other vars were missing 'export' in start.sh so Node.js never received them.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -752,7 +752,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Simplify: use Keycloak organization alias as orgId — no custom attribute mapper needed; org name from organization.name or alias.",
+        "changelog": "Simplify: use Keycloak organization alias as orgId \u2014 no custom attribute mapper needed; org name from organization.name or alias.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -828,7 +828,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: ICS calendar subscription now works — remove stale app_id filter from PocketBase query (app_id field was removed in v1.0.10).",
+        "changelog": "Fix: ICS calendar subscription now works \u2014 remove stale app_id filter from PocketBase query (app_id field was removed in v1.0.10).",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -866,7 +866,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: inning half (top/bottom) derivation was inverted — odd filled slots now correctly show bottom half and even slots show top of next inning; inning number also corrected for the even-count case.",
+        "changelog": "Fix: inning half (top/bottom) derivation was inverted \u2014 odd filled slots now correctly show bottom half and even slots show top of next inning; inning number also corrected for the even-count case.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -942,7 +942,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: PocketBase real-time scoring — score edits and schedule changes now push instantly via SSE instead of polling every 60 s; 5-minute fallback poll retained for resilience.",
+        "changelog": "Feat: PocketBase real-time scoring \u2014 score edits and schedule changes now push instantly via SSE instead of polling every 60 s; 5-minute fallback poll retained for resilience.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1018,7 +1018,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: SSE connection errors are now silent — graceful degradation to fallback polling (embed 15 s, admin 30 s) when realtime is unavailable; nginx HTTP/1.1 fix already in place for when SSE does work.",
+        "changelog": "Fix: SSE connection errors are now silent \u2014 graceful degradation to fallback polling (embed 15 s, admin 30 s) when realtime is unavailable; nginx HTTP/1.1 fix already in place for when SSE does work.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1056,7 +1056,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: remove SSE subscription attempts from embed — browser-native EventSource MIME-type error cannot be suppressed from JS; embed now uses 15 s polling only.",
+        "changelog": "Fix: remove SSE subscription attempts from embed \u2014 browser-native EventSource MIME-type error cannot be suppressed from JS; embed now uses 15 s polling only.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1094,7 +1094,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: stream overlay page (/stream-overlay.html?token=…) — compact live scoreboard for OBS browser source; transparent background by default; SSE real-time + 15 s fallback; 'Overlay' button added to Score Links manager.",
+        "changelog": "Feat: stream overlay page (/stream-overlay.html?token=\u2026) \u2014 compact live scoreboard for OBS browser source; transparent background by default; SSE real-time + 15 s fallback; 'Overlay' button added to Score Links manager.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1170,7 +1170,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "UX: score-edit auto-saves on state change (900 ms debounce) — Submit button removed; inline Saving/Saved/Error indicator shown instead.",
+        "changelog": "UX: score-edit auto-saves on state change (900 ms debounce) \u2014 Submit button removed; inline Saving/Saved/Error indicator shown instead.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1246,7 +1246,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Refactor: remove autoSync option — all score edits now applied automatically; 'Sync Remote Scores' banner removed; autoSync field, toggle button, and isWithinAutoSyncWindow logic deleted.",
+        "changelog": "Refactor: remove autoSync option \u2014 all score edits now applied automatically; 'Sync Remote Scores' banner removed; autoSync field, toggle button, and isWithinAutoSyncWindow logic deleted.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1284,7 +1284,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "UX: stream overlay split into 3 columns — teams/scores, status/inning/count (larger B·S digits), base diamond alone on the right.",
+        "changelog": "UX: stream overlay split into 3 columns \u2014 teams/scores, status/inning/count (larger B\u00b7S digits), base diamond alone on the right.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1322,7 +1322,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: base diamond SVG adjusted — viewBox -10 -10 80 80, rendered 110×100, 25×25 rects for larger and better-spaced bases.",
+        "changelog": "Fix: base diamond SVG adjusted \u2014 viewBox -10 -10 80 80, rendered 110\u00d7100, 25\u00d725 rects for larger and better-spaced bases.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1360,7 +1360,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: stream overlay base diamond corners no longer clipped — bases repositioned inward within SVG viewBox.",
+        "changelog": "Fix: stream overlay base diamond corners no longer clipped \u2014 bases repositioned inward within SVG viewBox.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1474,7 +1474,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "UX: team rows now stretch to fill full card height; outs dots and balls·strikes digits enlarged in stream overlay.",
+        "changelog": "UX: team rows now stretch to fill full card height; outs dots and balls\u00b7strikes digits enlarged in stream overlay.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1626,7 +1626,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: null innings preserved in save payload — overlay inning count no longer starts at top of 2nd due to blank rows being saved as 0.",
+        "changelog": "Fix: null innings preserved in save payload \u2014 overlay inning count no longer starts at top of 2nd due to blank rows being saved as 0.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1664,7 +1664,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: overlay inning half now based on home score only — top half stays ▲ while away is scoring; ▼ only when home field has a value entered.",
+        "changelog": "Fix: overlay inning half now based on home score only \u2014 top half stays \u25b2 while away is scoring; \u25bc only when home field has a value entered.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1702,7 +1702,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: linescore toggle in score-edit — when enabled, overlay slides in inning-by-inning scores to the right of the base diamond; PocketBase migration adds linescore bool field.",
+        "changelog": "Feat: linescore toggle in score-edit \u2014 when enabled, overlay slides in inning-by-inning scores to the right of the base diamond; PocketBase migration adds linescore bool field.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1778,7 +1778,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: linescore overlay panel width now scales with inning count — no longer clips at 8 innings.",
+        "changelog": "Fix: linescore overlay panel width now scales with inning count \u2014 no longer clips at 8 innings.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1854,7 +1854,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: published schedule games no longer overwritten by auto-save; Feat: superadmin dashboard — system_admin role sees tenant management UI instead of the app, with plan/limits/active editing.",
+        "changelog": "Fix: published schedule games no longer overwritten by auto-save; Feat: superadmin dashboard \u2014 system_admin role sees tenant management UI instead of the app, with plan/limits/active editing.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1892,7 +1892,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: superadmin dashboard now authenticates PocketBase before loading tenant list — resolves ClientResponseError 400 on dashboard open.",
+        "changelog": "Fix: superadmin dashboard now authenticates PocketBase before loading tenant list \u2014 resolves ClientResponseError 400 on dashboard open.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1930,7 +1930,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: remove sort parameter from listAllTenants API call — caused 404 on PocketBase; fix stable field back to boolean true in CloudronVersions.json.",
+        "changelog": "Fix: remove sort parameter from listAllTenants API call \u2014 caused 404 on PocketBase; fix stable field back to boolean true in CloudronVersions.json.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -1968,7 +1968,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: Resolve Pool Bracket — after pool play completes, seed bracket games from pool standings with interleaved seeding so pool winners meet in the final.",
+        "changelog": "Feat: Resolve Pool Bracket \u2014 after pool play completes, seed bracket games from pool standings with interleaved seeding so pool winners meet in the final.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2006,7 +2006,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: Pool+Bracket — games per day setting for pool stage; bracket format toggle (Final Only vs Full Bracket); pool leader is home team in Final Only mode.",
+        "changelog": "Feat: Pool+Bracket \u2014 games per day setting for pool stage; bracket format toggle (Final Only vs Full Bracket); pool leader is home team in Final Only mode.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2044,7 +2044,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: Pool bracket auto-resolves when all pool games are final — TBD slots replaced automatically; manual Seed button still available as override.",
+        "changelog": "Feat: Pool bracket auto-resolves when all pool games are final \u2014 TBD slots replaced automatically; manual Seed button still available as override.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2082,7 +2082,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: Playoff bracket view redesign — pool stage/bracket sections, live win counts, winner highlight with trophy, loser fade, forfeit support, short date format, status badges.",
+        "changelog": "Feat: Playoff bracket view redesign \u2014 pool stage/bracket sections, live win counts, winner highlight with trophy, loser fade, forfeit support, short date format, status badges.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2120,7 +2120,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: embed schedule widget (GameBar and others) now loads correctly in cross-origin iframes — CSP frame-ancestors and X-Frame-Options no longer block /embed.html on third-party sites.",
+        "changelog": "Fix: embed schedule widget (GameBar and others) now loads correctly in cross-origin iframes \u2014 CSP frame-ancestors and X-Frame-Options no longer block /embed.html on third-party sites.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2158,7 +2158,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: multi-select league filter in embed code generator — pick any combination of leagues (or all) instead of only one; embed URL uses comma-separated league IDs; all embed types respect the selection.",
+        "changelog": "Feat: multi-select league filter in embed code generator \u2014 pick any combination of leagues (or all) instead of only one; embed URL uses comma-separated league IDs; all embed types respect the selection.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2196,7 +2196,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: standings sort selector — choose sort priority (W, GB, RS, RA, RD) or enable custom drag-and-drop row ordering; default sort can be pre-configured in embed code generator.",
+        "changelog": "Feat: standings sort selector \u2014 choose sort priority (W, GB, RS, RA, RD) or enable custom drag-and-drop row ordering; default sort can be pre-configured in embed code generator.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2234,7 +2234,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: embed style templates — save named style presets in the browser and reload them via a dropdown; stored in localStorage, no backend required.",
+        "changelog": "Feat: embed style templates \u2014 save named style presets in the browser and reload them via a dropdown; stored in localStorage, no backend required.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2348,7 +2348,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: export loaded schedule as JSON from user menu; Fix: creating a new league no longer clears all games; sort games by date → time → game number in all views.",
+        "changelog": "Feat: export loaded schedule as JSON from user menu; Fix: creating a new league no longer clears all games; sort games by date \u2192 time \u2192 game number in all views.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2538,7 +2538,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: GameBar fullscreen game card overlay now opens reliably on mobile — replace native requestFullscreen (which caused a race condition clearing the overlay on mobile browsers) with a pure CSS modal approach; ESC key still closes the overlay.",
+        "changelog": "Fix: GameBar fullscreen game card overlay now opens reliably on mobile \u2014 replace native requestFullscreen (which caused a race condition clearing the overlay on mobile browsers) with a pure CSS modal approach; ESC key still closes the overlay.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2576,7 +2576,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: GameBar game card overlay now opens in true full-screen mode — requestFullscreen restored with a 600 ms timestamp guard that prevents the race condition where spurious fullscreenchange events cleared the overlay state on mobile; embed iframe snippet now includes allow=\"fullscreen\" for modern browser permissions policy.",
+        "changelog": "Fix: GameBar game card overlay now opens in true full-screen mode \u2014 requestFullscreen restored with a 600 ms timestamp guard that prevents the race condition where spurious fullscreenchange events cleared the overlay state on mobile; embed iframe snippet now includes allow=\"fullscreen\" for modern browser permissions policy.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2614,7 +2614,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: WBSC game tracker — league settings gain a 'WBSC Game Tracker' checkbox; when enabled, a WBSC Game ID field appears on the Add and Edit game modals for that league, storing the external identifier for future score and play-by-play data integration.",
+        "changelog": "Feat: WBSC game tracker \u2014 league settings gain a 'WBSC Game Tracker' checkbox; when enabled, a WBSC Game ID field appears on the Add and Edit game modals for that league, storing the external identifier for future score and play-by-play data integration.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2652,7 +2652,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: WBSC live data integration — score-edit page polls game.wbsc.org every 5 s via a server-side proxy (avoids CORS); two-step fetch gets latest play number then full play data; situation, linescore, base runners, hits, errors, and pitcher auto-populate the score form and trigger the 900 ms auto-save debounce.",
+        "changelog": "Feat: WBSC live data integration \u2014 score-edit page polls game.wbsc.org every 5 s via a server-side proxy (avoids CORS); two-step fetch gets latest play number then full play data; situation, linescore, base runners, hits, errors, and pitcher auto-populate the score form and trigger the 900 ms auto-save debounce.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2728,7 +2728,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: add /wbsc-proxy/ location block to nginx config — without it nginx served index.html for WBSC proxy requests instead of forwarding them to Node.js, causing a JSON parse error in the score-edit WBSC status banner.",
+        "changelog": "Fix: add /wbsc-proxy/ location block to nginx config \u2014 without it nginx served index.html for WBSC proxy requests instead of forwarding them to Node.js, causing a JSON parse error in the score-edit WBSC status banner.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2766,7 +2766,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: WBSC latest.json returns a plain JSON number, not an object — fetchLastPlay now reads it directly instead of looking for a .number or .latestpn field.",
+        "changelog": "Fix: WBSC latest.json returns a plain JSON number, not an object \u2014 fetchLastPlay now reads it directly instead of looking for a .number or .latestpn field.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2804,7 +2804,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: public GET /schedule.json?key=…&team=… endpoint — returns published schedule as clean JSON with resolved team objects and flat scores; optional team filter matches name or abbreviation (case-insensitive); 30-second cache.",
+        "changelog": "Feat: public GET /schedule.json?key=\u2026&team=\u2026 endpoint \u2014 returns published schedule as clean JSON with resolved team objects and flat scores; optional team filter matches name or abbreviation (case-insensitive); 30-second cache.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2880,7 +2880,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Fix: add migration 7 to add pitcher field to score_edits PocketBase collection — without it, the current pitcher was silently dropped on save and never reached the stream overlay.",
+        "changelog": "Fix: add migration 7 to add pitcher field to score_edits PocketBase collection \u2014 without it, the current pitcher was silently dropped on save and never reached the stream overlay.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -2918,7 +2918,7 @@
         "mediaLinks": [
           "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
         ],
-        "changelog": "Feat: batter bar in stream overlay — live card shows 'AT BAT' strip below the scoreboard with current batter name and game batting line (e.g. 1 for 4); populated automatically from WBSC tracking; migration 8 adds batter/batting fields to score_edits.",
+        "changelog": "Feat: batter bar in stream overlay \u2014 live card shows 'AT BAT' strip below the scoreboard with current batter name and game batting line (e.g. 1 for 4); populated automatically from WBSC tracking; migration 8 adds batter/batting fields to score_edits.",
         "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
         "packagerName": "bstrana",
         "packagerUrl": "https://github.com/bstrana"
@@ -3457,6 +3457,44 @@
       },
       "creationDate": "Mon, 04 May 2026 00:00:00 GMT",
       "ts": "Mon, 04 May 2026 00:00:00 GMT",
+      "publishState": "published"
+    },
+    "1.0.91": {
+      "manifest": {
+        "id": "io.github.bstrana.diamond-scheduler",
+        "title": "Diamond Scheduler",
+        "author": "bstrana",
+        "description": "Sports league scheduling app with a drag-and-drop calendar, playoff brackets, live score entry links, and iCal subscription feeds.",
+        "tagline": "Baseball & multi-sport league scheduling",
+        "version": "1.0.91",
+        "website": "https://github.com/bstrana/diamond-scheduler",
+        "contactEmail": "support@example.com",
+        "healthCheckPath": "/health",
+        "httpPort": 8000,
+        "dockerImage": "ghcr.io/bstrana/diamond-scheduler:1.0.91",
+        "addons": {
+          "localstorage": {}
+        },
+        "manifestVersion": 2,
+        "minBoxVersion": "9.1.0",
+        "icon": "file://appicon.png",
+        "iconUrl": "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png",
+        "tags": [
+          "sports",
+          "scheduling",
+          "calendar",
+          "league"
+        ],
+        "mediaLinks": [
+          "https://raw.githubusercontent.com/bstrana/diamond-scheduler/main/public/logo.png"
+        ],
+        "changelog": "Fix: stream overlay (/stream-overlay.html) can now be embedded in OBS browser sources and external broadcast tools \u2014 nginx CSP frame-ancestors and X-Frame-Options headers are overridden on that route to allow cross-origin framing, matching the existing embed.html behaviour.",
+        "postInstallMessage": "Diamond Scheduler is ready. Set VITE_KEYCLOAK_URL, VITE_KEYCLOAK_REALM, and VITE_KEYCLOAK_CLIENT_ID in the app's environment variables, then restart.",
+        "packagerName": "bstrana",
+        "packagerUrl": "https://github.com/bstrana"
+      },
+      "creationDate": "Tue, 05 May 2026 00:00:00 GMT",
+      "ts": "Tue, 05 May 2026 00:00:00 GMT",
       "publishState": "published"
     }
   }
